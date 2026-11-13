@@ -8,13 +8,7 @@
 import { useEffect, useRef } from 'react'
 
 type BottomButton = {
-  setParams(p: {
-    text?: string
-    color?: string
-    text_color?: string
-    is_active?: boolean
-    is_visible?: boolean
-  }): void
+  setParams(p: { text?: string; color?: string; text_color?: string; is_active?: boolean; is_visible?: boolean }): void
   onClick(cb: () => void): void
   offClick(cb: () => void): void
   showProgress(leaveActive?: boolean): void
@@ -23,7 +17,9 @@ type BottomButton = {
 
 type WebApp = {
   initData: string
-  initDataUnsafe: { user?: { id: number; first_name: string; language_code?: string } }
+  initDataUnsafe: {
+    user?: { id: number; first_name: string; language_code?: string }
+  }
   colorScheme: 'light' | 'dark'
   platform: string
   version: string
@@ -34,7 +30,12 @@ type WebApp = {
   enableClosingConfirmation(): void
   disableClosingConfirmation(): void
   MainButton: BottomButton
-  BackButton: { show(): void; hide(): void; onClick(cb: () => void): void; offClick(cb: () => void): void }
+  BackButton: {
+    show(): void
+    hide(): void
+    onClick(cb: () => void): void
+    offClick(cb: () => void): void
+  }
   HapticFeedback: {
     impactOccurred(style: 'light' | 'medium' | 'heavy'): void
     notificationOccurred(type: 'error' | 'success' | 'warning'): void

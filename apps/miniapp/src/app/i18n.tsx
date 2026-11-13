@@ -47,18 +47,24 @@ export const dict = {
     'admission.pay': 'Оплатить',
     'admission.cancel': 'Отмена',
     'admission.agree': 'Я принимаю правила торгов и обязательства победителя',
-    'room.leader': 'Лидер',
+    'room.leader': 'Лучшая цена',
     'room.min': 'мин',
+    'room.yourOffer': 'Ваше предложение',
+    'room.getAdmission': 'Получить допуск',
+    'room.back': 'К лоту',
+    'room.leaderIs': 'Лидирует',
+    'catalog.toRoom': 'В комнату торгов',
+    'catalog.details': 'Подробнее',
     'room.you': 'Вы',
-    'room.minBid': 'Минимальная ставка',
+    'room.minBid': 'Следующая цена — от',
     'room.inRoom': 'Сейчас в комнате',
-    'room.history': 'История ставок',
-    'room.noBids': 'Ставок пока нет. Первая ставка — от стартовой цены.',
-    'room.bid': 'Поставить',
-    'room.youLead': 'Вы лидируете',
-    'room.outbid': 'Вашу ставку перебили',
+    'room.history': 'Ход торгов',
+    'room.noBids': 'Предложений пока нет. Первое — от стартовой цены.',
+    'room.bid': 'Предложить',
+    'room.youLead': 'Ваша цена — лучшая. Ждём предложений других участников',
+    'room.outbid': 'Вашу цену перебили — предложите больше',
     'room.closed': 'Торги по лоту завершены',
-    'room.notAdmitted': 'Чтобы ставить, оплатите допуск к лоту',
+    'room.notAdmitted': 'Чтобы предлагать цену, получите допуск к этому лоту',
     'me.title': 'Профиль',
     'me.language': 'Язык',
     'me.admissions': 'Мои допуски',
@@ -107,18 +113,24 @@ export const dict = {
     'admission.pay': 'Toʻlash',
     'admission.cancel': 'Bekor qilish',
     'admission.agree': 'Savdo qoidalari va gʻolib majburiyatlarini qabul qilaman',
-    'room.leader': 'Yetakchi',
+    'room.leader': 'Eng yaxshi narx',
     'room.min': 'min',
+    'room.yourOffer': 'Sizning taklifingiz',
+    'room.getAdmission': 'Ruxsat olish',
+    'room.back': 'Lotga',
+    'room.leaderIs': 'Yetakchi',
+    'catalog.toRoom': 'Savdo xonasiga',
+    'catalog.details': 'Batafsil',
     'room.you': 'Siz',
-    'room.minBid': 'Eng kam stavka',
+    'room.minBid': 'Keyingi narx — dan',
     'room.inRoom': 'Hozir xonada',
-    'room.history': 'Stavkalar tarixi',
-    'room.noBids': 'Hali stavka yoʻq. Birinchi stavka — boshlangʻich narxdan.',
-    'room.bid': 'Stavka qoʻyish',
-    'room.youLead': 'Siz yetakchisiz',
-    'room.outbid': 'Stavkangizdan oshib ketishdi',
+    'room.history': 'Savdo jarayoni',
+    'room.noBids': 'Hali takliflar yoʻq. Birinchisi — boshlangʻich narxdan.',
+    'room.bid': 'Taklif qilish',
+    'room.youLead': 'Sizning narxingiz eng yaxshisi. Boshqalarning takliflarini kutamiz',
+    'room.outbid': 'Narxingizdan oshib ketishdi — koʻproq taklif qiling',
     'room.closed': 'Lot boʻyicha savdo yakunlandi',
-    'room.notAdmitted': 'Stavka qoʻyish uchun lotga ruxsat uchun toʻlang',
+    'room.notAdmitted': 'Narx taklif qilish uchun ushbu lotga ruxsat oling',
     'me.title': 'Profil',
     'me.language': 'Til',
     'me.admissions': 'Ruxsatlarim',
@@ -131,7 +143,11 @@ export const dict = {
 
 export type TKey = keyof (typeof dict)['ru']
 
-type Ctx = { locale: Locale; setLocale: (l: Locale) => void; t: (k: TKey) => string }
+type Ctx = {
+  locale: Locale
+  setLocale: (l: Locale) => void
+  t: (k: TKey) => string
+}
 const I18nContext = createContext<Ctx | null>(null)
 
 const STORAGE_KEY = 'auksion.locale'

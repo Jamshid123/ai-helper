@@ -20,9 +20,7 @@ function Root() {
 
   return (
     <div className='mx-auto flex min-h-svh max-w-lg flex-col'>
-      {DEMO && (
-        <div className='bg-surface px-4 py-1.5 text-center text-[11.5px] text-muted'>{t('app.demo')}</div>
-      )}
+      {DEMO && <div className='bg-surface px-4 py-1.5 text-center text-[11.5px] text-muted'>{t('app.demo')}</div>}
       <main className='flex-1 pb-24'>
         <Outlet />
       </main>
@@ -30,8 +28,18 @@ function Root() {
         <nav className='fixed inset-x-0 bottom-0 border-t border-line bg-bg pb-[env(safe-area-inset-bottom,0px)]'>
           <div className='mx-auto grid max-w-lg grid-cols-2'>
             {[
-              { to: '/', label: t('nav.catalog'), Icon: Gavel, active: path === '/' || path.startsWith('/lot') },
-              { to: '/me', label: t('nav.me'), Icon: User, active: path === '/me' },
+              {
+                to: '/',
+                label: t('nav.catalog'),
+                Icon: Gavel,
+                active: path === '/' || path.startsWith('/lot'),
+              },
+              {
+                to: '/me',
+                label: t('nav.me'),
+                Icon: User,
+                active: path === '/me',
+              },
             ].map(({ to, label, Icon, active }) => (
               <Link
                 key={to}

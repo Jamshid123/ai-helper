@@ -22,7 +22,10 @@ function MePage() {
               key={l}
               type='button'
               onClick={() => setLocale(l)}
-              className={cn('h-9 rounded-lg text-[14px]', locale === l ? 'bg-bg font-semibold shadow-sm' : 'text-muted')}
+              className={cn(
+                'h-9 rounded-lg text-[14px]',
+                locale === l ? 'bg-bg font-semibold shadow-sm' : 'text-muted'
+              )}
             >
               {l === 'ru' ? 'Русский' : 'Oʻzbekcha'}
             </button>

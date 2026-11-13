@@ -1,6 +1,8 @@
 import { cn } from '@/shared/lib/cn'
 
-type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'ghost' }
+type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: 'primary' | 'ghost'
+}
 
 export function Button({ className, variant = 'primary', ...props }: Props) {
   return (

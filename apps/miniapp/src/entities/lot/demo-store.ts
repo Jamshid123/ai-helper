@@ -60,7 +60,13 @@ export function getRoom(lotId: string): Room {
   if (!room) {
     const lot = lots.find((l) => l.id === lotId)
     if (!lot) throw new Error(`Unknown lot ${lotId}`)
-    room = { lotId, start: BigInt(lot.startPrice), step: BigInt(lot.step), closesAt: Date.parse(lot.closesAt), bids: [] }
+    room = {
+      lotId,
+      start: BigInt(lot.startPrice),
+      step: BigInt(lot.step),
+      closesAt: Date.parse(lot.closesAt),
+      bids: [],
+    }
     // пара стартовых ставок, чтобы история не была пустой
     for (const who of BOT_NAMES.slice(0, 2)) {
       const r = placeBid(room, roomMinBid(room), who, false, Date.now() - 600_000)

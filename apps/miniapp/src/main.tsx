@@ -17,7 +17,9 @@ function applyScheme() {
 applyScheme()
 getWebApp()?.onEvent('themeChanged', applyScheme)
 
-const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 10_000, retry: 1 } } })
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 10_000, retry: 1 } },
+})
 const router = createRouter({ routeTree, defaultPreload: 'intent' })
 
 declare module '@tanstack/react-router' {

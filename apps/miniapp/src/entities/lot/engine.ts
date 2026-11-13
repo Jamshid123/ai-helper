@@ -5,7 +5,13 @@ import { minNextBid } from '@auksion/shared'
  * первая ставка ≥ старта, далее ≥ текущая + шаг, после закрытия — отказ,
  * порядковый номер монотонный. На проде решение принимает только сервер.
  */
-export type Bid = { seq: number; amount: bigint; bidder: string; isMe: boolean; at: number }
+export type Bid = {
+  seq: number
+  amount: bigint
+  bidder: string
+  isMe: boolean
+  at: number
+}
 
 export type Room = {
   lotId: string
@@ -15,9 +21,7 @@ export type Room = {
   bids: Bid[]
 }
 
-export type BidResult =
-  | { ok: true; room: Room; bid: Bid }
-  | { ok: false; reason: 'TOO_LOW' | 'CLOSED'; minBid: bigint }
+export type BidResult = { ok: true; room: Room; bid: Bid } | { ok: false; reason: 'TOO_LOW' | 'CLOSED'; minBid: bigint }
 
 export function currentPrice(room: Room): bigint | null {
   return room.bids.length ? room.bids[room.bids.length - 1].amount : null

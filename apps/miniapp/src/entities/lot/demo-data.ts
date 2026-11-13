@@ -18,7 +18,13 @@ const SEEDS: Seed[] = [
     step: '100000',
     admittedCount: 23,
     fee: '12000',
-    inspection: { summary: 'Корпус без сколов, экран без царапин, Face ID работает', battery: 89, imeiChecked: true, kit: ['Телефон', 'Кабель USB-C — Lightning', 'Коробка'], defects: ['Лёгкие потёртости рамки у разъёма'] },
+    inspection: {
+      summary: 'Корпус без сколов, экран без царапин, Face ID работает',
+      battery: 89,
+      imeiChecked: true,
+      kit: ['Телефон', 'Кабель USB-C — Lightning', 'Коробка'],
+      defects: ['Лёгкие потёртости рамки у разъёма'],
+    },
     hue: 268,
   },
   {
@@ -29,7 +35,13 @@ const SEEDS: Seed[] = [
     step: '100000',
     admittedCount: 17,
     fee: '12000',
-    inspection: { summary: 'Новый, в заводской плёнке, официальная поставка', battery: null, imeiChecked: true, kit: ['Телефон', 'Кабель USB-C', 'Скрепка', 'Документы'], defects: [] },
+    inspection: {
+      summary: 'Новый, в заводской плёнке, официальная поставка',
+      battery: null,
+      imeiChecked: true,
+      kit: ['Телефон', 'Кабель USB-C', 'Скрепка', 'Документы'],
+      defects: [],
+    },
     hue: 210,
   },
   {
@@ -40,7 +52,13 @@ const SEEDS: Seed[] = [
     step: '100000',
     admittedCount: 9,
     fee: '12000',
-    inspection: { summary: 'Все функции работают, следов ремонта нет', battery: 93, imeiChecked: true, kit: ['Телефон', 'Зарядное устройство 90 Вт', 'Чехол'], defects: [] },
+    inspection: {
+      summary: 'Все функции работают, следов ремонта нет',
+      battery: 93,
+      imeiChecked: true,
+      kit: ['Телефон', 'Зарядное устройство 90 Вт', 'Чехол'],
+      defects: [],
+    },
     hue: 150,
   },
   {
@@ -51,7 +69,13 @@ const SEEDS: Seed[] = [
     step: '100000',
     admittedCount: 31,
     fee: '12000',
-    inspection: { summary: 'Новый, запечатан', battery: null, imeiChecked: true, kit: ['Телефон', 'Кабель USB-C', 'Документы'], defects: [] },
+    inspection: {
+      summary: 'Новый, запечатан',
+      battery: null,
+      imeiChecked: true,
+      kit: ['Телефон', 'Кабель USB-C', 'Документы'],
+      defects: [],
+    },
     hue: 40,
   },
   {
@@ -62,7 +86,13 @@ const SEEDS: Seed[] = [
     step: '100000',
     admittedCount: 6,
     fee: '12000',
-    inspection: { summary: 'Работает исправно, заменялось защитное стекло', battery: 86, imeiChecked: true, kit: ['Телефон', 'Кабель USB-C'], defects: ['Царапина на задней панели 4 мм'] },
+    inspection: {
+      summary: 'Работает исправно, заменялось защитное стекло',
+      battery: 86,
+      imeiChecked: true,
+      kit: ['Телефон', 'Кабель USB-C'],
+      defects: ['Царапина на задней панели 4 мм'],
+    },
     hue: 0,
   },
 ]

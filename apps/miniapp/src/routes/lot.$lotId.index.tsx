@@ -31,7 +31,11 @@ function AdmissionSheet({ lot, onClose, onPaid }: { lot: Lot; onClose: () => voi
     haptic('success')
     onPaid()
   }, [agree, lot.id, onPaid])
-  const native = useMainButton({ text: `${t('admission.pay')}`, onClick: pay, enabled: agree })
+  const native = useMainButton({
+    text: `${t('admission.pay')}`,
+    onClick: pay,
+    enabled: agree,
+  })
 
   return (
     <div className='fixed inset-0 z-20 flex items-end bg-black/40' role='dialog' aria-modal='true' onClick={onClose}>
@@ -80,7 +84,8 @@ function LotPage() {
   const navigate = useNavigate()
   const now = useNow()
   const { data: lot } = useLot(lotId)
-  const [sheet, setSheet] = useState(false)
+  const search = Route.useSearch()
+  const [sheet, setSheet] = useState(Boolean(search.admit))
   const back = useCallback(() => navigate({ to: '/' }), [navigate])
   useBackButton(sheet ? null : back)
 
@@ -178,9 +183,28 @@ function LotPage() {
         </Button>
       )}
 
-      {sheet && <AdmissionSheet lot={lot} onClose={() => setSheet(false)} onPaid={() => setSheet(false)} />}
+      {sheet && (
+        <AdmissionSheet
+          lot={lot}
+          onClose={() => setSheet(false)}
+          onPaid={() => {
+            setSheet(false)
+            // Короткий путь: после допуска к идущему лоту — сразу в комнату торгов.
+            if (live)
+              navigate({
+                to: '/lot/$lotId/room',
+                params: { lotId: lot.id },
+                replace: true,
+              })
+          }}
+        />
+      )}
     </div>
   )
 }
 
-export const Route = createFileRoute('/lot/$lotId/')({ component: LotPage })
+export const Route = createFileRoute('/lot/$lotId/')({
+  validateSearch: (s: Record<string, unknown>): { admit?: boolean } =>
+    s.admit === true || s.admit === 'true' ? { admit: true } : {},
+  component: LotPage,
+})

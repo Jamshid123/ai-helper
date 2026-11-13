@@ -42,33 +42,46 @@ function SessionStrip() {
 function LotCard({ lot }: { lot: Lot }) {
   const { t } = useI18n()
   const live = lot.status === 'live'
+  const admitted = isAdmitted(lot.id)
   return (
-    <Link
-      to='/lot/$lotId'
-      params={{ lotId: lot.id }}
-      className='grid grid-cols-[104px_1fr] gap-3 rounded-2xl p-1 transition-colors active:bg-surface'
-    >
-      <LotPhoto hue={lot.hue} className='aspect-square'>
-        {live && <LiveBadge />}
-      </LotPhoto>
-      <div className='flex min-w-0 flex-col gap-1 py-1'>
-        <span className='line-clamp-2 text-[15px] leading-snug font-medium'>{lot.title}</span>
-        <span className='text-[12.5px] text-muted'>
-          {t(lot.condition === 'new' ? 'lot.condition.new' : 'lot.condition.used')} · {t('lot.admitted')}{' '}
-          {lot.admittedCount}
-        </span>
-        <div className='mt-auto flex items-baseline justify-between gap-2'>
-          <span className='grid'>
-            <span className='text-[11.5px] text-muted'>{lot.currentPrice ? t('lot.current') : t('lot.start')}</span>
-            <Price
-              value={lot.currentPrice ?? lot.startPrice}
-              className={cn('text-[17px] font-bold', lot.currentPrice && 'text-brand-ink')}
-            />
+    <div className='grid gap-2'>
+      <Link
+        to='/lot/$lotId'
+        params={{ lotId: lot.id }}
+        className='grid grid-cols-[104px_1fr] gap-3 rounded-2xl p-1 transition-colors active:bg-surface'
+      >
+        <LotPhoto hue={lot.hue} className='aspect-square'>
+          {live && <LiveBadge />}
+        </LotPhoto>
+        <div className='flex min-w-0 flex-col gap-1 py-1'>
+          <span className='line-clamp-2 text-[15px] leading-snug font-medium'>{lot.title}</span>
+          <span className='text-[12.5px] text-muted'>
+            {t(lot.condition === 'new' ? 'lot.condition.new' : 'lot.condition.used')} · {t('lot.admitted')}{' '}
+            {lot.admittedCount}
           </span>
-          {isAdmitted(lot.id) && <span className='text-[11.5px] font-medium text-ok'>✓ {t('lot.admittedBadge')}</span>}
+          <div className='mt-auto flex items-baseline justify-between gap-2'>
+            <span className='grid'>
+              <span className='text-[11.5px] text-muted'>{lot.currentPrice ? t('lot.current') : t('lot.start')}</span>
+              <Price
+                value={lot.currentPrice ?? lot.startPrice}
+                className={cn('text-[17px] font-bold', lot.currentPrice && 'text-brand-ink')}
+              />
+            </span>
+            {admitted && <span className='text-[11.5px] font-medium text-ok'>✓ {t('lot.admittedBadge')}</span>}
+          </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+      {live && (
+        <Link
+          to={admitted ? '/lot/$lotId/room' : '/lot/$lotId'}
+          params={{ lotId: lot.id }}
+          search={admitted ? undefined : { admit: true }}
+          className='flex h-11 items-center justify-center rounded-xl bg-primary text-[15px] font-semibold text-on-primary active:opacity-80'
+        >
+          {admitted ? t('catalog.toRoom') : t('lot.participate')}
+        </Link>
+      )}
+    </div>
   )
 }
 
