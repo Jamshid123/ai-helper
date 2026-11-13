@@ -5,6 +5,7 @@
 ## [Unreleased]
 
 ### Deployed
+- 13.11.2026 — Deploy #6 (коммит `9ed20d3`): на сервере впервые запущены API и Redis, применены миграции БД, health-check Mini App и API зелёный.
 - 13.11.2026 — демо-стенд Mini App на https://auksion.expertly.uz (коммит `ed6e299`), кнопка меню @auksionchi1_bot.
 
 ### Fixed
