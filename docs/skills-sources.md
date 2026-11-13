@@ -10,6 +10,7 @@
 | `spec-check` | trailofbits/skills — spec-to-code-compliance | CC BY-SA 4.0 | Пошаговая проверка требований, шкала вердиктов, рубрика серьёзности, попытка опровергнуть находку |
 | `frontend` | Документация Telegram Mini Apps (core.telegram.org/bots/webapps), `@telegram-apps/sdk` | — | Проверка initData, нативные кнопки, тема, safe area |
 | `deploy` | Документация GitHub Actions по hardening, Docker best practices | — | Закрепление actions по SHA, минимальные permissions, non-root контейнеры |
+| `ux-review` | Эвристики Нильсена, WCAG 2.2, Apple HIG, Material 3, Telegram Mini Apps guidelines, Baymard Institute, Laws of UX, Refactoring UI; anthropics/skills — frontend-design (Apache-2.0) | — / Apache-2.0 | Чек-лист, шкала серьёзности, признаки «ИИ-шаблона» — переписано под проект |
 | `backend`, `mobile` | Документация NestJS, Prisma, BullMQ, Expo | — | — |
 
 При обновлении скилла из внешнего источника: прочитать изменения целиком, не тянуть исполняемые файлы, обновить эту таблицу.

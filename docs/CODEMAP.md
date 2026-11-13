@@ -8,12 +8,13 @@
 |---|---|
 | `CLAUDE.md` | Правила работы, таблица скиллов, процесс изменений |
 | `CHANGELOG.md` | Журнал изменений |
-| `.claude/skills/<name>/SKILL.md` | Скиллы: backend, frontend, mobile, testing, security, deploy, spec-check, token-economy |
+| `.claude/skills/<name>/SKILL.md` | Скиллы: backend, frontend, mobile, testing, security, deploy, spec-check, token-economy, ux-review |
 | `.claude/settings.json` | Запрет чтения секретов и сгенерированных артефактов |
 | `docs/STATUS.md` | Текущее состояние и следующий шаг |
 | `docs/PROJECT_CONTEXT.md` | Архитектура, стек, инварианты, решения, открытые вопросы |
 | `docs/spec/tz.md` | ТЗ (эталон) |
 | `docs/skills-sources.md` | Источники методик скиллов |
+| `docs/plans/mobile-app.md` | План мобильного приложения (Expo) |
 | `package.json`, `pnpm-workspace.yaml`, `.nvmrc` | Монорепо pnpm, Node 22; корневые `lint/typecheck/test/build` |
 | `.github/workflows/ci.yml` | CI: gitleaks, `pnpm audit`, lint, typecheck, тесты (Chromium), build |
 | `.github/workflows/server-inspect.yml` | Ручной осмотр сервера (только чтение) |
