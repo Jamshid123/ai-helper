@@ -23,6 +23,7 @@
 - Раздел «Дизайн» (§10) в `docs/PROJECT_CONTEXT.md`.
 - `packages/shared`: правила торгов из ТЗ (`minNextBid`, `prepaymentAmount`, сроки), форматирование сумов (bigint), расписание пятничной сессии по Ташкенту — общие для всех приложений.
 - `apps/miniapp`: Telegram Mini App — демо-стенд на тестовых данных: каталог с отсчётом до торгов и фильтрами, карточка лота с актом проверки и условиями, допуск с согласием на правила (имитация оплаты), комната торгов (мин. ставка по правилам ТЗ, быстрые шаги, история, «перебили»), профиль с выбором языка. Нативные MainButton/BackButton, тема Telegram, палитра B, ru/uz.
+- `infra/Dockerfile.spa` + `infra/nginx/spa.conf`: образ статики (Mini App / админка) на nginx-unprivileged без root, CSP (Mini App встраивается только в Telegram, админка — никуда), кэш ассетов, `/healthz`.
 
 ### Changed
 - `valibot` (необязательная зависимость `@hookform/resolvers`) закреплён на `^1.2.0` через `pnpm.overrides` — закрыта уязвимость ReDoS (GHSA-vqpr-j7v3-hqw9).

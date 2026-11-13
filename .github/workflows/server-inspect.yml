@@ -16,6 +16,14 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
+      - name: Check secrets
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          SSHPASS: ${{ secrets.SERVER_ROOT_PASSWORD }}
+        run: |
+          [ -n "$HOST" ] || { echo "::error::Нет секрета SERVER_HOST (Settings → Secrets and variables → Actions)"; exit 1; }
+          [ -n "$SSHPASS" ] || { echo "::error::Нет секрета SERVER_ROOT_PASSWORD"; exit 1; }
+
       - name: Install sshpass
         run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
 

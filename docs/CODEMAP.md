@@ -27,5 +27,5 @@
 |---|---|
 | `apps/api` | NestJS API + worker (BullMQ). Модули: auth, users, catalog, inspection, auctions, payments, fulfillment, antifraud, notifications, audit |
 | `apps/mobile` | Expo (не в MVP) |
-| `infra/` | docker-compose, proxy, deploy.sh, backup.sh |
+| `infra/` | `Dockerfile.spa`, `nginx/spa.conf` (есть); docker-compose, proxy, deploy.sh, backup.sh (будут) |
 | `.github/workflows/deploy.yml` | CD в прод при пуше в `main` |
