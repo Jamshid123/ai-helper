@@ -85,7 +85,7 @@ packages/
 infra/
   docker-compose.yml, Caddyfile, deploy scripts
 docs/
-  PROJECT_CONTEXT.md, spec/tz.md, adr/
+  STATUS.md, CODEMAP.md, PROJECT_CONTEXT.md, spec/tz.md
 .claude/skills/ # скиллы разработки
 CHANGELOG.md
 ```
@@ -107,7 +107,7 @@ CHANGELOG.md
 |---|---|
 | 13.11.2026 | Первый клиент — Telegram Mini App; mobile (Expo) — позже на том же API |
 | 13.11.2026 | Стек из §5 утверждён |
-| 13.11.2026 | Домен: `aukcion.expertly.us` (поддомен `expertly.us`) |
+| 13.11.2026 | Домен: `aukcion.expertly.us` (поддомен `expertly.us`). DNS `expertly.us` управляется в Vercel → A-запись `aukcion` на IP сервера |
 | 13.11.2026 | Телефон подтверждается через «Поделиться контактом» в Telegram (не SMS OTP). SMS понадобится только для mobile |
 | 13.11.2026 | Языки: русский и узбекский (латиница) с первого дня |
 | 13.11.2026 | Админка в MVP — полная: все роли из §2, MFA, аудит |

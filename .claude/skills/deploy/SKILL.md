@@ -19,7 +19,7 @@ worker (тот же образ api, команда worker) ─▶ BullMQ зад�
 ```
 
 - Reverse proxy: если на сервере уже есть nginx/Caddy для `expertly.us` — добавляем в него виртуальный хост; иначе Caddy в compose (авто-TLS). Выяснить при получении доступа.
-- DNS: A-запись `aukcion.expertly.us` (и админки) → IP сервера.
+- DNS: зона `expertly.us` в **Vercel** → A-запись `aukcion` (и админки) → IP сервера.
 
 ## Существующий PostgreSQL на сервере
 

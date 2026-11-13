@@ -11,3 +11,9 @@
 - Скиллы `.claude/skills/`: `backend`, `frontend`, `mobile`, `testing`, `security`, `deploy`, `spec-check`.
 - `docs/skills-sources.md` — источники и лицензии методик, использованных в скиллах.
 - `.gitignore`.
+- Скилл `token-economy`: порядок получения контекста (STATUS → CODEMAP → точечное чтение), короткий вывод команд, поддержание «памяти проекта».
+- `docs/STATUS.md` и `docs/CODEMAP.md` — состояние проекта и карта кода, чтобы не переиндексировать репозиторий.
+- `.claude/settings.json` — запрет чтения `.env`, ключей и сгенерированных артефактов.
+
+### Changed
+- DNS `expertly.us` в Vercel зафиксирован в решениях и скилле `deploy`.
