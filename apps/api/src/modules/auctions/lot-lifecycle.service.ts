@@ -10,7 +10,8 @@ export type CloseOutcome = 'SKIPPED' | 'CLOSED_SOLD' | 'CLOSED_UNSOLD'
 
 /**
  * Жизненный цикл лота (ТЗ «Расписание», «Закрытие торгов»): в 09:00 лот открывается, с 18:00 предложения отклоняются,
- * закрытие выполняется ровно один раз и создаёт одно обязательство оплаты (уникальность (lotId, rank) в БД).
+ * закрытие выполняется ровно один раз и создаёт одно предложение купить (уникальность (lotId, rank) в БД);
+ * продажа заключается только после подтверждения победителем (15 мин), затем 30% за 2 часа.
  * Вызывается догоняющим sweep-ом — переживает перезапуски, не зависит от точности таймеров.
  */
 @Injectable()
@@ -83,7 +84,7 @@ export class LotLifecycleService {
           rank: 1,
           amount: top.amount,
           prepaymentAmount: prepaymentAmount(top.amount),
-          prepaymentDeadline: new Date(now.getTime() + RULES.PREPAYMENT_WINDOW_MIN * 60_000),
+          confirmDeadline: new Date(now.getTime() + RULES.CONFIRM_WINDOW_MIN * 60_000),
         },
       })
       await tx.outboxEvent.createMany({
@@ -97,7 +98,7 @@ export class LotLifecycleService {
               userId: top.user_id,
               amount: top.amount.toString(),
               prepayment: obligation.prepaymentAmount.toString(),
-              deadline: obligation.prepaymentDeadline.toISOString(),
+              confirmDeadline: obligation.confirmDeadline.toISOString(),
             },
           },
         ],

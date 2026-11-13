@@ -32,7 +32,7 @@ describe('Жизненный цикл лота', () => {
     expect(await db.outboxEvent.count({ where: { type: 'lot.opened' } })).toBe(1)
   })
 
-  it('закрытие: побеждает максимальная сумма, обязательство 30% и срок 15 минут', async () => {
+  it('закрытие: побеждает максимальная сумма; предложение купить с 30% и сроком подтверждения 15 минут', async () => {
     const lot = await createLot(db, { opensAt: OPEN, closesAt: CLOSE })
     await bid(lot.id, 2_000_000n, 1)
     const best = await bid(lot.id, 2_400_000n, 2)
@@ -44,9 +44,10 @@ describe('Жизненный цикл лота', () => {
       rank: 1,
       amount: 2_400_000n,
       prepaymentAmount: 720_000n,
-      status: 'AWAITING_PREPAYMENT',
+      status: 'AWAITING_CONFIRMATION',
     })
-    expect(ob.prepaymentDeadline.toISOString()).toBe('2026-11-20T13:15:00.000Z')
+    expect(ob.confirmDeadline.toISOString()).toBe('2026-11-20T13:15:00.000Z')
+    expect(ob.prepaymentDeadline).toBeNull() // продажа ещё не заключена
   })
 
   it('без предложений — закрытие без продажи, обязательств нет', async () => {

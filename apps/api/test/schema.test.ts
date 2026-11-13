@@ -50,7 +50,7 @@ describe('гарантии схемы БД (последняя линия защ
       rank: 1,
       amount: 2_000_000n,
       prepaymentAmount: 600_000n,
-      prepaymentDeadline: new Date(),
+      confirmDeadline: new Date(),
     }
     await db.obligation.create({ data })
     await expect(db.obligation.create({ data })).rejects.toThrow(/Unique constraint/)

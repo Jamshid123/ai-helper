@@ -83,7 +83,7 @@ export const dict = {
     'howto.hide': 'Скрыть',
     'howto.1': 'Выберите лот и получите допуск — взнос за участие в одном лоте',
     'howto.2': 'В пятницу с 09:00 до 18:00 предлагайте цену в комнате торгов',
-    'howto.3': 'Победили — внесите 30% за 15 минут, остаток и получение товара — за 24 часа',
+    'howto.3': 'Победили — подтвердите покупку за 15 минут, внесите 30% за 2 часа, остаток и получение товара — за 24 часа',
     'lot.refund': 'Возврат взноса',
     'lot.refund.text':
       'Возвращаем, если до открытия торгов описание лота существенно исправлено или если оплата пришла после закрытия торгов',
@@ -119,7 +119,7 @@ export const dict = {
     'lot.noDefects': 'Не обнаружены',
     'lot.terms': 'Условия',
     'lot.terms.text':
-      'Победитель вносит 30% за 15 минут после торгов, остаток — и получение товара в пункте выдачи — в течение 24 часов. Невыкуп ограничивает участие в торгах на 50 дней.',
+      'Победитель подтверждает покупку за 15 минут после торгов, вносит 30% за 2 часа, остаток — и получение товара в пункте выдачи — в течение 24 часов. При получении можно осмотреть товар. Отказ без уважительной причины снижает рейтинг и может ограничить участие в торгах.',
     'lot.fee': 'Взнос за участие',
     'lot.feeNote': 'Взнос за один лот, не входит в цену товара',
     'lot.opensIn': 'Откроется через',
@@ -233,7 +233,7 @@ export const dict = {
     'howto.hide': 'Yashirish',
     'howto.1': 'Lotni tanlang va ruxsat oling — bitta lotda ishtirok badali',
     'howto.2': 'Juma kuni 09:00 dan 18:00 gacha savdo xonasida narx taklif qiling',
-    'howto.3': 'Yutdingizmi — 15 daqiqada 30% toʻlang, qolganini toʻlash va tovarni olish — 24 soat ichida',
+    'howto.3': 'Yutdingizmi — 15 daqiqada xaridni tasdiqlang, 2 soatda 30% toʻlang, qolganini toʻlash va tovarni olish — 24 soat ichida',
     'lot.refund': 'Badalni qaytarish',
     'lot.refund.text':
       'Savdo ochilishidan oldin lot tavsifi jiddiy tuzatilsa yoki toʻlov savdo yopilgandan keyin kelsa, qaytaramiz',
@@ -269,7 +269,7 @@ export const dict = {
     'lot.noDefects': 'Aniqlanmadi',
     'lot.terms': 'Shartlar',
     'lot.terms.text':
-      'Gʻolib savdodan keyin 15 daqiqa ichida 30% toʻlaydi, qolgan qismini toʻlash va tovarni olish — 24 soat ichida. Sotib olmaslik savdolarda ishtirokni 50 kunga cheklaydi.',
+      'Gʻolib savdodan keyin 15 daqiqada xaridni tasdiqlaydi, 2 soatda 30% toʻlaydi, qolganini toʻlash va topshirish punktida tovarni olish — 24 soat ichida. Olishda tovarni koʻrib chiqish mumkin. Uzrli sababsiz rad etish reytingni pasaytiradi va savdoda ishtirokni cheklashi mumkin.',
     'lot.fee': 'Ishtirok badali',
     'lot.feeNote': 'Bitta lot uchun badal, tovar narxiga kirmaydi',
     'lot.opensIn': 'Ochilishiga',

@@ -9,6 +9,7 @@ import { AuthModule } from './modules/auth/auth.module'
 import { CatalogModule } from './modules/catalog/catalog.module'
 import { PaymentsModule } from './modules/payments/payments.module'
 import { RemindersModule } from './modules/reminders/reminders.module'
+import { FulfillmentModule } from './modules/fulfillment/fulfillment.module'
 import { HealthModule } from './modules/health/health.module'
 import { PrismaModule } from './prisma/prisma.module'
 
@@ -47,6 +48,7 @@ export const LOG_REDACT = [
     PaymentsModule,
     RemindersModule,
     AuctionsModule,
+    FulfillmentModule,
   ],
 })
 export class AppModule {}

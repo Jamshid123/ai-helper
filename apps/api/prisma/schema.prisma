@@ -215,6 +215,7 @@ model Order {
 }
 
 enum ObligationStatus {
+  AWAITING_CONFIRMATION
   AWAITING_PREPAYMENT
   AWAITING_REMAINDER
   AWAITING_PICKUP
@@ -223,7 +224,8 @@ enum ObligationStatus {
   CANCELLED
 }
 
-/// Обязательство выкупа: победитель (rank 1) или следующий по рейтингу. Одно на (лот, место в очереди).
+/// Предложение купить лот: победителю (rank 1) или следующему по рейтингу. Одно на (лот, место в очереди).
+/// Продажа заключается только после подтверждения (confirmedAt) — лидерство само по себе не продажа.
 model Obligation {
   id                 String           @id @default(uuid()) @db.Uuid
   lotId              String           @db.Uuid
@@ -234,8 +236,12 @@ model Obligation {
   rank               Int
   amount             BigInt
   prepaymentAmount   BigInt
-  status             ObligationStatus @default(AWAITING_PREPAYMENT)
-  prepaymentDeadline DateTime         @db.Timestamptz
+  status             ObligationStatus @default(AWAITING_CONFIRMATION)
+  /// Срок подтвердить покупку (15 мин).
+  confirmDeadline    DateTime         @db.Timestamptz
+  confirmedAt        DateTime?        @db.Timestamptz
+  /// Срок оплаты 30% — назначается при подтверждении (2 ч).
+  prepaymentDeadline DateTime?        @db.Timestamptz
   remainderDeadline  DateTime?        @db.Timestamptz
   /// Хэш одноразового кода выдачи (сам код показывается только покупателю).
   pickupCodeHash     String?
@@ -243,6 +249,7 @@ model Obligation {
   updatedAt          DateTime         @updatedAt @db.Timestamptz
 
   @@unique([lotId, rank])
+  @@index([status, confirmDeadline])
   @@index([status, prepaymentDeadline])
 }
 
