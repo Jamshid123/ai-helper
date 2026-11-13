@@ -1,11 +1,13 @@
 import { useState } from 'react'
+import { X } from 'lucide-react'
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { SESSION_TZ, currentOrNextSession } from '@auksion/shared'
+import { currentOrNextSession } from '@auksion/shared'
 import { useI18n } from '@/app/i18n'
-import { useLots } from '@/entities/lot/api'
+import { DEMO, useLots } from '@/entities/lot/api'
 import { isAdmitted } from '@/entities/lot/demo-store'
 import { type Condition, type Lot } from '@/entities/lot/types'
 import { cn } from '@/shared/lib/cn'
+import { formatSessionDate } from '@/shared/lib/format-date'
 import { formatCountdown, useNow } from '@/shared/lib/use-now'
 import { LiveBadge } from '@/shared/ui/live-badge'
 import { LotPhoto } from '@/shared/ui/lot-photo'
@@ -13,29 +15,77 @@ import { Price } from '@/shared/ui/price'
 
 type Filter = 'all' | Condition
 
-function SessionStrip() {
+function SessionStrip({ demoLiveUntil }: { demoLiveUntil: Date | null }) {
   const { t, locale } = useI18n()
   const now = useNow()
   const s = currentOrNextSession(new Date(now))
-  const target = s.isLive ? s.closesAt : s.opensAt
-  const when = new Intl.DateTimeFormat(locale === 'uz' ? 'uz-Latn' : 'ru-RU', {
-    timeZone: SESSION_TZ,
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(target)
+  // В демо часть лотов «идёт» в любой день — полоса не должна противоречить LIVE-карточкам.
+  const live = demoLiveUntil !== null || s.isLive
+  const target = demoLiveUntil ?? (s.isLive ? s.closesAt : s.opensAt)
+  const title = demoLiveUntil ? t('catalog.demoLive') : s.isLive ? t('catalog.liveNow') : t('catalog.nextSession')
   return (
     <div className='flex items-center justify-between rounded-2xl bg-surface px-4 py-3'>
       <div className='grid'>
-        <span className='text-[13px] text-muted'>{s.isLive ? t('catalog.liveNow') : t('catalog.nextSession')}</span>
+        <span className='text-[13px] text-muted'>{title}</span>
         <span className='text-[13px]'>
-          {s.isLive ? `${t('catalog.until')} ` : ''}
-          {when}
+          {live
+            ? locale === 'uz'
+              ? `${formatSessionDate(target, locale)} ${t('catalog.until')}`
+              : `${t('catalog.until')} ${formatSessionDate(target, locale)}`
+            : formatSessionDate(target, locale)}
         </span>
       </div>
-      <span className='tabular text-lg font-semibold'>{formatCountdown(target.getTime() - now, t('time.d'))}</span>
+      <span className={cn('tabular text-lg font-semibold', live && 'text-hot-text')}>
+        {formatCountdown(target.getTime() - now, t('time.d'))}
+      </span>
     </div>
+  )
+}
+
+const HOWTO_KEY = 'auksion.howto.hidden'
+
+function HowTo() {
+  const { t } = useI18n()
+  const [hidden, setHidden] = useState(() => {
+    try {
+      return localStorage.getItem(HOWTO_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+  if (hidden) return null
+  const hide = () => {
+    setHidden(true)
+    try {
+      localStorage.setItem(HOWTO_KEY, '1')
+    } catch {
+      // не критично
+    }
+  }
+  return (
+    <section className='relative rounded-2xl border border-line px-4 py-3' aria-label={t('howto.title')}>
+      <div className='mb-2 flex items-center justify-between'>
+        <h2 className='text-[15px] font-semibold'>{t('howto.title')}</h2>
+        <button
+          type='button'
+          onClick={hide}
+          aria-label={t('howto.hide')}
+          className='-mr-2 grid size-11 place-items-center text-muted'
+        >
+          <X className='size-4' />
+        </button>
+      </div>
+      <ol className='grid gap-2'>
+        {(['howto.1', 'howto.2', 'howto.3'] as const).map((k, i) => (
+          <li key={k} className='grid grid-cols-[24px_1fr] gap-2 text-[13.5px] leading-snug'>
+            <span className='grid size-6 place-items-center rounded-full bg-primary text-[12px] font-bold text-on-primary'>
+              {i + 1}
+            </span>
+            <span className='pt-0.5'>{t(k)}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
   )
 }
 
@@ -44,7 +94,7 @@ function LotCard({ lot }: { lot: Lot }) {
   const live = lot.status === 'live'
   const admitted = isAdmitted(lot.id)
   return (
-    <div className='grid gap-2'>
+    <div className='grid gap-2 border-b border-line pb-4 last:border-b-0'>
       <Link
         to='/lot/$lotId'
         params={{ lotId: lot.id }}
@@ -76,7 +126,7 @@ function LotCard({ lot }: { lot: Lot }) {
           to={admitted ? '/lot/$lotId/room' : '/lot/$lotId'}
           params={{ lotId: lot.id }}
           search={admitted ? undefined : { admit: true }}
-          className='flex h-11 items-center justify-center rounded-xl bg-primary text-[15px] font-semibold text-on-primary active:opacity-80'
+          className='flex h-12 items-center justify-center rounded-xl bg-primary text-[15px] font-semibold text-on-primary active:opacity-80'
         >
           {admitted ? t('catalog.toRoom') : t('lot.participate')}
         </Link>
@@ -90,10 +140,13 @@ function Catalog() {
   const { data: lots = [] } = useLots()
   const [filter, setFilter] = useState<Filter>('all')
   const visible = lots.filter((l) => filter === 'all' || l.condition === filter)
+  const liveLot = DEMO ? lots.find((l) => l.status === 'live') : undefined
+  const demoLiveUntil = liveLot ? new Date(liveLot.closesAt) : null
 
   return (
     <div className='flex flex-col gap-4 px-4 pt-4'>
-      <SessionStrip />
+      <SessionStrip demoLiveUntil={demoLiveUntil} />
+      <HowTo />
 
       <div className='flex gap-2 overflow-x-auto' role='tablist' aria-label='Категории'>
         <span className='rounded-full bg-fg px-3.5 py-1.5 text-[13px] font-medium text-bg'>
@@ -111,7 +164,7 @@ function Catalog() {
             type='button'
             onClick={() => setFilter(f)}
             className={cn(
-              '-mb-px border-b-2 pb-2',
+              '-mb-px flex h-11 items-end border-b-2 pb-2.5',
               filter === f ? 'border-primary font-semibold text-fg' : 'border-transparent text-muted'
             )}
           >
@@ -120,7 +173,7 @@ function Catalog() {
         ))}
       </div>
 
-      <div className='flex flex-col gap-2'>
+      <div className='flex flex-col gap-4'>
         {visible.map((lot) => (
           <LotCard key={lot.id} lot={lot} />
         ))}

@@ -8,6 +8,19 @@ import { telegramLanguage } from './telegram'
  */
 export const dict = {
   ru: {
+    'howto.title': 'Как это работает',
+    'howto.hide': 'Скрыть',
+    'howto.1': 'Выберите лот и получите допуск — взнос за участие в одном лоте',
+    'howto.2': 'В пятницу с 09:00 до 18:00 предлагайте цену в комнате торгов',
+    'howto.3': 'Победили — внесите 30% за 15 минут, остаток и получение товара — за 24 часа',
+    'lot.refund': 'Возврат взноса',
+    'lot.refund.text':
+      'Возвращаем, если до открытия торгов описание лота существенно исправлено или если оплата пришла после закрытия торгов',
+    'lot.pickup': 'Пункт выдачи',
+    'lot.pickup.text': 'Ташкент — адрес и график сообщим до начала торгов',
+    'room.confirm': 'Подтвердить',
+    'room.online': 'в комнате',
+    'catalog.demoLive': 'Идут демо-торги',
     'app.demo': 'Демо-стенд: данные тестовые, оплата не списывается',
     'app.openInTelegram': 'Откройте приложение в Telegram',
     'catalog.nextSession': 'Торги в пятницу',
@@ -74,6 +87,19 @@ export const dict = {
     'time.d': 'д',
   },
   uz: {
+    'howto.title': 'Bu qanday ishlaydi',
+    'howto.hide': 'Yashirish',
+    'howto.1': 'Lotni tanlang va ruxsat oling — bitta lotda ishtirok badali',
+    'howto.2': 'Juma kuni 09:00 dan 18:00 gacha savdo xonasida narx taklif qiling',
+    'howto.3': 'Yutdingizmi — 15 daqiqada 30% toʻlang, qolganini toʻlash va tovarni olish — 24 soat ichida',
+    'lot.refund': 'Badalni qaytarish',
+    'lot.refund.text':
+      'Savdo ochilishidan oldin lot tavsifi jiddiy tuzatilsa yoki toʻlov savdo yopilgandan keyin kelsa, qaytaramiz',
+    'lot.pickup': 'Topshirish punkti',
+    'lot.pickup.text': 'Toshkent — manzil va ish vaqtini savdodan oldin xabar qilamiz',
+    'room.confirm': 'Tasdiqlash',
+    'room.online': 'xonada',
+    'catalog.demoLive': 'Demo-savdo ketmoqda',
     'app.demo': 'Demo: maʼlumotlar sinov uchun, toʻlov yechilmaydi',
     'app.openInTelegram': 'Ilovani Telegramda oching',
     'catalog.nextSession': 'Savdo juma kuni',

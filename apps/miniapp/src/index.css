@@ -10,13 +10,14 @@
   --bg: var(--tg-theme-bg-color, #ffffff);
   --surface: var(--tg-theme-secondary-bg-color, #f0f1f2);
   --fg: var(--tg-theme-text-color, #18181b);
-  --muted: var(--tg-theme-hint-color, #757575);
+  --muted: var(--tg-theme-hint-color, #52525b);
   --line: color-mix(in oklab, var(--fg) 12%, transparent);
   --primary: #f97216;
   --on-primary: #ffffff;
   --brand-ink: #c2410c;
   --hot: #e11d48;
-  --ok: #15803d;
+  --hot-text: #be123c;
+  --ok: #166534;
   color-scheme: light;
 }
 
@@ -27,6 +28,7 @@
   --muted: var(--tg-theme-hint-color, #a1a1aa);
   --brand-ink: #fb923c;
   --hot: #fb7185;
+  --hot-text: #fb7185;
   --ok: #4ade80;
   color-scheme: dark;
 }
@@ -42,6 +44,7 @@
   --color-on-primary: var(--on-primary);
   --color-brand-ink: var(--brand-ink);
   --color-hot: var(--hot);
+  --color-hot-text: var(--hot-text);
   --color-ok: var(--ok);
 }
 
@@ -70,4 +73,17 @@ body {
 
 :root[data-scheme='dark'] .lot-photo-bg {
   filter: brightness(0.45) saturate(0.7);
+}
+
+/* Короткая подсветка нового предложения в ходе торгов */
+@keyframes flash-new {
+  from {
+    background-color: color-mix(in oklab, var(--primary) 18%, transparent);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+.flash-new {
+  animation: flash-new 1.2s ease-out;
 }

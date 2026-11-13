@@ -1,11 +1,13 @@
 import { useCallback, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { BadgeCheck } from 'lucide-react'
+import { formatSum } from '@auksion/shared'
 import { useI18n } from '@/app/i18n'
 import { haptic, useBackButton, useMainButton } from '@/app/telegram'
 import { useLot } from '@/entities/lot/api'
 import { admit, isAdmitted } from '@/entities/lot/demo-store'
 import { type Lot } from '@/entities/lot/types'
+import { cn } from '@/shared/lib/cn'
 import { formatCountdown, useNow } from '@/shared/lib/use-now'
 import { Button } from '@/shared/ui/button'
 import { LiveBadge } from '@/shared/ui/live-badge'
@@ -15,14 +17,14 @@ import { Price } from '@/shared/ui/price'
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className='flex items-baseline justify-between gap-4 py-2.5'>
-      <span className='text-[14px] text-muted'>{label}</span>
+      <span className='shrink-0 text-[14px] text-muted'>{label}</span>
       <span className='text-right text-[14px]'>{children}</span>
     </div>
   )
 }
 
 function AdmissionSheet({ lot, onClose, onPaid }: { lot: Lot; onClose: () => void; onPaid: () => void }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [agree, setAgree] = useState(false)
   const pay = useCallback(() => {
     if (!agree) return
@@ -32,7 +34,7 @@ function AdmissionSheet({ lot, onClose, onPaid }: { lot: Lot; onClose: () => voi
     onPaid()
   }, [agree, lot.id, onPaid])
   const native = useMainButton({
-    text: `${t('admission.pay')}`,
+    text: `${t('admission.pay')} ${formatSum(lot.fee, locale)}`,
     onClick: pay,
     enabled: agree,
   })
@@ -52,7 +54,20 @@ function AdmissionSheet({ lot, onClose, onPaid }: { lot: Lot; onClose: () => voi
           </span>
           <Price value={lot.fee} className='text-lg font-bold' />
         </div>
-        <p className='mb-4 text-[13px] leading-relaxed text-muted'>{t('lot.terms.text')}</p>
+        <dl className='mb-4 grid gap-2 text-[13px] leading-relaxed'>
+          <div>
+            <dt className='font-medium'>{t('lot.terms')}</dt>
+            <dd className='text-muted'>{t('lot.terms.text')}</dd>
+          </div>
+          <div>
+            <dt className='font-medium'>{t('lot.refund')}</dt>
+            <dd className='text-muted'>{t('lot.refund.text')}</dd>
+          </div>
+          <div>
+            <dt className='font-medium'>{t('lot.pickup')}</dt>
+            <dd className='text-muted'>{t('lot.pickup.text')}</dd>
+          </div>
+        </dl>
         <label className='mb-5 flex items-start gap-3 text-[14px]'>
           <input
             id='agree'
@@ -69,7 +84,7 @@ function AdmissionSheet({ lot, onClose, onPaid }: { lot: Lot; onClose: () => voi
           </Button>
           {!native && (
             <Button onClick={pay} disabled={!agree}>
-              {t('admission.pay')}
+              {t('admission.pay')} <Price value={lot.fee} />
             </Button>
           )}
         </div>
@@ -107,7 +122,7 @@ function LotPage() {
   const closes = Date.parse(lot.closesAt)
 
   return (
-    <div className='flex flex-col gap-4 px-4 pt-4'>
+    <div className={cn('flex flex-col gap-4 px-4 pt-4', !native && (!admitted || live) && 'pb-24')}>
       <LotPhoto hue={lot.hue} className='aspect-[4/3]'>
         {live && <LiveBadge />}
       </LotPhoto>
@@ -175,12 +190,18 @@ function LotPage() {
       <section className='grid gap-2'>
         <h2 className='text-[15px] font-semibold'>{t('lot.terms')}</h2>
         <p className='text-[13.5px] leading-relaxed text-muted'>{t('lot.terms.text')}</p>
+        <div className='divide-y divide-line'>
+          <Row label={t('lot.refund')}>{t('lot.refund.text')}</Row>
+          <Row label={t('lot.pickup')}>{t('lot.pickup.text')}</Row>
+        </div>
       </section>
 
       {!native && (!admitted || live) && (
-        <Button onClick={primary} className='sticky bottom-20'>
-          {admitted ? t('lot.toRoom') : t('lot.participate')}
-        </Button>
+        <div className='fixed inset-x-0 bottom-0 z-10 border-t border-line bg-bg px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]'>
+          <Button onClick={primary} className='mx-auto flex w-full max-w-lg'>
+            {admitted ? t('lot.toRoom') : t('lot.participate')}
+          </Button>
+        </div>
       )}
 
       {sheet && (

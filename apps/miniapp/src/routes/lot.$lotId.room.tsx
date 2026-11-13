@@ -40,11 +40,25 @@ function RoomPage() {
   const amount = min + extra * room.step
   const canOffer = admitted && !closed && !iLead
 
+  // Сумма выше минимальной — второе касание «Подтвердить» (защита от случайного обязательства).
+  const [confirming, setConfirming] = useState(false)
+  useEffect(() => {
+    if (!confirming) return
+    const id = setTimeout(() => setConfirming(false), 4000)
+    return () => clearTimeout(id)
+  }, [confirming])
   const offer = () => {
+    if (extra > 0n && !confirming) {
+      setConfirming(true)
+      haptic('tap')
+      return
+    }
     const r = demoPlaceBid(lotId, amount)
     haptic(r.ok ? 'success' : 'error')
     setExtra(0n)
+    setConfirming(false)
   }
+  const offerLabel = confirming ? t('room.confirm') : t('room.bid')
 
   const getAdmission = useCallback(
     () =>
@@ -57,7 +71,7 @@ function RoomPage() {
   )
 
   const native = useMainButton({
-    text: !admitted ? t('room.getAdmission') : `${t('room.bid')} ${formatSum(amount, locale)}`,
+    text: !admitted ? t('room.getAdmission') : `${offerLabel} ${formatSum(amount, locale)}`,
     onClick: !admitted ? getAdmission : offer,
     visible: !closed && (!admitted || canOffer),
   })
@@ -71,7 +85,7 @@ function RoomPage() {
       : iLead
         ? { text: t('room.youLead'), cls: 'bg-ok/10 text-ok' }
         : iBid
-          ? { text: t('room.outbid'), cls: 'bg-hot/10 text-hot' }
+          ? { text: t('room.outbid'), cls: 'bg-hot/10 text-hot-text' }
           : null
 
   const showPanel = !closed && (canOffer || !admitted)
@@ -82,7 +96,7 @@ function RoomPage() {
         <Link
           to='/lot/$lotId'
           params={{ lotId }}
-          className='-ml-1 inline-flex w-max items-center gap-0.5 text-[14px] text-muted'
+          className='-ml-1 inline-flex min-h-11 w-max items-center gap-0.5 text-[14px] text-muted'
         >
           <ChevronLeft className='size-4' /> {t('room.back')}
         </Link>
@@ -91,25 +105,28 @@ function RoomPage() {
       <header className='flex items-start justify-between gap-3'>
         <h1 className='text-[17px] leading-snug font-semibold'>{lot.title}</h1>
         <span className='inline-flex shrink-0 items-center gap-1 text-[12.5px] text-muted'>
-          <Users className='size-3.5' /> {demoOnline(lot)}
+          <Users className='size-3.5' aria-hidden='true' /> {demoOnline(lot)} {t('room.online')}
         </span>
       </header>
 
       {/* Главное: текущая цена, кто лидирует и сколько осталось */}
       <section className='relative overflow-hidden rounded-2xl bg-surface px-4 pt-9 pb-4'>
         {!closed && <LiveBadge />}
-        <div className='flex items-end justify-between gap-3'>
-          <div className='grid gap-0.5'>
+        <div className='flex flex-wrap items-end justify-between gap-x-3 gap-y-3'>
+          <div className='grid min-w-0 gap-0.5'>
             <span className='text-[12.5px] text-muted'>{t('lot.current')}</span>
-            <Price value={price ?? room.start} className='text-[28px] leading-none font-bold text-brand-ink' />
+            <Price
+              value={price ?? room.start}
+              className='text-[clamp(22px,7.5vw,28px)] leading-none font-bold text-brand-ink'
+            />
             <span className='mt-1 text-[13px] text-muted'>
               {t('room.leaderIs')}:{' '}
               <b className='font-semibold text-fg'>{last ? (last.isMe ? t('room.you') : last.bidder) : '—'}</b>
             </span>
           </div>
-          <div className='grid justify-items-end gap-0.5'>
+          <div className='ml-auto grid justify-items-end gap-0.5'>
             <span className='text-[12.5px] text-muted'>{t('lot.endsIn')}</span>
-            <span className='tabular text-[20px] font-bold text-hot'>
+            <span className='tabular text-[20px] font-bold whitespace-nowrap text-hot-text'>
               {formatCountdown(room.closesAt - now, t('time.d'))}
             </span>
           </div>
@@ -125,10 +142,18 @@ function RoomPage() {
         ) : (
           <ol className='divide-y divide-line'>
             {[...room.bids].reverse().map((b, i) => (
-              <li key={b.seq} className='flex items-baseline justify-between gap-3 py-2.5 text-[14px]'>
-                <span className={cn('tabular', b.isMe ? 'font-semibold' : 'text-muted')}>
+              <li
+                key={b.seq}
+                className={cn(
+                  '-mx-2 flex items-baseline justify-between gap-3 rounded-lg px-2 py-2.5 text-[14px]',
+                  i === 0 && 'flash-new'
+                )}
+              >
+                <span className={cn('tabular min-w-0', b.isMe ? 'font-semibold' : 'text-muted')}>
                   #{b.seq} · {b.isMe ? t('room.you') : b.bidder}
-                  {i === 0 && <span className='ml-2 text-[11.5px] text-brand-ink'>{t('room.leader')}</span>}
+                  {i === 0 && (
+                    <span className='block text-[11.5px] font-medium text-brand-ink'>{t('room.leader')}</span>
+                  )}
                 </span>
                 <Price value={b.amount} className={cn(i === 0 && 'font-semibold')} />
               </li>
@@ -168,6 +193,7 @@ function RoomPage() {
                         aria-checked={active}
                         onClick={() => {
                           setExtra(n)
+                          setConfirming(false)
                           haptic('tap')
                         }}
                         className={cn(
@@ -186,7 +212,7 @@ function RoomPage() {
               <Button onClick={admitted ? offer : getAdmission} className='w-full'>
                 {admitted ? (
                   <>
-                    {t('room.bid')} <Price value={amount} />
+                    {offerLabel} <Price value={amount} />
                   </>
                 ) : (
                   t('room.getAdmission')
