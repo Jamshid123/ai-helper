@@ -7,6 +7,9 @@
 ### Deployed
 - 13.11.2026 — демо-стенд Mini App на https://auksion.expertly.uz (коммит `ed6e299`), кнопка меню @auksionchi1_bot.
 
+### Fixed
+- Образ API: в нём не было `schema-engine` Prisma, из‑за чего `prisma migrate deploy` при выкладке падал (Deploy #4). pnpm 10 не запускает install-скрипты зависимостей без разрешения — добавлен `onlyBuiltDependencies` (`prisma`, `@prisma/client`, `@prisma/engines`, `esbuild`, `@swc/core`) в `pnpm-workspace.yaml`.
+
 ### Added
 - `docs/spec/tz.md` — ТЗ в Markdown (эталон для сверки).
 - `docs/PROJECT_CONTEXT.md` — контекст проекта: роли, модули, инварианты, стек, решения, открытые вопросы.
