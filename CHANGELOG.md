@@ -9,6 +9,7 @@
 
 ### Fixed
 - Образ API: в нём не было `schema-engine` Prisma, из‑за чего `prisma migrate deploy` при выкладке падал (Deploy #4). pnpm 10 не запускает install-скрипты зависимостей без разрешения — добавлен `onlyBuiltDependencies` (`prisma`, `@prisma/client`, `@prisma/engines`, `esbuild`, `@swc/core`) в `pnpm-workspace.yaml`.
+- Образ API: на этапе сборки не было OpenSSL, Prisma скачивала движки под `openssl-1.1.x`, а в рантайме нужен `openssl-3.0.x` (Deploy #5). В build-стадию `infra/Dockerfile.api` добавлен `openssl`.
 
 ### Added
 - `docs/spec/tz.md` — ТЗ в Markdown (эталон для сверки).
