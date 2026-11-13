@@ -16,3 +16,4 @@ coverage/
 # test artifacts
 playwright-report/
 test-results/
+dist-cjs/

@@ -39,6 +39,9 @@ jobs:
             --build-arg "FRAME_ANCESTORS=https://web.telegram.org https://*.telegram.org" \
             -t "auksion-miniapp:${GITHUB_SHA::12}" .
 
+      - name: Build API image
+        run: docker build -f infra/Dockerfile.api -t "auksion-api:${GITHUB_SHA::12}" .
+
       - name: SSH setup
         env:
           HOST: ${{ secrets.SERVER_HOST }}
@@ -52,7 +55,7 @@ jobs:
 
       - name: Ship image and compose file
         run: |
-          docker save "auksion-miniapp:$TAG" | gzip | ssh srv 'gunzip | docker load'
+          docker save "auksion-miniapp:$TAG" "auksion-api:$TAG" | gzip | ssh srv 'gunzip | docker load'
           scp infra/docker-compose.prod.yml srv:/opt/auksion/docker-compose.yml
 
       - name: Start new version
@@ -60,13 +63,16 @@ jobs:
           ssh srv "set -e; cd /opt/auksion
             [ -f .deploy.env ] && cp .deploy.env .deploy.env.prev || true
             echo TAG=$TAG > .deploy.env
-            docker compose --env-file .env --env-file .deploy.env up -d --remove-orphans
+            C='docker compose --env-file .env --env-file .deploy.env'
+            \$C up -d --wait postgres redis
+            \$C run --rm --no-deps api ./node_modules/.bin/prisma migrate deploy
+            \$C up -d --remove-orphans
             docker compose --env-file .env --env-file .deploy.env ps"
 
       - name: Health check (rollback on failure)
         run: |
           for i in $(seq 1 20); do
-            if curl -fsS "$APP_URL/healthz" >/dev/null; then echo "healthy"; exit 0; fi
+            if curl -fsS "$APP_URL/healthz" >/dev/null && ssh srv 'curl -fsS http://127.0.0.1:3400/api/v1/health' >/dev/null; then echo "healthy (miniapp + api)"; exit 0; fi
             sleep 3
           done
           echo "::error::Health check failed — rolling back"
@@ -75,7 +81,7 @@ jobs:
 
       - name: Prune old images (keep 3 latest)
         run: |
-          ssh srv "docker images auksion-miniapp --format '{{.Tag}}' | tail -n +4 | xargs -r -I{} docker rmi auksion-miniapp:{} || true"
+          ssh srv "for img in auksion-miniapp auksion-api; do docker images \$img --format '{{.Tag}}' | tail -n +4 | xargs -r -I{} docker rmi \$img:{} || true; done"
 
       - name: Telegram menu button → Mini App
         env:

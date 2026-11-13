@@ -1,0 +1,25 @@
+# API AuksionGO (NestJS + Prisma). docker build -f infra/Dockerfile.api .
+FROM node:22-bookworm-slim AS build
+RUN corepack enable
+WORKDIR /repo
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/shared/package.json packages/shared/
+COPY apps/api/package.json apps/api/
+RUN pnpm install --frozen-lockfile --filter "@auksion/api..."
+COPY packages/shared packages/shared
+COPY apps/api apps/api
+RUN pnpm --filter @auksion/shared build && pnpm --filter @auksion/api build
+# Автономная папка только с prod-зависимостями (workspace-пакеты копируются внутрь).
+RUN pnpm --filter @auksion/api deploy --prod --legacy /out && cd /out && ./node_modules/.bin/prisma generate
+
+FROM node:22-bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=build --chown=node:node /out ./
+USER node
+ENV NODE_ENV=production
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=3s --start-period=20s \
+  CMD node -e "fetch('http://127.0.0.1:3000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+CMD ["node", "dist/main.js"]

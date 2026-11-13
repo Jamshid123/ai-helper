@@ -25,6 +25,43 @@ services:
       driver: json-file
       options: { max-size: 10m, max-file: '3' }
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
+    networks: [internal]
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    security_opt: [no-new-privileges:true]
+    logging: *logging
+
+  api:
+    image: auksion-api:${TAG:?TAG is required}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://auksion:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/auksion
+      REDIS_URL: redis://redis:6379
+      CORS_ORIGINS: https://auksion.expertly.uz,https://auksion-admin.expertly.uz
+      PAYMENTS_MODE: ${PAYMENTS_MODE:-disabled}
+      # read-only контейнер: Prisma не пишет кэш/телеметрию
+      CHECKPOINT_DISABLE: '1'
+      PRISMA_HIDE_UPDATE_MESSAGE: '1'
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    ports: ['127.0.0.1:3400:3000']
+    # default — для публикации порта на 127.0.0.1 (во внутренних сетях Docker порты не публикует)
+    networks: [db, internal, default]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging: *logging
+
   miniapp:
     image: auksion-miniapp:${TAG:?TAG is required}
     restart: unless-stopped
@@ -37,6 +74,8 @@ services:
 
 networks:
   db:
+    internal: true
+  internal:
     internal: true
 
 volumes:

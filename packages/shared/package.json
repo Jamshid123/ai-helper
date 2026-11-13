@@ -3,13 +3,27 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "require": "./dist-cjs/index.js",
+      "default": "./src/index.ts"
+    }
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build": "esbuild src/index.ts --bundle --format=cjs --platform=node --target=node22 --outfile=dist-cjs/index.js && node -e \"require('fs').writeFileSync('dist-cjs/package.json', JSON.stringify({type:'commonjs'}))\""
   },
   "devDependencies": {
+    "esbuild": "0.28.2",
     "typescript": "~6.0.3",
     "vitest": "^4.1.4"
-  }
+  },
+  "files": [
+    "src",
+    "dist-cjs"
+  ],
+  "main": "./dist-cjs/index.js",
+  "types": "./src/index.ts"
 }

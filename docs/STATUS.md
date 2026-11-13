@@ -13,7 +13,9 @@ _Обновлено: 13.11.2026_
 - **Демо-стенд в проде** (13.11.2026): https://auksion.expertly.uz, кнопка «AuksionGO» в @auksionchi1_bot. Сервер настроен (deploy-пользователь, свой Postgres, nginx + Let's Encrypt). Первая выкладка — ручным запуском Deploy с рабочей ветки.
 
 ## В работе
-- Backend по `docs/plans/backend-mvp.md` — ночная задача каждую ночь 00:05 (Ташкент), начиная с этапа 1.
+- Backend по `docs/plans/backend-mvp.md` — ведётся в основной сессии (ночная задача на паузе: у её запусков нет прав на push в репозиторий).
+  - Этап 1, шаг 1 ✓: `apps/api` (NestJS + Fastify + Prisma), конфиг на zod, `/api/v1/health` (БД + Redis), логи с redact, Docker-образ, сервисы `api`/`redis` в compose, CI с Postgres/Redis.
+  - Следующий шаг: схема БД домена (пользователи, лоты, допуски, ставки, заказы, обязательства, outbox) + миграция.
 
 ## Вопросы к заказчику
 - —

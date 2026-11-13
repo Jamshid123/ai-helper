@@ -58,8 +58,8 @@
 | Слой | Выбор | Почему |
 |---|---|---|
 | Монорепо | pnpm workspaces | Общие типы/валидация между API и клиентами без лишних инструментов |
-| Backend | Node.js 22 LTS + **NestJS** + Fastify adapter | Модули, guards (RBAC), DI из коробки; зрелый, легко масштабировать команду |
-| ORM / миграции | **Prisma** (+ raw SQL для блокировок ставок) | Типобезопасность, понятные миграции |
+| Backend | Node.js 22 LTS + **NestJS 11** + Fastify adapter (CommonJS; переход на ESM — до TypeScript 7) | Модули, guards (RBAC), DI из коробки; зрелый, легко масштабировать команду |
+| ORM / миграции | **Prisma 6** (+ raw SQL для блокировок ставок) | Типобезопасность, понятные миграции |
 | БД | **PostgreSQL** — уже установлен на сервере (вне Docker), отдельная БД `auksion` | Транзакции, row locks, надёжность денег |
 | Кэш / очереди / pub-sub | **Redis 7** + BullMQ | Отложенные задачи (открытие 09:00, закрытие 18:00, таймеры 15 мин / 24 ч), fan-out WebSocket |
 | Real-time | WebSocket (Socket.IO + Redis adapter) | Комнаты лотов, ресинк состояния после переподключения |
@@ -67,7 +67,7 @@
 | Админка | React + Vite + shadcn/ui на основе шаблона shadcn-admin (отдельное приложение, отдельный домен/путь, MFA) | Изоляция от публичного клиента, готовые таблицы/формы |
 | Mobile (позже) | React Native (Expo) | Переиспользование TS-типов и API-клиента |
 | Валидация контрактов | zod + OpenAPI из NestJS | Один контракт для Mini App, админки и мобайла |
-| Тесты | Vitest (unit), Testcontainers (Postgres/Redis integration), Playwright (e2e) | Инварианты аукциона проверяются на реальной БД |
+| Тесты | Vitest (unit; для API — через SWC ради decorator metadata), интеграционные — на настоящих Postgres/Redis (в CI — service-контейнеры), Playwright (e2e) | Инварианты аукциона проверяются на реальной БД |
 | Инфра | Docker Compose на одном VPS (Европа), reverse proxy с TLS (Caddy или существующий на сервере), GitHub Actions → GHCR → SSH deploy | Просто, быстро, без Kubernetes на пилоте |
 | Наблюдаемость | pino-логи (JSON), healthchecks, Sentry (опционально) | |
 | Бэкапы | ежедневный `pg_dump` + шифрование + вынос за пределы сервера | |
