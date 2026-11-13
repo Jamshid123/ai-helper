@@ -5,7 +5,7 @@ description: Use when building or changing apps/miniapp (Telegram Mini App for b
 
 # Frontend: Telegram Mini App + Админка
 
-Общее для обоих приложений: React 18, Vite, TypeScript strict, TanStack Query (серверное состояние), zod-схемы и типы из `packages/shared`, i18next (`ru`, `uz` — латиница), ESLint + Prettier. Глобальный стейт-менеджер не нужен, пока нет явной причины.
+Общее для обоих приложений: React 19, Vite, TypeScript strict, TanStack Query (серверное состояние), zod-схемы и типы из `packages/shared`, i18next (`ru`, `uz` — латиница), ESLint + Prettier. Глобальный стейт-менеджер не нужен, пока нет явной причины.
 
 ## Общие правила
 
@@ -53,7 +53,9 @@ WebSocket в комнате:
 
 ## Админка (`apps/admin`)
 
-- Отдельное приложение и поддомен/путь, **не** внутри Mini App. UI — shadcn/ui + Tailwind, таблицы — TanStack Table.
+- Отдельное приложение и поддомен/путь, **не** внутри Mini App. Основа — шаблон shadcn-admin (shadcn/ui, Tailwind 4, TanStack Router/Query/Table). Карта файлов и контракт API — `apps/admin/README.md`.
+- Новый раздел: запись в `src/config/sections.ts` + доступ в `src/lib/rbac.ts` (+ тест) + маршрут `src/routes/_authenticated/<id>/index.tsx` с `beforeLoad: requireSection('<id>')`.
+- Демо-вход (`VITE_DEMO_AUTH=true`) — только для `vite dev`; проверять, что в production-бандле нет демо-кода.
 - Вход: логин + пароль + TOTP (MFA обязателен для всех ролей). Сессия в httpOnly secure cookie, SameSite=Strict, CSRF-токен на мутациях.
 - Навигация и кнопки строятся от прав, пришедших с сервера (`/me` → permissions). Это только UX — сервер всё равно проверяет каждое действие.
 - Разделы по ролям ТЗ: Оператор (расписание, лоты), Эксперт (приёмка, акт, чек-лист, фото), Риск (сигналы, разборы, ограничения), Финансы (платежи, возвраты, сверка), Выдача (сверка с актом, выдача по коду), Поддержка (снятие ограничения с обязательной причиной).
