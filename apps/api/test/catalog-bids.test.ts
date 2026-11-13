@@ -100,4 +100,24 @@ describe('Каталог и предложение цены по HTTP', () => {
       expect(res.statusCode).toBe(400)
     }
   })
+  it('автопредложение по HTTP: установить, посмотреть, отменить; максимум виден только владельцу', async () => {
+    const lot = await createLot(db)
+    const a = await loginAs(app, 900_010, 'Азиз')
+    await admit(lot.id, a.userId)
+    const url = `/api/v1/lots/${lot.id}/autobid`
+    const set = await app.inject({ method: 'PUT', url, headers: a.auth, payload: { maxAmount: '3000000' } })
+    expect(set.statusCode).toBe(200)
+    expect(set.json()).toMatchObject({ maxAmount: '3000000', active: true, leading: true, currentPrice: '2000000' })
+    expect((await app.inject({ method: 'GET', url, headers: a.auth })).json()).toEqual({
+      maxAmount: '3000000',
+      active: true,
+    })
+    const b = await loginAs(app, 900_011, 'Малика')
+    expect((await app.inject({ method: 'GET', url, headers: b.auth })).json()).toBeNull()
+    expect((await app.inject({ method: 'DELETE', url, headers: a.auth })).statusCode).toBe(204)
+    expect((await app.inject({ method: 'GET', url, headers: a.auth })).json()).toEqual({
+      maxAmount: '3000000',
+      active: false,
+    })
+  })
 })

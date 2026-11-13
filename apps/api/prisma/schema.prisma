@@ -30,6 +30,7 @@ model User {
 
   admissions   Admission[]
   bids         Bid[]
+  autoBids     AutoBid[]
   orders       Order[]
   obligations  Obligation[]
   restrictions Restriction[]
@@ -104,6 +105,7 @@ model Lot {
 
   admissions  Admission[]
   bids        Bid[]
+  autoBids    AutoBid[]
   orders      Order[]
   obligations Obligation[]
 
@@ -138,6 +140,23 @@ model Bid {
   @@unique([lotId, seq])
   @@unique([userId, idempotencyKey])
   @@index([lotId, amount(sort: Desc)])
+}
+
+/// Автопредложение до максимума (proxy bidding): система предлагает за участника на шаг выше,
+/// пока не превышен его максимум. Максимум виден только владельцу. Одно на (лот, пользователь).
+model AutoBid {
+  id        String   @id @default(uuid()) @db.Uuid
+  lotId     String   @db.Uuid
+  lot       Lot      @relation(fields: [lotId], references: [id])
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id])
+  maxAmount BigInt
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+
+  @@unique([lotId, userId])
+  @@index([lotId, active, maxAmount(sort: Desc)])
 }
 
 // ───────────── Платежи и выкуп ─────────────

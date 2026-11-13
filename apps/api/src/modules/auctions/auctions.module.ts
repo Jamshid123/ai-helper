@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 import { APP_FILTER } from '@nestjs/core'
+import { AutoBidController } from './autobid.controller'
 import { BidRejectedFilter } from './bid-rejected.filter'
 import { BidsController } from './bids.controller'
 import { BidsService } from './bids.service'
@@ -7,7 +8,7 @@ import { LifecycleScheduler } from './lifecycle.scheduler'
 import { LotLifecycleService } from './lot-lifecycle.service'
 
 @Module({
-  controllers: [BidsController],
+  controllers: [BidsController, AutoBidController],
   providers: [
     BidsService,
     LotLifecycleService,

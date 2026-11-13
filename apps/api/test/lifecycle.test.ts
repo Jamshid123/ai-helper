@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { FakeClock } from '../src/common/clock'
+import { BidsService } from '../src/modules/auctions/bids.service'
 import { LotLifecycleService } from '../src/modules/auctions/lot-lifecycle.service'
 import type { PrismaService } from '../src/prisma/prisma.service'
 import { cleanDb, createLot, createUser, key } from './factories'
@@ -79,8 +80,9 @@ describe('LifecycleScheduler.tick', () => {
     const { LifecycleScheduler } = await import('../src/modules/auctions/lifecycle.scheduler')
     await cleanDb(db)
     const env = { SCHEDULER_ENABLED: false, SCHEDULER_INTERVAL_MS: 5000 } as never
-    const s1 = new LifecycleScheduler(env, db as unknown as PrismaService, lifecycle)
-    const s2 = new LifecycleScheduler(env, db as unknown as PrismaService, lifecycle)
+    const bidsSvc = new BidsService(db as unknown as PrismaService, clock)
+    const s1 = new LifecycleScheduler(env, db as unknown as PrismaService, lifecycle, bidsSvc)
+    const s2 = new LifecycleScheduler(env, db as unknown as PrismaService, lifecycle, bidsSvc)
     const toOpen = await createLot(db, { status: 'SCHEDULED', opensAt: OPEN, closesAt: CLOSE })
     clock.set(OPEN)
     await Promise.all([s1.tick(), s2.tick()])
