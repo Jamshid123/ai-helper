@@ -1,0 +1,51 @@
+name: Server bootstrap (one-time)
+
+# Ручной запуск после согласования. Делает только то, что описано в infra/server/bootstrap.sh.
+# Секреты: SERVER_HOST, SERVER_ROOT_PASSWORD (временный), DEPLOY_SSH_PUBKEY, TELEGRAM_BOT_TOKEN.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: server-admin
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check secrets
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          SSHPASS: ${{ secrets.SERVER_ROOT_PASSWORD }}
+          PUBKEY: ${{ secrets.DEPLOY_SSH_PUBKEY }}
+        run: |
+          for v in HOST SSHPASS PUBKEY; do
+            [ -n "${!v}" ] || { echo "::error::Не задан секрет для $v"; exit 1; }
+          done
+
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+
+      - name: Upload and run bootstrap
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          SSHPASS: ${{ secrets.SERVER_ROOT_PASSWORD }}
+          DEPLOY_PUBKEY: ${{ secrets.DEPLOY_SSH_PUBKEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          mkdir -p ~/.ssh && ssh-keyscan -T 10 -t ed25519 "$HOST" > ~/.ssh/known_hosts 2>/dev/null
+          SSH="sshpass -e ssh -o StrictHostKeyChecking=yes root@$HOST"
+          $SSH 'rm -rf /tmp/auksion-bootstrap && mkdir -m 700 /tmp/auksion-bootstrap'
+          sshpass -e scp -o StrictHostKeyChecking=yes infra/server/bootstrap.sh infra/server/nginx-auksion.conf "root@$HOST:/tmp/auksion-bootstrap/"
+          # Секреты передаём через stdin, а не в командной строке (не видны в ps на сервере).
+          printf 'export DEPLOY_PUBKEY=%q TELEGRAM_BOT_TOKEN=%q\n' "$DEPLOY_PUBKEY" "$TELEGRAM_BOT_TOKEN" \
+            | $SSH 'set -e; read -r line; eval "$line"; bash /tmp/auksion-bootstrap/bootstrap.sh; rm -rf /tmp/auksion-bootstrap'

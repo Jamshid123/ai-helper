@@ -1,0 +1,88 @@
+name: Deploy
+
+# Пуш в main = выкладка на сервер. Также ручной запуск (Run workflow).
+# Секреты: SERVER_HOST, DEPLOY_SSH_KEY, TELEGRAM_BOT_TOKEN.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: ci
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      APP_URL: https://auksion.expertly.uz
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build Mini App image (demo stand)
+        run: |
+          echo "TAG=${GITHUB_SHA::12}" >> "$GITHUB_ENV"
+          docker build -f infra/Dockerfile.spa \
+            --build-arg APP=miniapp \
+            --build-arg VITE_DEMO_DATA=true \
+            --build-arg "FRAME_ANCESTORS=https://web.telegram.org https://*.telegram.org" \
+            -t "auksion-miniapp:${GITHUB_SHA::12}" .
+
+      - name: SSH setup
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          [ -n "$HOST" ] && [ -n "$KEY" ] || { echo "::error::Нужны секреты SERVER_HOST и DEPLOY_SSH_KEY"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          ssh-keyscan -T 10 -t ed25519 "$HOST" > ~/.ssh/known_hosts 2>/dev/null
+          printf 'Host srv\n  HostName %s\n  User deploy\n  IdentityFile ~/.ssh/deploy\n  StrictHostKeyChecking yes\n' "$HOST" > ~/.ssh/config
+
+      - name: Ship image and compose file
+        run: |
+          docker save "auksion-miniapp:$TAG" | gzip | ssh srv 'gunzip | docker load'
+          scp infra/docker-compose.prod.yml srv:/opt/auksion/docker-compose.yml
+
+      - name: Start new version
+        run: |
+          ssh srv "set -e; cd /opt/auksion
+            [ -f .deploy.env ] && cp .deploy.env .deploy.env.prev || true
+            echo TAG=$TAG > .deploy.env
+            docker compose --env-file .env --env-file .deploy.env up -d --remove-orphans
+            docker compose --env-file .env --env-file .deploy.env ps"
+
+      - name: Health check (rollback on failure)
+        run: |
+          for i in $(seq 1 20); do
+            if curl -fsS "$APP_URL/healthz" >/dev/null; then echo "healthy"; exit 0; fi
+            sleep 3
+          done
+          echo "::error::Health check failed — rolling back"
+          ssh srv "cd /opt/auksion && [ -f .deploy.env.prev ] && mv .deploy.env.prev .deploy.env && docker compose --env-file .env --env-file .deploy.env up -d" || true
+          exit 1
+
+      - name: Prune old images (keep 3 latest)
+        run: |
+          ssh srv "docker images auksion-miniapp --format '{{.Tag}}' | tail -n +4 | xargs -r -I{} docker rmi auksion-miniapp:{} || true"
+
+      - name: Telegram menu button → Mini App
+        env:
+          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          [ -n "$TOKEN" ] || { echo "TELEGRAM_BOT_TOKEN не задан — пропускаю"; exit 0; }
+          curl -fsS "https://api.telegram.org/bot${TOKEN}/setChatMenuButton" \
+            -H 'Content-Type: application/json' \
+            -d "{\"menu_button\":{\"type\":\"web_app\",\"text\":\"AuksionGO\",\"web_app\":{\"url\":\"${APP_URL}\"}}}" \
+            | grep -q '"ok":true' && echo "menu button set"

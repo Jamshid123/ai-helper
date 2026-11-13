@@ -17,6 +17,10 @@
 | `package.json`, `pnpm-workspace.yaml`, `.nvmrc` | Монорепо pnpm, Node 22; корневые `lint/typecheck/test/build` |
 | `.github/workflows/ci.yml` | CI: gitleaks, `pnpm audit`, lint, typecheck, тесты (Chromium), build |
 | `.github/workflows/server-inspect.yml` | Ручной осмотр сервера (только чтение) |
+| `.github/workflows/server-bootstrap.yml` + `infra/server/bootstrap.sh` | Разовая настройка сервера: пользователь deploy, `/opt/auksion/.env`, nginx vhost + HTTPS |
+| `.github/workflows/deploy.yml` | Выкладка: push в `main` (или вручную) → CI → образ → сервер → health check → откат при сбое → кнопка меню бота |
+| `infra/docker-compose.prod.yml` | Сервисы на сервере: свой `postgres` (без внешнего порта), `miniapp` на `127.0.0.1:3401` |
+| `infra/server/nginx-auksion.conf` | vhost `auksion.expertly.uz` для nginx хоста |
 | `apps/admin` | Админка (shadcn-admin). Карта файлов — в `apps/admin/README.md` |
 | `apps/miniapp` | Telegram Mini App покупателя (демо-стенд на тестовых данных). Карта — `apps/miniapp/README.md` |
 | `packages/shared` | Общие правила: `rules.ts` (шаг, 30%, сроки, мин. ставка), `money.ts` (сумы, bigint), `session-time.ts` (пятница по Ташкенту) |
@@ -27,5 +31,4 @@
 |---|---|
 | `apps/api` | NestJS API + worker (BullMQ). Модули: auth, users, catalog, inspection, auctions, payments, fulfillment, antifraud, notifications, audit |
 | `apps/mobile` | Expo (не в MVP) |
-| `infra/` | `Dockerfile.spa`, `nginx/spa.conf` (есть); docker-compose, proxy, deploy.sh, backup.sh (будут) |
-| `.github/workflows/deploy.yml` | CD в прод при пуше в `main` |
+| `infra/` | `Dockerfile.spa`, `nginx/spa.conf`, `docker-compose.prod.yml`, `server/` (есть); backup.sh (будет вместе с API) |

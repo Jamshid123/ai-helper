@@ -15,7 +15,7 @@ _Обновлено: 13.11.2026_
 - —
 
 ## Следующий шаг
-1. Выкладка демо-стенда: осмотр сервера → настройка → Docker + CD → бот @auksionchi1_bot открывает Mini App.
+1. Выкладка демо-стенда: осмотр ✓ → ключ deploy (заказчик) → bootstrap → ветка `main` → Deploy → бот @auksionchi1_bot открывает Mini App.
 2. `apps/api`: auth сотрудников (login/MFA/me/logout) под контракт из `apps/admin/README.md`.
 
 ## Проблемы / ожидаем от заказчика

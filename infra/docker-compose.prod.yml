@@ -1,0 +1,43 @@
+# Прод/демо-стенд AuksionGO на сервере: /opt/auksion/docker-compose.yml
+# Запуск: docker compose --env-file .env --env-file .deploy.env up -d
+# .env (секреты, создаётся bootstrap, chmod 600) · .deploy.env (TAG текущей версии, пишет deploy)
+name: auksion
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: auksion
+      POSTGRES_USER: auksion
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [db]
+    # Наружу порт не публикуется: доступ только из сети db (позже — сервис api).
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U auksion -d auksion']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    security_opt: [no-new-privileges:true]
+    logging: &logging
+      driver: json-file
+      options: { max-size: 10m, max-file: '3' }
+
+  miniapp:
+    image: auksion-miniapp:${TAG:?TAG is required}
+    restart: unless-stopped
+    ports: ['127.0.0.1:3401:8080']
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging: *logging
+
+networks:
+  db:
+    internal: true
+
+volumes:
+  pgdata:

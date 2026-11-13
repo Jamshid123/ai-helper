@@ -20,7 +20,8 @@ worker (тот же образ api, команда worker) ─▶ BullMQ зад�
 
 - На сервере уже работает другой проект (`karnaychi-api`). Ничего чужого не останавливать и не переконфигурировать; свои сервисы — отдельный compose-проект `auksion`, свои виртуальные хосты в существующем proxy.
 - Reverse proxy: **nginx на хосте** + certbot (см. `docs/PROJECT_CONTEXT.md` §11). Добавляем `/etc/nginx/sites-available/auksion*.conf` → `nginx -t` → reload. Контейнеры слушают только `127.0.0.1:3400–3409`.
-- PostgreSQL: существующий контейнер `ai-helper-postgres` (подключение через docker-сеть `ai-helper-net`), отдельная БД и роли `auksion_*`.
+- PostgreSQL: **свой** контейнер `postgres` в `infra/docker-compose.prod.yml` (сеть `db`, `internal: true`, порт наружу не публикуется). `ai-helper-postgres` — чужой проект, не трогать.
+- Файлы: `infra/server/bootstrap.sh` (разово, root), `.github/workflows/deploy.yml` (каждый push в `main`). Образы передаются `docker save | ssh docker load`, без registry.
 - DNS: зона `expertly.uz` в **Vercel** → A-запись `auksion` (и админки) → IP сервера.
 
 ## Существующий PostgreSQL на сервере

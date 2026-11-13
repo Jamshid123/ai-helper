@@ -24,8 +24,10 @@
 - `packages/shared`: правила торгов из ТЗ (`minNextBid`, `prepaymentAmount`, сроки), форматирование сумов (bigint), расписание пятничной сессии по Ташкенту — общие для всех приложений.
 - `apps/miniapp`: Telegram Mini App — демо-стенд на тестовых данных: каталог с отсчётом до торгов и фильтрами, карточка лота с актом проверки и условиями, допуск с согласием на правила (имитация оплаты), комната торгов (мин. ставка по правилам ТЗ, быстрые шаги, история, «перебили»), профиль с выбором языка. Нативные MainButton/BackButton, тема Telegram, палитра B, ru/uz.
 - `infra/Dockerfile.spa` + `infra/nginx/spa.conf`: образ статики (Mini App / админка) на nginx-unprivileged без root, CSP (Mini App встраивается только в Telegram, админка — никуда), кэш ассетов, `/healthz`.
+- Выкладка: `infra/docker-compose.prod.yml` (свой Postgres 16 без внешнего порта, Mini App на `127.0.0.1:3401`, read-only контейнер без capabilities), `infra/server/bootstrap.sh` + workflow `server-bootstrap.yml` (пользователь deploy по ключу, `.env` с паролем БД, сгенерированным на сервере, nginx vhost + Let's Encrypt с проверкой `nginx -t` и откатом), workflow `deploy.yml` (push в `main` → CI → образ → сервер → health check → откат → кнопка меню @auksionchi1_bot).
 
 ### Changed
+- CI: группа concurrency учитывает вызывающий workflow (вызов из Deploy не отменяется параллельным CI).
 - Палитра заменена на Expertly из Figma (кнопки `#F97216` с белым текстом, вариант C; акцентный текст `#C2410C`; ошибки `#E11D48`), шрифт Onest → Rubik; favicon и знак — оранжевые. Админка, Mini App и Telegram MainButton.
 - Название в интерфейсе: AuksionGO.
 - `valibot` (необязательная зависимость `@hookform/resolvers`) закреплён на `^1.2.0` через `pnpm.overrides` — закрыта уязвимость ReDoS (GHSA-vqpr-j7v3-hqw9).
