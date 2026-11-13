@@ -9,3 +9,239 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// ───────────── Покупатели ─────────────
+
+model User {
+  id              String    @id @default(uuid()) @db.Uuid
+  telegramId      BigInt    @unique
+  firstName       String
+  lastName        String?
+  username        String?
+  /// Подтверждённый телефон (из message.contact бота). ПДн: не логировать, отдавать только владельцу/уполномоченным.
+  phone           String?   @unique
+  phoneVerifiedAt DateTime? @db.Timestamptz
+  /// Публичное имя для ленты торгов: «Имя Ф.» или «Участник 0417».
+  publicName      String
+  rulesVersion    String?
+  rulesAcceptedAt DateTime? @db.Timestamptz
+  createdAt       DateTime  @default(now()) @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @db.Timestamptz
+
+  admissions   Admission[]
+  bids         Bid[]
+  orders       Order[]
+  obligations  Obligation[]
+  restrictions Restriction[]
+}
+
+/// Ограничение участия (невыкуп → 50 календарных дней). Снятие — только с причиной и аудитом.
+model Restriction {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
+  user         User      @relation(fields: [userId], references: [id])
+  reason       String
+  obligationId String?   @db.Uuid
+  startsAt     DateTime  @db.Timestamptz
+  endsAt       DateTime  @db.Timestamptz
+  liftedAt     DateTime? @db.Timestamptz
+  liftedBy     String?
+  liftReason   String?
+  createdAt    DateTime  @default(now()) @db.Timestamptz
+
+  @@index([userId, endsAt])
+}
+
+// ───────────── Лоты и торги ─────────────
+
+enum LotCategory {
+  PHONES
+}
+
+enum LotCondition {
+  NEW
+  USED
+}
+
+enum SellerType {
+  PLATFORM
+  EXTERNAL
+}
+
+enum LotStatus {
+  DRAFT
+  SCHEDULED
+  LIVE
+  CLOSED_SOLD
+  CLOSED_UNSOLD
+  UNDER_REVIEW
+  CANCELLED
+}
+
+model Lot {
+  id            String       @id @default(uuid()) @db.Uuid
+  title         String
+  category      LotCategory  @default(PHONES)
+  condition     LotCondition
+  sellerType    SellerType   @default(PLATFORM)
+  description   String       @default("")
+  /// Акт проверки для карточки: summary, battery, imeiChecked, kit[], defects[]. Полный IMEI здесь не хранится.
+  inspection    Json         @default("{}")
+  startPrice    BigInt
+  step          BigInt
+  fee           BigInt
+  currentPrice  BigInt?
+  leaderUserId  String?      @db.Uuid
+  /// Последний порядковый номер ставки (монотонный, меняется только под FOR UPDATE).
+  lastSeq       Int          @default(0)
+  admittedCount Int          @default(0)
+  status        LotStatus    @default(DRAFT)
+  opensAt       DateTime     @db.Timestamptz
+  closesAt      DateTime     @db.Timestamptz
+  closedAt      DateTime?    @db.Timestamptz
+  createdAt     DateTime     @default(now()) @db.Timestamptz
+  updatedAt     DateTime     @updatedAt @db.Timestamptz
+
+  admissions  Admission[]
+  bids        Bid[]
+  orders      Order[]
+  obligations Obligation[]
+
+  @@index([status, opensAt])
+}
+
+/// Допуск к конкретному лоту. Один на пару (лот, пользователь).
+model Admission {
+  id        String   @id @default(uuid()) @db.Uuid
+  lotId     String   @db.Uuid
+  lot       Lot      @relation(fields: [lotId], references: [id])
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id])
+  orderId   String   @unique @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz
+
+  @@unique([lotId, userId])
+}
+
+/// Принятое предложение цены. Неизменяемо.
+model Bid {
+  id             String   @id @default(uuid()) @db.Uuid
+  lotId          String   @db.Uuid
+  lot            Lot      @relation(fields: [lotId], references: [id])
+  userId         String   @db.Uuid
+  user           User     @relation(fields: [userId], references: [id])
+  amount         BigInt
+  seq            Int
+  idempotencyKey String
+  createdAt      DateTime @default(now()) @db.Timestamptz
+
+  @@unique([lotId, seq])
+  @@unique([userId, idempotencyKey])
+  @@index([lotId, amount(sort: Desc)])
+}
+
+// ───────────── Платежи и выкуп ─────────────
+
+enum OrderPurpose {
+  ADMISSION
+  LISTING
+  PREPAYMENT
+  REMAINDER
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUND_PENDING
+  REFUNDED
+  CANCELLED
+}
+
+model Order {
+  id           String       @id @default(uuid()) @db.Uuid
+  userId       String       @db.Uuid
+  user         User         @relation(fields: [userId], references: [id])
+  lotId        String       @db.Uuid
+  lot          Lot          @relation(fields: [lotId], references: [id])
+  purpose      OrderPurpose
+  /// Сумма считается на сервере, в сумах.
+  amount       BigInt
+  status       OrderStatus  @default(PENDING)
+  provider     String
+  providerTxId String?      @unique
+  paidAt       DateTime?    @db.Timestamptz
+  createdAt    DateTime     @default(now()) @db.Timestamptz
+  updatedAt    DateTime     @updatedAt @db.Timestamptz
+
+  @@index([userId, lotId, purpose])
+}
+
+enum ObligationStatus {
+  AWAITING_PREPAYMENT
+  AWAITING_REMAINDER
+  AWAITING_PICKUP
+  COMPLETED
+  EXPIRED
+  CANCELLED
+}
+
+/// Обязательство выкупа: победитель (rank 1) или следующий по рейтингу. Одно на (лот, место в очереди).
+model Obligation {
+  id                 String           @id @default(uuid()) @db.Uuid
+  lotId              String           @db.Uuid
+  lot                Lot              @relation(fields: [lotId], references: [id])
+  userId             String           @db.Uuid
+  user               User             @relation(fields: [userId], references: [id])
+  bidId              String           @db.Uuid
+  rank               Int
+  amount             BigInt
+  prepaymentAmount   BigInt
+  status             ObligationStatus @default(AWAITING_PREPAYMENT)
+  prepaymentDeadline DateTime         @db.Timestamptz
+  remainderDeadline  DateTime?        @db.Timestamptz
+  /// Хэш одноразового кода выдачи (сам код показывается только покупателю).
+  pickupCodeHash     String?
+  createdAt          DateTime         @default(now()) @db.Timestamptz
+  updatedAt          DateTime         @updatedAt @db.Timestamptz
+
+  @@unique([lotId, rank])
+  @@index([status, prepaymentDeadline])
+}
+
+// ───────────── Служебное ─────────────
+
+/// Transactional outbox: событие пишется в той же транзакции, воркер публикует его в комнату/уведомления.
+model OutboxEvent {
+  id          BigInt    @id @default(autoincrement())
+  type        String
+  aggregateId String
+  payload     Json
+  createdAt   DateTime  @default(now()) @db.Timestamptz
+  publishedAt DateTime? @db.Timestamptz
+
+  @@index([publishedAt, id])
+}
+
+/// Журнал аудита. Только вставка (права на UPDATE/DELETE у роли приложения отзываются миграцией).
+model AuditLog {
+  id         BigInt   @id @default(autoincrement())
+  actorType  String
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String?
+  reason     String?
+  meta       Json     @default("{}")
+  ip         String?
+  createdAt  DateTime @default(now()) @db.Timestamptz
+
+  @@index([entityType, entityId])
+}
+
+/// Настройки, которые меняются в админке без программиста (взнос, пункт выдачи…).
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt @db.Timestamptz
+}

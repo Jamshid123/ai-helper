@@ -36,6 +36,7 @@
 - `infra/Dockerfile.api`; в `infra/docker-compose.prod.yml` — сервисы `redis` и `api` (`127.0.0.1:3400`, read-only, без capabilities).
 - Deploy: сборка и передача образа API, `prisma migrate deploy` перед запуском, health-check Mini App + API, очистка старых образов обоих сервисов.
 - CI: PostgreSQL и Redis как service-контейнеры, сборка `packages/shared`, проверочная сборка образа API.
+- API: схема БД домена — пользователи, ограничения, лоты, допуски, предложения цены, заказы, обязательства выкупа, outbox, журнал аудита, настройки; деньги `BigInt`, время `timestamptz`; уникальности (номер предложения в лоте, ключ идемпотентности, допуск, место в очереди выкупа, `providerTxId`) и CHECK-ограничения в миграции; тесты гарантий схемы.
 
 ### Changed
 - `packages/shared` собирается в CommonJS (`dist-cjs`, esbuild) для API; Vite-приложения по-прежнему берут исходники.
