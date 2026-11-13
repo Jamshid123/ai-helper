@@ -104,7 +104,7 @@ jobs:
           echo "Roles:"
           docker exec ai-helper-postgres psql -U "$PGU" -d postgres -Atc "select rolname || case when rolsuper then ' (superuser)' else '' end from pg_roles where rolname !~ '^pg_' order by 1;" 2>&1 | head -30
           echo "Active connections per DB:"
-          docker exec ai-helper-postgres psql -U "$PGU" -d postgres -Atc "select coalesce(datname,'-') || ' | ' || count(*) from pg_stat_activity group by 1 order by 1;" 2>&1 | head -20
+          docker exec ai-helper-postgres psql -U "$PGU" -d postgres -Atc "select coalesce(datname,'-') || ' | ' || count(*) from pg_stat_activity group by datname order by datname;" 2>&1 | head -20
 
           section "MySQL"
           mysql --version 2>/dev/null; systemctl is-active mysql 2>/dev/null
