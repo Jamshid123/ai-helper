@@ -21,8 +21,12 @@
 - CI (`.github/workflows/ci.yml`): gitleaks, `pnpm audit`, lint, typecheck, браузерные тесты, build. Actions закреплены по SHA.
 - Палитра B «Шафран» в админке (светлая и тёмная темы), токен `brand-ink` для акцентного текста, фирменный знак и favicon.
 - Раздел «Дизайн» (§10) в `docs/PROJECT_CONTEXT.md`.
+- `packages/shared`: правила торгов из ТЗ (`minNextBid`, `prepaymentAmount`, сроки), форматирование сумов (bigint), расписание пятничной сессии по Ташкенту — общие для всех приложений.
+- `apps/miniapp`: Telegram Mini App — демо-стенд на тестовых данных: каталог с отсчётом до торгов и фильтрами, карточка лота с актом проверки и условиями, допуск с согласием на правила (имитация оплаты), комната торгов (мин. ставка по правилам ТЗ, быстрые шаги, история, «перебили»), профиль с выбором языка. Нативные MainButton/BackButton, тема Telegram, палитра B, ru/uz.
 
 ### Changed
+- `valibot` (необязательная зависимость `@hookform/resolvers`) закреплён на `^1.2.0` через `pnpm.overrides` — закрыта уязвимость ReDoS (GHSA-vqpr-j7v3-hqw9).
+- Расчёт пятничной сессии перенесён из админки в `packages/shared`.
 - CI и server-inspect: раннер закреплён на `ubuntu-24.04` (на `ubuntu-latest` = 26.04 Playwright не ставит Chromium).
 - DNS `expertly.uz` в Vercel зафиксирован в решениях и скилле `deploy`.
 - Домен исправлен на `auksion.expertly.uz` во всех документах; админка — `auksion-admin.expertly.uz`.

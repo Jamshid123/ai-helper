@@ -1,0 +1,73 @@
+@import '@fontsource-variable/onest';
+@import 'tailwindcss';
+
+/*
+ * Палитра B «Шафран» (docs/PROJECT_CONTEXT.md §10).
+ * Фон и текст — из темы Telegram (--tg-theme-*, их выставляет telegram-web-app.js),
+ * с фолбэком на нашу палитру вне Telegram. Бренд — только в акцентах.
+ */
+:root {
+  --bg: var(--tg-theme-bg-color, #fafaf8);
+  --surface: var(--tg-theme-secondary-bg-color, #f0efea);
+  --fg: var(--tg-theme-text-color, #1b1a17);
+  --muted: var(--tg-theme-hint-color, #66635c);
+  --line: color-mix(in oklab, var(--fg) 12%, transparent);
+  --primary: #f0b323;
+  --on-primary: #1b1a17;
+  --brand-ink: #8a5a00;
+  --hot: #b4372b;
+  --ok: #2f7d4f;
+  color-scheme: light;
+}
+
+:root[data-scheme='dark'] {
+  --bg: var(--tg-theme-bg-color, #141413);
+  --surface: var(--tg-theme-secondary-bg-color, #1f1e1c);
+  --fg: var(--tg-theme-text-color, #edebe6);
+  --muted: var(--tg-theme-hint-color, #a19e96);
+  --brand-ink: #f0b323;
+  --hot: #f08a7e;
+  --ok: #6fcf97;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: 'Onest Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-brand-ink: var(--brand-ink);
+  --color-hot: var(--hot);
+  --color-ok: var(--ok);
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+:root[data-scheme='dark'] .lot-photo-bg {
+  filter: brightness(0.45) saturate(0.7);
+}

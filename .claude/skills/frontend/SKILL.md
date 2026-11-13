@@ -17,7 +17,7 @@ description: Use when building or changing apps/miniapp (Telegram Mini App for b
 - Таймеры: считаем от `serverTime` из ответа API (храним offset `serverNow - Date.now()`), а не от часов устройства.
 - Деньги приходят строкой (сумы). Форматирование — одна утилита `formatSum("2100000") → "2 100 000 so'm"` / `"2 100 000 сум"`. Никакого `parseFloat`.
 - API-клиент — один модуль, типизированный из OpenAPI/zod. Ответы валидируются zod в dev.
-- Тексты только через i18n-ключи; ключи `ru` и `uz` должны совпадать (проверка в CI).
+- Тексты только через словарь `apps/miniapp/src/app/i18n.tsx` (без i18next); ключи `ru` и `uz` должны совпадать (тест в CI).
 - Секретов во фронте нет и быть не может: всё, что в `VITE_*`, публично.
 - Не рендерить HTML из данных (`dangerouslySetInnerHTML` запрещён).
 
@@ -34,7 +34,7 @@ src/
 ```
 
 Telegram:
-- SDK: `@telegram-apps/sdk-react`. Инициализация в `app/`: `init()`, `miniApp.ready()`, `viewport.expand()`, тема из `themeParams` → CSS-переменные.
+- Официальный скрипт `telegram-web-app.js` + типизированная обёртка `apps/miniapp/src/app/telegram.ts` (`useMainButton`, `useBackButton`, `haptic`, `rawInitData`). Тема: CSS-переменные `--tg-theme-*` с фолбэком на палитру B.
 - Учитывать safe area / content safe area insets, тёмную и светлую тему Telegram.
 - Нативные элементы: `BackButton` для навигации назад, `MainButton` для главного действия экрана (оплатить допуск / поставить), `HapticFeedback` на успешную ставку.
 - Авторизация: при старте отправляем **сырую** строку `initData` на `/api/v1/auth/telegram`, получаем сессию. Никогда не доверять `initDataUnsafe` для чего-либо, кроме отображения.

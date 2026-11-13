@@ -18,14 +18,14 @@
 | `.github/workflows/ci.yml` | CI: gitleaks, `pnpm audit`, lint, typecheck, тесты (Chromium), build |
 | `.github/workflows/server-inspect.yml` | Ручной осмотр сервера (только чтение) |
 | `apps/admin` | Админка (shadcn-admin). Карта файлов — в `apps/admin/README.md` |
+| `apps/miniapp` | Telegram Mini App покупателя (демо-стенд на тестовых данных). Карта — `apps/miniapp/README.md` |
+| `packages/shared` | Общие правила: `rules.ts` (шаг, 30%, сроки, мин. ставка), `money.ts` (сумы, bigint), `session-time.ts` (пятница по Ташкенту) |
 
 ## Плановая структура (появится при создании каркаса)
 
 | Путь | Назначение |
 |---|---|
 | `apps/api` | NestJS API + worker (BullMQ). Модули: auth, users, catalog, inspection, auctions, payments, fulfillment, antifraud, notifications, audit |
-| `apps/miniapp` | Telegram Mini App (покупатель) |
 | `apps/mobile` | Expo (не в MVP) |
-| `packages/shared` | zod-схемы, типы, правила (`rules.ts`), статусные автоматы, i18n |
 | `infra/` | docker-compose, proxy, deploy.sh, backup.sh |
 | `.github/workflows/deploy.yml` | CD в прод при пуше в `main` |
