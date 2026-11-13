@@ -6,6 +6,7 @@ import { ConfigModule, ENV } from './config/config.module'
 import type { Env } from './config/env'
 import { AuctionsModule } from './modules/auctions/auctions.module'
 import { AuthModule } from './modules/auth/auth.module'
+import { CatalogModule } from './modules/catalog/catalog.module'
 import { HealthModule } from './modules/health/health.module'
 import { PrismaModule } from './prisma/prisma.module'
 
@@ -40,6 +41,7 @@ export const LOG_REDACT = [
     RedisModule,
     HealthModule,
     AuthModule,
+    CatalogModule,
     AuctionsModule,
   ],
 })
