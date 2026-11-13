@@ -29,6 +29,12 @@ export const envSchema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().regex(/^\d+:[A-Za-z0-9_-]{20,}$/, 'неверный формат токена бота'),
   /** Секрет подписи сессий покупателей (HS256), не короче 32 символов. */
   JWT_SECRET: z.string().min(32),
+  /** Догоняющий sweep расписания (открытие/закрытие лотов). В тестах выключается. */
+  SCHEDULER_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  SCHEDULER_INTERVAL_MS: z.coerce.number().int().min(1000).max(60_000).default(5000),
 })
 
 export type Env = z.infer<typeof envSchema>

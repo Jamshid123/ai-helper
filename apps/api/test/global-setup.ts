@@ -20,6 +20,7 @@ export default function setup() {
     PAYMENTS_MODE: 'fake',
     TELEGRAM_BOT_TOKEN: '123456:TEST-TOKEN-not-real-xxxxxx',
     JWT_SECRET: 'test-secret-'.padEnd(40, 'x'),
+    SCHEDULER_ENABLED: 'false',
   })
   const run = (cmd: string, input?: string) =>
     execSync(cmd, { env: process.env, input, stdio: input ? ['pipe', 'inherit', 'inherit'] : 'inherit' })
