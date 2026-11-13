@@ -16,6 +16,7 @@
 | `docs/skills-sources.md` | Источники методик скиллов |
 | `package.json`, `pnpm-workspace.yaml`, `.nvmrc` | Монорепо pnpm, Node 22; корневые `lint/typecheck/test/build` |
 | `.github/workflows/ci.yml` | CI: gitleaks, `pnpm audit`, lint, typecheck, тесты (Chromium), build |
+| `.github/workflows/server-inspect.yml` | Ручной осмотр сервера (только чтение) |
 | `apps/admin` | Админка (shadcn-admin). Карта файлов — в `apps/admin/README.md` |
 
 ## Плановая структура (появится при создании каркаса)

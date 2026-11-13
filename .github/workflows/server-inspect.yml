@@ -1,0 +1,86 @@
+name: Server inspect (read-only)
+
+# Ручной запуск: Actions → "Server inspect (read-only)" → Run workflow.
+# Только читает состояние сервера, ничего не меняет. Нужен перед первичной настройкой,
+# чтобы не задеть уже работающие на сервере проекты.
+# Секреты: SERVER_HOST, SERVER_ROOT_PASSWORD (временный, удалить после настройки сервера).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+
+      - name: Record host key fingerprint
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -T 10 -t ed25519 "$HOST" > ~/.ssh/known_hosts 2>/dev/null
+          echo "Host key (сверить и закрепить для деплоя):"
+          ssh-keygen -lf ~/.ssh/known_hosts
+
+      - name: Inspect
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          SSHPASS: ${{ secrets.SERVER_ROOT_PASSWORD }}
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=yes -o ConnectTimeout=15 "root@$HOST" 'bash -s' <<'REMOTE'
+          set +e
+          section() { echo; echo "===== $1 ====="; }
+
+          section "OS / resources"
+          grep -E '^(PRETTY_NAME|VERSION_ID)=' /etc/os-release
+          uname -r
+          echo "CPU: $(nproc)"; free -h | head -2; df -h / | tail -1
+          uptime
+
+          section "Listening TCP ports"
+          ss -tlnpH | awk '{print $4, $6}' | sort -u
+
+          section "Services"
+          for s in nginx caddy apache2 haproxy traefik postgresql redis-server docker fail2ban ufw; do
+            printf '%-14s %s\n' "$s" "$(systemctl is-active $s 2>/dev/null || echo n/a)"
+          done
+          ufw status 2>/dev/null | head -20
+
+          section "Docker"
+          docker --version 2>/dev/null; docker compose version 2>/dev/null
+          docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}' 2>/dev/null
+          docker compose ls 2>/dev/null
+          docker network ls --format '{{.Name}} {{.Driver}}' 2>/dev/null
+
+          section "Reverse proxy (имена хостов, без содержимого конфигов)"
+          if command -v nginx >/dev/null; then
+            nginx -v 2>&1
+            ls /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null
+            grep -rhoE 'server_name[^;]+' /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null | sort -u
+            ls /etc/letsencrypt/live 2>/dev/null
+          fi
+          if command -v caddy >/dev/null; then
+            caddy version
+            grep -hoE '^[a-zA-Z0-9.*:-]+\s*\{' /etc/caddy/Caddyfile 2>/dev/null
+          fi
+          docker ps --format '{{.Names}} {{.Image}}' 2>/dev/null | grep -iE 'nginx|caddy|traefik|proxy'
+
+          section "PostgreSQL"
+          command -v psql >/dev/null && psql --version
+          if systemctl is-active -q postgresql 2>/dev/null; then
+            sudo -u postgres psql -Atc "show server_version;" 2>/dev/null
+            sudo -u postgres psql -Atc "show listen_addresses;" 2>/dev/null
+            echo "Databases:"; sudo -u postgres psql -Atc "select datname from pg_database where not datistemplate;" 2>/dev/null
+          fi
+          docker ps --format '{{.Names}} {{.Image}} {{.Ports}}' 2>/dev/null | grep -iE 'postgres|redis'
+
+          section "SSH config"
+          sshd -T 2>/dev/null | grep -E '^(port|permitrootlogin|passwordauthentication|pubkeyauthentication) '
+          getent passwd deploy >/dev/null && echo "user deploy exists" || echo "user deploy absent"
+          REMOTE

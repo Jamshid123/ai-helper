@@ -17,6 +17,7 @@
 
 - Монорепо pnpm (`package.json`, `pnpm-workspace.yaml`, `.nvmrc`).
 - `apps/admin` на основе shadcn-admin (MIT): вход пароль → TOTP с httpOnly-сессией и CSRF, меню и маршруты по ролям (ADMIN, OPERATOR, EXPERT, RISK, FINANCE, FULFILLMENT, SUPPORT), разделы-заглушки по ТЗ, экран «Обзор» с отсчётом до пятничной сессии по Ташкенту, защита от open redirect, демо-вход только для dev, шрифт Onest без загрузки с Google Fonts, интерфейс на русском.
+- Workflow `server-inspect.yml` (ручной запуск, только чтение): осмотр сервера перед настройкой — ОС, порты, сервисы, Docker, reverse proxy, PostgreSQL, SSH.
 - CI (`.github/workflows/ci.yml`): gitleaks, `pnpm audit`, lint, typecheck, браузерные тесты, build. Actions закреплены по SHA.
 - Палитра B «Шафран» в админке (светлая и тёмная темы), токен `brand-ink` для акцентного текста, фирменный знак и favicon.
 - Раздел «Дизайн» (§10) в `docs/PROJECT_CONTEXT.md`.
