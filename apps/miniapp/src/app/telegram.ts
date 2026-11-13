@@ -49,7 +49,7 @@ declare global {
   }
 }
 
-export const BRAND = { primary: '#F0B323', onPrimary: '#1B1A17' } as const
+export const BRAND = { primary: '#F97216', onPrimary: '#FFFFFF' } as const
 
 export function getWebApp(): WebApp | null {
   return window.Telegram?.WebApp ?? null

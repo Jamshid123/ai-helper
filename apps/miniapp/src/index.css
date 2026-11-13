@@ -1,38 +1,38 @@
-@import '@fontsource-variable/onest';
+@import '@fontsource-variable/rubik';
 @import 'tailwindcss';
 
 /*
- * Палитра B «Шафран» (docs/PROJECT_CONTEXT.md §10).
- * Фон и текст — из темы Telegram (--tg-theme-*, их выставляет telegram-web-app.js),
- * с фолбэком на нашу палитру вне Telegram. Бренд — только в акцентах.
+ * Палитра Expertly, вариант C (docs/PROJECT_CONTEXT.md §10).
+ * Фон и текст — из темы Telegram (--tg-theme-*), с фолбэком на палитру Expertly вне Telegram.
+ * Бренд — кнопки #F97216 с белым текстом; акцентный текст — #C2410C; ошибки/LIVE/таймер — #E11D48.
  */
 :root {
-  --bg: var(--tg-theme-bg-color, #fafaf8);
-  --surface: var(--tg-theme-secondary-bg-color, #f0efea);
-  --fg: var(--tg-theme-text-color, #1b1a17);
-  --muted: var(--tg-theme-hint-color, #66635c);
+  --bg: var(--tg-theme-bg-color, #ffffff);
+  --surface: var(--tg-theme-secondary-bg-color, #f0f1f2);
+  --fg: var(--tg-theme-text-color, #18181b);
+  --muted: var(--tg-theme-hint-color, #757575);
   --line: color-mix(in oklab, var(--fg) 12%, transparent);
-  --primary: #f0b323;
-  --on-primary: #1b1a17;
-  --brand-ink: #8a5a00;
-  --hot: #b4372b;
-  --ok: #2f7d4f;
+  --primary: #f97216;
+  --on-primary: #ffffff;
+  --brand-ink: #c2410c;
+  --hot: #e11d48;
+  --ok: #15803d;
   color-scheme: light;
 }
 
 :root[data-scheme='dark'] {
-  --bg: var(--tg-theme-bg-color, #141413);
-  --surface: var(--tg-theme-secondary-bg-color, #1f1e1c);
-  --fg: var(--tg-theme-text-color, #edebe6);
-  --muted: var(--tg-theme-hint-color, #a19e96);
-  --brand-ink: #f0b323;
-  --hot: #f08a7e;
-  --ok: #6fcf97;
+  --bg: var(--tg-theme-bg-color, #18181b);
+  --surface: var(--tg-theme-secondary-bg-color, #27272a);
+  --fg: var(--tg-theme-text-color, #f4f4f5);
+  --muted: var(--tg-theme-hint-color, #a1a1aa);
+  --brand-ink: #fb923c;
+  --hot: #fb7185;
+  --ok: #4ade80;
   color-scheme: dark;
 }
 
 @theme inline {
-  --font-sans: 'Onest Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Rubik Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-fg: var(--fg);

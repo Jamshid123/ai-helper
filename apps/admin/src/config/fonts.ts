@@ -1,6 +1,6 @@
 /**
  * List of available font names (visit the url `/settings/appearance`).
- * This array is used to generate dynamic font classes (e.g., `font-onest`).
+ * This array is used to generate dynamic font classes (e.g., `font-rubik`).
  *
  * 📝 How to Add a New Font (Tailwind v4+):
  * 1. Add the font name here.
@@ -16,4 +16,4 @@
  *      --font-roboto: 'Roboto', var(--font-sans);
  *   }
  */
-export const fonts = ['onest', 'system'] as const
+export const fonts = ['rubik', 'system'] as const

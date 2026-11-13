@@ -1,84 +1,83 @@
 /*
- * Палитра B «Шафран» (docs/PROJECT_CONTEXT.md → «Дизайн»).
- * Шафран — только заливка главной кнопки/акцента, текст на нём тёмный.
- * Для текста-ссылок на светлом фоне — тёмная охра (--brand-ink), контраст ≥ 4.5:1.
- * «Горячий» красный — ошибки, LIVE, срочность (--destructive).
+ * Палитра Expertly (Figma «Experly», вариант C — выбран заказчиком).
+ * Главные кнопки: #F97216 + белый текст (контраст 2.8:1 — ниже WCAG AA, принято заказчиком).
+ * Акцентный текст (цены, ссылки) — --brand-ink #C2410C (5.2:1). Ошибки, LIVE, таймер — #E11D48.
  */
 :root {
-  --radius: 0.5rem;
-  --background: #fafaf8;
-  --foreground: #1b1a17;
+  --radius: 0.75rem;
+  --background: #ffffff;
+  --foreground: #18181b;
   --card: #ffffff;
-  --card-foreground: #1b1a17;
+  --card-foreground: #18181b;
   --popover: #ffffff;
-  --popover-foreground: #1b1a17;
-  --primary: #f0b323;
-  --primary-foreground: #1b1a17;
-  --secondary: #f0efea;
-  --secondary-foreground: #1b1a17;
-  --muted: #f0efea;
-  --muted-foreground: #66635c;
-  --accent: #f0efea;
-  --accent-foreground: #1b1a17;
-  --destructive: #b4372b;
-  --border: #e6e4de;
-  --input: #dcd9d1;
-  --ring: #8a5a00;
-  --brand-ink: #8a5a00;
-  --chart-1: #f0b323;
-  --chart-2: #8a5a00;
-  --chart-3: #66635c;
-  --chart-4: #b4372b;
-  --chart-5: #1b1a17;
+  --popover-foreground: #18181b;
+  --primary: #f97216;
+  --primary-foreground: #ffffff;
+  --secondary: #f0f1f2;
+  --secondary-foreground: #18181b;
+  --muted: #f0f1f2;
+  --muted-foreground: #52525b;
+  --accent: #f0f1f2;
+  --accent-foreground: #18181b;
+  --destructive: #e11d48;
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --ring: #f97216;
+  --brand-ink: #c2410c;
+  --chart-1: #f97216;
+  --chart-2: #c2410c;
+  --chart-3: #52525b;
+  --chart-4: #e11d48;
+  --chart-5: #3b82f6;
 
-  --sidebar: #f5f4f0;
+  --sidebar: #fafafa;
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: #ebe9e2;
+  --sidebar-accent: #f0f1f2;
   --sidebar-accent-foreground: var(--foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
 }
 
 .dark {
-  --background: #141413;
-  --foreground: #edebe6;
-  --card: #1c1b19;
-  --card-foreground: #edebe6;
-  --popover: #1f1e1c;
-  --popover-foreground: #edebe6;
-  --primary: #f0b323;
-  --primary-foreground: #141413;
-  --secondary: #262522;
-  --secondary-foreground: #edebe6;
-  --muted: #262522;
-  --muted-foreground: #a19e96;
-  --accent: #262522;
-  --accent-foreground: #edebe6;
-  --destructive: #f08a7e;
-  --border: #2b2a27;
-  --input: #36342f;
-  --ring: #f0b323;
-  --brand-ink: #f0b323;
-  --chart-1: #f0b323;
-  --chart-2: #d9a12a;
-  --chart-3: #a19e96;
-  --chart-4: #f08a7e;
-  --chart-5: #edebe6;
+  --background: #18181b;
+  --foreground: #f4f4f5;
+  --card: #1f1f23;
+  --card-foreground: #f4f4f5;
+  --popover: #1f1f23;
+  --popover-foreground: #f4f4f5;
+  --primary: #f97216;
+  --primary-foreground: #ffffff;
+  --secondary: #27272a;
+  --secondary-foreground: #f4f4f5;
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;
+  --accent: #27272a;
+  --accent-foreground: #f4f4f5;
+  --destructive: #fb7185;
+  --border: #2e2e33;
+  --input: #3f3f46;
+  --ring: #f97216;
+  --brand-ink: #fb923c;
+  --chart-1: #f97216;
+  --chart-2: #fb923c;
+  --chart-3: #a1a1aa;
+  --chart-4: #fb7185;
+  --chart-5: #60a5fa;
 
-  --sidebar: #181816;
+  --sidebar: #141416;
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: #262522;
+  --sidebar-accent: #27272a;
   --sidebar-accent-foreground: var(--foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
 }
 
 @theme inline {
-  --font-onest: 'Onest Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-rubik: 'Rubik Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

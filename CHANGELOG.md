@@ -26,6 +26,7 @@
 - `infra/Dockerfile.spa` + `infra/nginx/spa.conf`: образ статики (Mini App / админка) на nginx-unprivileged без root, CSP (Mini App встраивается только в Telegram, админка — никуда), кэш ассетов, `/healthz`.
 
 ### Changed
+- Палитра заменена на Expertly из Figma (кнопки `#F97216` с белым текстом, вариант C; акцентный текст `#C2410C`; ошибки `#E11D48`), шрифт Onest → Rubik; favicon и знак — оранжевые. Админка, Mini App и Telegram MainButton.
 - Название в интерфейсе: AuksionGO.
 - `valibot` (необязательная зависимость `@hookform/resolvers`) закреплён на `^1.2.0` через `pnpm.overrides` — закрыта уязвимость ReDoS (GHSA-vqpr-j7v3-hqw9).
 - Расчёт пятничной сессии перенесён из админки в `packages/shared`.
