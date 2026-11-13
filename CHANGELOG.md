@@ -16,4 +16,5 @@
 - `.claude/settings.json` — запрет чтения `.env`, ключей и сгенерированных артефактов.
 
 ### Changed
-- DNS `expertly.us` в Vercel зафиксирован в решениях и скилле `deploy`.
+- DNS `expertly.uz` в Vercel зафиксирован в решениях и скилле `deploy`.
+- Домен исправлен на `auksion.expertly.uz` во всех документах.

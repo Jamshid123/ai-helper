@@ -42,7 +42,7 @@ description: Use when touching auth, sessions, roles/permissions, secrets or env
 - Валидация всех входов (zod/class-validator, `whitelist: true, forbidNonWhitelisted: true`).
 - Только параметризованные запросы. `$queryRawUnsafe` запрещён.
 - Rate limit (Redis): запросы контакта/OTP, вход в админку, ставки (на пользователя и на лот), создание заказов.
-- CORS — явный список: `https://aukcion.expertly.us` и домен админки. Никогда `*` с credentials.
+- CORS — явный список: `https://auksion.expertly.uz` и домен админки. Никогда `*` с credentials.
 - Заголовки: Helmet, HSTS. CSP для Mini App должен разрешать встраивание в Telegram Web: `frame-ancestors https://web.telegram.org https://*.telegram.org`. Для админки — `frame-ancestors 'none'`.
 - Загрузка файлов: проверка MIME по сигнатуре, лимит размера, перекодирование изображений (sharp), удаление EXIF.
 - Ошибки наружу — без стектрейсов и SQL; детали — только в логах.

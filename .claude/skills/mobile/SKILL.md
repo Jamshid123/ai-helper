@@ -25,7 +25,7 @@ description: Use when starting or changing apps/mobile — the Android/iOS clien
 
 - Только HTTPS; в конфиге нет секретов (всё в бандле публично).
 - Отключить логирование ответов API в release-сборке.
-- Deep links (`auksion://lot/<id>`, universal links на `aukcion.expertly.us`) — параметры валидируются, никаких действий без подтверждения пользователя.
+- Deep links (`auksion://lot/<id>`, universal links на `auksion.expertly.uz`) — параметры валидируются, никаких действий без подтверждения пользователя.
 - Скриншоты экрана с кодом выдачи — по желанию заблокировать (`expo-screen-capture`).
 
 ## Real-time и пуши

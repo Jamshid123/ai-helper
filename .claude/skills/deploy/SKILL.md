@@ -1,6 +1,6 @@
 ---
 name: deploy
-description: Use when working on Dockerfiles, docker-compose, Caddy/reverse proxy, GitHub Actions CI/CD, server setup, database provisioning, backups, or a production release/rollback of aukcion.expertly.us.
+description: Use when working on Dockerfiles, docker-compose, Caddy/reverse proxy, GitHub Actions CI/CD, server setup, database provisioning, backups, or a production release/rollback of auksion.expertly.uz.
 ---
 
 # Deploy & CI/CD
@@ -10,16 +10,16 @@ description: Use when working on Dockerfiles, docker-compose, Caddy/reverse prox
 ## Топология
 
 ```
-Internet ─▶ reverse proxy (TLS) ─┬─▶ miniapp (static, nginx-unprivileged)   aukcion.expertly.us
-                                 ├─▶ api (NestJS, :3000)                     aukcion.expertly.us/api, /ws
-                                 └─▶ admin (static)                          admin.aukcion.expertly.us (уточнить)
+Internet ─▶ reverse proxy (TLS) ─┬─▶ miniapp (static, nginx-unprivileged)   auksion.expertly.uz
+                                 ├─▶ api (NestJS, :3000)                     auksion.expertly.uz/api, /ws
+                                 └─▶ admin (static)                          admin.auksion.expertly.uz (уточнить)
 api ─▶ PostgreSQL (уже установлен на сервере, вне compose)
 api ─▶ Redis (контейнер в compose, только внутренняя сеть)
 worker (тот же образ api, команда worker) ─▶ BullMQ задачи
 ```
 
-- Reverse proxy: если на сервере уже есть nginx/Caddy для `expertly.us` — добавляем в него виртуальный хост; иначе Caddy в compose (авто-TLS). Выяснить при получении доступа.
-- DNS: зона `expertly.us` в **Vercel** → A-запись `aukcion` (и админки) → IP сервера.
+- Reverse proxy: если на сервере уже есть nginx/Caddy для `expertly.uz` — добавляем в него виртуальный хост; иначе Caddy в compose (авто-TLS). Выяснить при получении доступа.
+- DNS: зона `expertly.uz` в **Vercel** → A-запись `auksion` (и админки) → IP сервера.
 
 ## Существующий PostgreSQL на сервере
 
