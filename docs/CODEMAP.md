@@ -15,6 +15,7 @@
 | `docs/spec/tz.md` | ТЗ (эталон) |
 | `docs/skills-sources.md` | Источники методик скиллов |
 | `docs/plans/mobile-app.md` | План мобильного приложения (Expo) |
+| `docs/research/market-and-risks.md` | Что перенять у похожих платформ, мошенничество и недовольство (Узбекистан), решения для заказчика |
 | `docs/reviews/` | Отчёты UX-ревью (скилл `ux-review`) |
 | `docs/plans/backend-mvp.md` | Утверждённый план backend и боевого режима (выполняет ночная задача) |
 | `package.json`, `pnpm-workspace.yaml`, `.nvmrc` | Монорепо pnpm, Node 22; корневые `lint/typecheck/test/build` |
