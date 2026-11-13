@@ -1,0 +1,18 @@
+node_modules/
+dist/
+build/
+coverage/
+.turbo/
+*.log
+.DS_Store
+# secrets — никогда не коммитить
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.dump
+*.sql.gz
+# test artifacts
+playwright-report/
+test-results/
