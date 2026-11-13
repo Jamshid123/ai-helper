@@ -1,10 +1,11 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { BadgeCheck } from 'lucide-react'
 import { formatSum } from '@auksion/shared'
 import { useI18n } from '@/app/i18n'
 import { haptic, useBackButton, useMainButton } from '@/app/telegram'
 import { useLot } from '@/entities/lot/api'
+import { isRegistered, useAccount } from '@/entities/account/demo-account'
 import { admit, isAdmitted } from '@/entities/lot/demo-store'
 import { type Lot } from '@/entities/lot/types'
 import { cn } from '@/shared/lib/cn'
@@ -100,7 +101,17 @@ function LotPage() {
   const now = useNow()
   const { data: lot } = useLot(lotId)
   const search = Route.useSearch()
-  const [sheet, setSheet] = useState(Boolean(search.admit))
+  const account = useAccount()
+  const registered = isRegistered(account)
+  const [sheet, setSheet] = useState(Boolean(search.admit) && registered)
+  // Без регистрации «Участвовать» ведёт на регистрацию и возвращает к оформлению допуска.
+  const toRegister = useCallback(
+    () => navigate({ to: '/register', search: { next: `/lot/${lotId}?admit=true` } }),
+    [navigate, lotId]
+  )
+  useEffect(() => {
+    if (search.admit && !registered) toRegister()
+  }, [search.admit, registered, toRegister])
   const back = useCallback(() => navigate({ to: '/' }), [navigate])
   useBackButton(sheet ? null : back)
 
@@ -109,8 +120,11 @@ function LotPage() {
   const primary = useCallback(() => {
     if (!lot) return
     if (admitted && live) navigate({ to: '/lot/$lotId/room', params: { lotId: lot.id } })
-    else if (!admitted) setSheet(true)
-  }, [admitted, live, lot, navigate])
+    else if (!admitted) {
+      if (registered) setSheet(true)
+      else toRegister()
+    }
+  }, [admitted, live, lot, navigate, registered, toRegister])
   const native = useMainButton({
     text: admitted ? t('lot.toRoom') : t('lot.participate'),
     onClick: primary,

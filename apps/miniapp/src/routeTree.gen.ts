@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MeRouteImport } from './routes/me'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as SellerRouteImport } from './routes/seller'
 import { Route as LotLotIdIndexRouteImport } from './routes/lot.$lotId.index'
 import { Route as LotLotIdRoomRouteImport } from './routes/lot.$lotId.room'
 
@@ -22,6 +24,16 @@ const IndexRoute = IndexRouteImport.update({
 const MeRoute = MeRouteImport.update({
   id: '/me',
   path: '/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SellerRoute = SellerRouteImport.update({
+  id: '/seller',
+  path: '/seller',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LotLotIdIndexRoute = LotLotIdIndexRouteImport.update({
@@ -38,12 +50,16 @@ const LotLotIdRoomRoute = LotLotIdRoomRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/me': typeof MeRoute
+  '/register': typeof RegisterRoute
+  '/seller': typeof SellerRoute
   '/lot/$lotId/room': typeof LotLotIdRoomRoute
   '/lot/$lotId/': typeof LotLotIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/me': typeof MeRoute
+  '/register': typeof RegisterRoute
+  '/seller': typeof SellerRoute
   '/lot/$lotId/room': typeof LotLotIdRoomRoute
   '/lot/$lotId': typeof LotLotIdIndexRoute
 }
@@ -51,20 +67,32 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/me': typeof MeRoute
+  '/register': typeof RegisterRoute
+  '/seller': typeof SellerRoute
   '/lot/$lotId/room': typeof LotLotIdRoomRoute
   '/lot/$lotId/': typeof LotLotIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/me' | '/lot/$lotId/room' | '/lot/$lotId/'
+  fullPaths:
+    '/' | '/me' | '/register' | '/seller' | '/lot/$lotId/room' | '/lot/$lotId/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/me' | '/lot/$lotId/room' | '/lot/$lotId'
-  id: '__root__' | '/' | '/me' | '/lot/$lotId/room' | '/lot/$lotId/'
+  to: '/' | '/me' | '/register' | '/seller' | '/lot/$lotId/room' | '/lot/$lotId'
+  id:
+    | '__root__'
+    | '/'
+    | '/me'
+    | '/register'
+    | '/seller'
+    | '/lot/$lotId/room'
+    | '/lot/$lotId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   MeRoute: typeof MeRoute
+  RegisterRoute: typeof RegisterRoute
+  SellerRoute: typeof SellerRoute
   LotLotIdRoomRoute: typeof LotLotIdRoomRoute
   LotLotIdIndexRoute: typeof LotLotIdIndexRoute
 }
@@ -83,6 +111,20 @@ declare module '@tanstack/react-router' {
       path: '/me'
       fullPath: '/me'
       preLoaderRoute: typeof MeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/seller': {
+      id: '/seller'
+      path: '/seller'
+      fullPath: '/seller'
+      preLoaderRoute: typeof SellerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lot/$lotId/': {
@@ -105,6 +147,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   MeRoute: MeRoute,
+  RegisterRoute: RegisterRoute,
+  SellerRoute: SellerRoute,
   LotLotIdRoomRoute: LotLotIdRoomRoute,
   LotLotIdIndexRoute: LotLotIdIndexRoute,
 }

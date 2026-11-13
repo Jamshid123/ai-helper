@@ -26,7 +26,7 @@
 | `infra/docker-compose.prod.yml` | Сервисы на сервере: свой `postgres` (без внешнего порта), `miniapp` на `127.0.0.1:3401` |
 | `infra/server/nginx-auksion.conf` | vhost `auksion.expertly.uz` для nginx хоста |
 | `apps/admin` | Админка (shadcn-admin). Карта файлов — в `apps/admin/README.md` |
-| `apps/miniapp` | Telegram Mini App покупателя (демо-стенд на тестовых данных). Карта — `apps/miniapp/README.md` |
+| `apps/miniapp` | Telegram Mini App покупателя (демо-стенд на тестовых данных; регистрация `routes/register.tsx`, заявка продавца `routes/seller.tsx`, демо-аккаунт `entities/account/`). Карта — `apps/miniapp/README.md` |
 | `apps/api` | NestJS 11 + Fastify + Prisma 6: `src/config/env.ts` (zod, без фолбэков секретов), `src/bootstrap.ts` (префикс `/api/v1`, CORS, заголовки), `src/modules/health`, `prisma/schema.prisma` + `prisma/migrations/`; тесты `test/` на настоящих PostgreSQL/Redis (`test/factories.ts`) |
 | `infra/Dockerfile.api` | Образ API (node:22-bookworm-slim, non-root, healthcheck) |
 | `packages/shared` | Общие правила: `rules.ts` (шаг, 30%, сроки, мин. ставка), `money.ts` (сумы, bigint), `session-time.ts` (пятница по Ташкенту) |
