@@ -61,7 +61,9 @@ const ACCESS: Record<Section, readonly Role[]> = {
 }
 
 export function isRole(value: unknown): value is Role {
-  return typeof value === 'string' && (ROLES as readonly string[]).includes(value)
+  return (
+    typeof value === 'string' && (ROLES as readonly string[]).includes(value)
+  )
 }
 
 /** Есть ли у сотрудника хотя бы одна роль с доступом к разделу. Неизвестные роли игнорируются. */

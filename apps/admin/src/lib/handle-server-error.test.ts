@@ -13,9 +13,11 @@ describe('serverErrorMessage', () => {
   })
 
   it('для 4xx берёт безопасное сообщение сервера', () => {
-    expect(serverErrorMessage(new ApiError(400, 'BID_TOO_LOW', 'Ставка ниже минимальной'))).toBe(
-      'Ставка ниже минимальной'
-    )
+    expect(
+      serverErrorMessage(
+        new ApiError(400, 'BID_TOO_LOW', 'Ставка ниже минимальной')
+      )
+    ).toBe('Ставка ниже минимальной')
   })
 
   it('неизвестная ошибка — общий текст', () => {

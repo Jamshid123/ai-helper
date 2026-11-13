@@ -1,10 +1,16 @@
 import { useEffect, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { SECTION_LIST } from '@/config/sections'
+import { useAuthStore } from '@/stores/auth-store'
 import { canAccess } from '@/lib/rbac'
 import { SESSION_TZ, currentOrNextSession } from '@/lib/session-time'
-import { useAuthStore } from '@/stores/auth-store'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { PageShell } from '@/components/layout/page-shell'
 
 const dateFmt = new Intl.DateTimeFormat('ru-RU', {
@@ -39,28 +45,44 @@ export function Dashboard() {
   const now = useNow()
   const session = currentOrNextSession(now)
   const roles = useAuthStore((s) => s.user?.roles ?? [])
-  const sections = SECTION_LIST.filter((s) => s.id !== 'dashboard' && canAccess(roles, s.id))
+  const sections = SECTION_LIST.filter(
+    (s) => s.id !== 'dashboard' && canAccess(roles, s.id)
+  )
 
   return (
-    <PageShell title='Обзор' description='Время показано по Ташкенту. Точное расписание задаёт сервер.'>
+    <PageShell
+      title='Обзор'
+      description='Время показано по Ташкенту. Точное расписание задаёт сервер.'
+    >
       <div className='grid gap-4 lg:grid-cols-3'>
         <Card className='lg:col-span-1'>
           <CardHeader>
-            <CardDescription>{session.isLive ? 'Торги идут' : 'Ближайшие торги'}</CardDescription>
+            <CardDescription>
+              {session.isLive ? 'Торги идут' : 'Ближайшие торги'}
+            </CardDescription>
             <CardTitle className='text-3xl font-semibold tabular-nums'>
-              {formatLeft((session.isLive ? session.closesAt : session.opensAt).getTime() - now.getTime())}
+              {formatLeft(
+                (session.isLive
+                  ? session.closesAt
+                  : session.opensAt
+                ).getTime() - now.getTime()
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className='text-sm text-muted-foreground'>
             {session.isLive ? 'Приём ставок до ' : 'Открытие: '}
-            {dateFmt.format(session.isLive ? session.closesAt : session.opensAt)}
+            {dateFmt.format(
+              session.isLive ? session.closesAt : session.opensAt
+            )}
           </CardContent>
         </Card>
 
         <Card className='lg:col-span-2'>
           <CardHeader>
             <CardTitle className='text-base'>Ваши разделы</CardTitle>
-            <CardDescription>Доступ определяется ролями учётной записи.</CardDescription>
+            <CardDescription>
+              Доступ определяется ролями учётной записи.
+            </CardDescription>
           </CardHeader>
           <CardContent className='grid gap-2 sm:grid-cols-2'>
             {sections.map((s) => (
@@ -72,7 +94,9 @@ export function Dashboard() {
                 <s.icon className='mt-0.5 size-4 shrink-0 text-muted-foreground' />
                 <span className='grid gap-0.5'>
                   <span className='text-sm font-medium'>{s.title}</span>
-                  <span className='text-xs text-muted-foreground'>{s.description}</span>
+                  <span className='text-xs text-muted-foreground'>
+                    {s.description}
+                  </span>
                 </span>
               </Link>
             ))}

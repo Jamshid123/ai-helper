@@ -23,7 +23,14 @@ describe('canAccess', () => {
   })
 
   it('управление сотрудниками и аудит — только у администратора', () => {
-    for (const r of ['OPERATOR', 'EXPERT', 'RISK', 'FINANCE', 'FULFILLMENT', 'SUPPORT']) {
+    for (const r of [
+      'OPERATOR',
+      'EXPERT',
+      'RISK',
+      'FINANCE',
+      'FULFILLMENT',
+      'SUPPORT',
+    ]) {
       expect(canAccess([r], 'staff')).toBe(false)
       expect(canAccess([r], 'audit')).toBe(false)
     }

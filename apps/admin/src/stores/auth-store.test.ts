@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useAuthStore } from './auth-store'
 
-const user = { id: 'u1', name: 'Тест', email: 't@example.com', roles: ['EXPERT'] }
+const user = {
+  id: 'u1',
+  name: 'Тест',
+  email: 't@example.com',
+  roles: ['EXPERT'],
+}
 
 describe('useAuthStore', () => {
   beforeEach(() => useAuthStore.getState().reset())

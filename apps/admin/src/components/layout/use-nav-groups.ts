@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { SECTION_LIST } from '@/config/sections'
-import { canAccess } from '@/lib/rbac'
 import { useAuthStore } from '@/stores/auth-store'
+import { canAccess } from '@/lib/rbac'
 import { type NavGroup } from './types'
 
 /** Меню, отфильтрованное по ролям текущего сотрудника. */

@@ -20,7 +20,8 @@ export function GeneralError({
         )}
         <span className='font-medium'>Что-то пошло не так</span>
         <p className='text-center text-muted-foreground'>
-          Попробуйте обновить страницу. Если ошибка повторяется, сообщите администратору.
+          Попробуйте обновить страницу. Если ошибка повторяется, сообщите
+          администратору.
         </p>
         {!minimal && (
           <div className='mt-6 flex gap-4'>

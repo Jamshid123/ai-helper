@@ -23,7 +23,9 @@ describe('SignOutDialog', () => {
 
   it('завершает сессию на сервере, очищает состояние и ведёт на вход', async () => {
     logout.mockResolvedValue(undefined)
-    const { getByRole } = await render(<SignOutDialog open onOpenChange={vi.fn()} />)
+    const { getByRole } = await render(
+      <SignOutDialog open onOpenChange={vi.fn()} />
+    )
     await userEvent.click(getByRole('button', { name: /^Выйти$/ }))
     await vi.waitFor(() => expect(navigate).toHaveBeenCalled())
     expect(logout).toHaveBeenCalledOnce()
@@ -34,14 +36,18 @@ describe('SignOutDialog', () => {
 
   it('очищает локальное состояние, даже если сервер недоступен', async () => {
     logout.mockRejectedValue(new Error('network'))
-    const { getByRole } = await render(<SignOutDialog open onOpenChange={vi.fn()} />)
+    const { getByRole } = await render(
+      <SignOutDialog open onOpenChange={vi.fn()} />
+    )
     await userEvent.click(getByRole('button', { name: /^Выйти$/ }))
     await vi.waitFor(() => expect(navigate).toHaveBeenCalled())
     expect(reset).toHaveBeenCalledOnce()
   })
 
   it('«Отмена» ничего не делает', async () => {
-    const { getByRole } = await render(<SignOutDialog open onOpenChange={vi.fn()} />)
+    const { getByRole } = await render(
+      <SignOutDialog open onOpenChange={vi.fn()} />
+    )
     await userEvent.click(getByRole('button', { name: /^Отмена$/ }))
     expect(logout).not.toHaveBeenCalled()
     expect(navigate).not.toHaveBeenCalled()

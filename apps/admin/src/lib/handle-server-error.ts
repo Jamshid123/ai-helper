@@ -6,8 +6,10 @@ export function serverErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 403) return 'Недостаточно прав для этого действия.'
     if (error.status === 404) return 'Объект не найден.'
-    if (error.status === 409) return 'Данные изменились. Обновите страницу и повторите.'
-    if (error.status === 429) return 'Слишком много запросов. Подождите немного.'
+    if (error.status === 409)
+      return 'Данные изменились. Обновите страницу и повторите.'
+    if (error.status === 429)
+      return 'Слишком много запросов. Подождите немного.'
     if (error.status >= 500) return 'Ошибка сервера. Попробуйте позже.'
     if (error.message) return error.message
   }

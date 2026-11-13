@@ -21,13 +21,21 @@ function demoUser(): StaffUser {
     .split(',')
     .map((r: string) => r.trim())
     .filter(Boolean)
-  return { id: 'demo', name: 'Демо Сотрудник', email: 'demo@auksion.local', roles }
+  return {
+    id: 'demo',
+    name: 'Демо Сотрудник',
+    email: 'demo@auksion.local',
+    roles,
+  }
 }
 
 let demoSignedIn = false
 
 /** Шаг 1: логин и пароль. Сервер отвечает идентификатором MFA-челленджа. */
-export async function login(email: string, password: string): Promise<LoginResult> {
+export async function login(
+  email: string,
+  password: string
+): Promise<LoginResult> {
   if (DEMO) return { challengeId: 'demo' }
   return api<LoginResult>('/admin/auth/login', {
     method: 'POST',
@@ -36,7 +44,10 @@ export async function login(email: string, password: string): Promise<LoginResul
 }
 
 /** Шаг 2: TOTP-код. При успехе сервер ставит httpOnly-cookie сессии. */
-export async function verifyMfa(challengeId: string, code: string): Promise<StaffUser> {
+export async function verifyMfa(
+  challengeId: string,
+  code: string
+): Promise<StaffUser> {
   if (DEMO) {
     demoSignedIn = true
     return demoUser()

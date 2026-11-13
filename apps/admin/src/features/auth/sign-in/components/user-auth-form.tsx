@@ -22,7 +22,8 @@ import { login } from '../../api'
 
 const formSchema = z.object({
   email: z.email({
-    error: (iss) => (iss.input === '' ? 'Введите email.' : 'Неверный формат email.'),
+    error: (iss) =>
+      iss.input === '' ? 'Введите email.' : 'Неверный формат email.',
   }),
   password: z.string().min(1, 'Введите пароль.'),
 })
@@ -36,13 +37,19 @@ interface UserAuthFormProps extends React.HTMLAttributes<HTMLFormElement> {
 function errorText(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 401) return 'Неверный email или пароль.'
-    if (error.status === 423) return 'Учётная запись временно заблокирована. Обратитесь к администратору.'
-    if (error.status === 429) return 'Слишком много попыток. Подождите несколько минут.'
+    if (error.status === 423)
+      return 'Учётная запись временно заблокирована. Обратитесь к администратору.'
+    if (error.status === 429)
+      return 'Слишком много попыток. Подождите несколько минут.'
   }
   return 'Не удалось войти. Проверьте соединение и попробуйте ещё раз.'
 }
 
-export function UserAuthForm({ className, redirectTo, ...props }: UserAuthFormProps) {
+export function UserAuthForm({
+  className,
+  redirectTo,
+  ...props
+}: UserAuthFormProps) {
   const navigate = useNavigate()
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -54,7 +61,10 @@ export function UserAuthForm({ className, redirectTo, ...props }: UserAuthFormPr
     meta: { silent: true },
     onSuccess: ({ challengeId }) => {
       form.resetField('password')
-      navigate({ to: '/otp', search: { challenge: challengeId, redirect: redirectTo } })
+      navigate({
+        to: '/otp',
+        search: { challenge: challengeId, redirect: redirectTo },
+      })
     },
   })
 
@@ -78,7 +88,12 @@ export function UserAuthForm({ className, redirectTo, ...props }: UserAuthFormPr
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input type='email' autoComplete='username' placeholder='name@company.uz' {...field} />
+                <Input
+                  type='email'
+                  autoComplete='username'
+                  placeholder='name@company.uz'
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -98,7 +113,11 @@ export function UserAuthForm({ className, redirectTo, ...props }: UserAuthFormPr
           )}
         />
         <Button className='mt-2' disabled={mutation.isPending}>
-          {mutation.isPending ? <Loader2 className='animate-spin' /> : <LogIn />}
+          {mutation.isPending ? (
+            <Loader2 className='animate-spin' />
+          ) : (
+            <LogIn />
+          )}
           Продолжить
         </Button>
       </form>

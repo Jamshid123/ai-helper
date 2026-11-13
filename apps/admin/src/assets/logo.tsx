@@ -10,15 +10,18 @@ export function Logo({ className, ...props }: SVGProps<SVGSVGElement>) {
       height='24'
       width='24'
       fill='none'
-      stroke='currentColor'
-      strokeWidth='2.2'
-      strokeLinecap='round'
-      strokeLinejoin='round'
       className={cn('size-6', className)}
       {...props}
     >
       <title>Auksion</title>
-      <path d='M5 17h4v-4h4V9h4V5' />
+      <rect width='24' height='24' rx='6' fill='var(--primary)' />
+      <path
+        d='M5 17h4v-4h4V9h4V5'
+        stroke='var(--primary-foreground)'
+        strokeWidth='2.2'
+        strokeLinecap='round'
+        strokeLinejoin='round'
+      />
     </svg>
   )
 }

@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { Menu, X } from 'lucide-react'
+import { Logo } from '@/assets/logo'
 import { cn } from '@/lib/utils'
 import {
   SidebarMenu,
@@ -7,7 +8,6 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar'
-import { Logo } from '@/assets/logo'
 import { Button } from '../ui/button'
 
 export function AppTitle() {

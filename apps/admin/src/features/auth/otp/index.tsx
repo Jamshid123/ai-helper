@@ -17,10 +17,12 @@ export function Otp() {
     <AuthLayout>
       <Card className='max-w-md gap-4'>
         <CardHeader>
-          <CardTitle className='text-base tracking-tight'>Код подтверждения</CardTitle>
+          <CardTitle className='text-base tracking-tight'>
+            Код подтверждения
+          </CardTitle>
           <CardDescription>
-            Введите 6-значный код из приложения-аутентификатора
-            (Google Authenticator, Aegis, 1Password и т.п.).
+            Введите 6-значный код из приложения-аутентификатора (Google
+            Authenticator, Aegis, 1Password и т.п.).
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -29,7 +31,10 @@ export function Otp() {
         <CardFooter>
           <p className='text-sm text-muted-foreground'>
             Потеряли доступ к приложению? Попросите администратора сбросить MFA.{' '}
-            <Link to='/sign-in' className='underline underline-offset-4 hover:text-primary'>
+            <Link
+              to='/sign-in'
+              className='text-brand-ink underline underline-offset-4'
+            >
               Вернуться ко входу
             </Link>
           </p>

@@ -16,10 +16,12 @@ export function SignIn() {
     <AuthLayout>
       <Card className='max-w-sm gap-4'>
         <CardHeader>
-          <CardTitle className='text-lg tracking-tight'>Вход для сотрудников</CardTitle>
+          <CardTitle className='text-lg tracking-tight'>
+            Вход для сотрудников
+          </CardTitle>
           <CardDescription>
-            Учётную запись выдаёт администратор. После пароля понадобится код
-            из приложения-аутентификатора.
+            Учётную запись выдаёт администратор. После пароля понадобится код из
+            приложения-аутентификатора.
           </CardDescription>
         </CardHeader>
         <CardContent>

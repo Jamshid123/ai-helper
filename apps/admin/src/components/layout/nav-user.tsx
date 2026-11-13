@@ -1,6 +1,6 @@
 import { ChevronsUpDown, LogOut } from 'lucide-react'
-import { ROLE_LABELS, isRole } from '@/lib/rbac'
 import { useAuthStore } from '@/stores/auth-store'
+import { ROLE_LABELS, isRole } from '@/lib/rbac'
 import useDialogState from '@/hooks/use-dialog-state'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -34,7 +34,10 @@ export function NavUser() {
   const user = useAuthStore((s) => s.user)
   if (!user) return null
 
-  const roles = user.roles.filter(isRole).map((r) => ROLE_LABELS[r]).join(', ')
+  const roles = user.roles
+    .filter(isRole)
+    .map((r) => ROLE_LABELS[r])
+    .join(', ')
 
   return (
     <>
@@ -67,12 +70,17 @@ export function NavUser() {
               <DropdownMenuLabel className='font-normal'>
                 <div className='grid gap-1 text-sm'>
                   <span className='font-semibold'>{user.name}</span>
-                  <span className='text-xs text-muted-foreground'>{user.email}</span>
+                  <span className='text-xs text-muted-foreground'>
+                    {user.email}
+                  </span>
                   <span className='text-xs text-muted-foreground'>{roles}</span>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem variant='destructive' onClick={() => setOpen(true)}>
+              <DropdownMenuItem
+                variant='destructive'
+                onClick={() => setOpen(true)}
+              >
                 <LogOut />
                 Выйти
               </DropdownMenuItem>

@@ -30,7 +30,10 @@ function onUnauthorized() {
   useAuthStore.getState().reset()
   queryClient.clear()
   toast.error('Сессия завершена. Войдите снова.')
-  router.navigate({ to: '/sign-in', search: { redirect: router.history.location.href } })
+  router.navigate({
+    to: '/sign-in',
+    search: { redirect: router.history.location.href },
+  })
 }
 
 const queryClient = new QueryClient({
@@ -51,7 +54,8 @@ const queryClient = new QueryClient({
   }),
   mutationCache: new MutationCache({
     onError: (error, _vars, _ctx, mutation) => {
-      if (error instanceof ApiError && error.status === 401) return onUnauthorized()
+      if (error instanceof ApiError && error.status === 401)
+        return onUnauthorized()
       if (!mutation.meta?.silent) handleServerError(error)
     },
   }),

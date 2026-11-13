@@ -15,7 +15,9 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 })
 
 function renderForm(redirectTo?: string) {
-  const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+  const qc = new QueryClient({
+    defaultOptions: { mutations: { retry: false } },
+  })
   return render(
     <QueryClientProvider client={qc}>
       <UserAuthForm redirectTo={redirectTo} />
@@ -41,7 +43,10 @@ describe('UserAuthForm', () => {
     await userEvent.click(getByRole('button', { name: 'Продолжить' }))
     await vi.waitFor(() => expect(navigate).toHaveBeenCalled())
     expect(login).toHaveBeenCalledWith('op@company.uz', 'correct horse')
-    expect(navigate).toHaveBeenCalledWith({ to: '/otp', search: { challenge: 'ch-1', redirect: '/lots' } })
+    expect(navigate).toHaveBeenCalledWith({
+      to: '/otp',
+      search: { challenge: 'ch-1', redirect: '/lots' },
+    })
   })
 
   it('на 401 показывает понятную ошибку и не уходит со страницы', async () => {
@@ -50,7 +55,9 @@ describe('UserAuthForm', () => {
     await userEvent.fill(getByLabelText('Email'), 'op@company.uz')
     await userEvent.fill(getByLabelText('Пароль'), 'wrong')
     await userEvent.click(getByRole('button', { name: 'Продолжить' }))
-    await expect.element(getByText('Неверный email или пароль.')).toBeInTheDocument()
+    await expect
+      .element(getByText('Неверный email или пароль.'))
+      .toBeInTheDocument()
     expect(navigate).not.toHaveBeenCalled()
   })
 })

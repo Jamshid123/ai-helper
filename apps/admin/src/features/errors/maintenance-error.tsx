@@ -1,4 +1,3 @@
-
 export function MaintenanceError() {
   return (
     <div className='h-svh'>

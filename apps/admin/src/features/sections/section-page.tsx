@@ -1,5 +1,5 @@
-import { Construction } from 'lucide-react'
 import { SECTIONS_BY_ID } from '@/config/sections'
+import { Construction } from 'lucide-react'
 import { type Section } from '@/lib/rbac'
 import { PageShell } from '@/components/layout/page-shell'
 

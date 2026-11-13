@@ -11,7 +11,12 @@ type PageShellProps = {
 }
 
 /** Общая оболочка страницы раздела: шапка с поиском и темой, заголовок, контент. */
-export function PageShell({ title, description, actions, children }: PageShellProps) {
+export function PageShell({
+  title,
+  description,
+  actions,
+  children,
+}: PageShellProps) {
   return (
     <>
       <Header fixed>
@@ -22,7 +27,9 @@ export function PageShell({ title, description, actions, children }: PageShellPr
         <div className='mb-6 flex flex-wrap items-end justify-between gap-3'>
           <div className='space-y-1'>
             <h1 className='text-2xl font-semibold tracking-tight'>{title}</h1>
-            {description && <p className='max-w-2xl text-muted-foreground'>{description}</p>}
+            {description && (
+              <p className='max-w-2xl text-muted-foreground'>{description}</p>
+            )}
           </div>
           {actions}
         </div>

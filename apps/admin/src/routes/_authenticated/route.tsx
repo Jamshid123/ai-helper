@@ -1,10 +1,15 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { meQuery } from '@/features/auth/queries'
 import { useAuthStore } from '@/stores/auth-store'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
+import { meQuery } from '@/features/auth/queries'
 
 function isUnauthorized(e: unknown): boolean {
-  return typeof e === 'object' && e !== null && 'status' in e && (e as { status: number }).status === 401
+  return (
+    typeof e === 'object' &&
+    e !== null &&
+    'status' in e &&
+    (e as { status: number }).status === 401
+  )
 }
 
 export const Route = createFileRoute('/_authenticated')({

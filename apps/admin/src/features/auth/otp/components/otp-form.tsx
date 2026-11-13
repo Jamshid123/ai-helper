@@ -39,13 +39,20 @@ type OtpFormProps = React.HTMLAttributes<HTMLFormElement> & {
 function errorText(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 401) return 'Неверный или устаревший код.'
-    if (error.status === 410) return 'Сессия входа истекла. Вернитесь и введите пароль снова.'
-    if (error.status === 429) return 'Слишком много попыток. Подождите несколько минут.'
+    if (error.status === 410)
+      return 'Сессия входа истекла. Вернитесь и введите пароль снова.'
+    if (error.status === 429)
+      return 'Слишком много попыток. Подождите несколько минут.'
   }
   return 'Не удалось проверить код. Попробуйте ещё раз.'
 }
 
-export function OtpForm({ className, challengeId, redirectTo, ...props }: OtpFormProps) {
+export function OtpForm({
+  className,
+  challengeId,
+  redirectTo,
+  ...props
+}: OtpFormProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const setUser = useAuthStore((s) => s.setUser)
@@ -113,7 +120,10 @@ export function OtpForm({ className, challengeId, redirectTo, ...props }: OtpFor
             </FormItem>
           )}
         />
-        <Button className='mt-2' disabled={otp.length < 6 || mutation.isPending}>
+        <Button
+          className='mt-2'
+          disabled={otp.length < 6 || mutation.isPending}
+        >
           {mutation.isPending && <Loader2 className='animate-spin' />}
           Войти
         </Button>

@@ -1,9 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { logout } from '@/features/auth/api'
 import { useAuthStore } from '@/stores/auth-store'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { logout } from '@/features/auth/api'
 
 interface SignOutDialogProps {
   open: boolean
@@ -19,7 +19,9 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
     try {
       await logout()
     } catch {
-      toast.error('Не удалось завершить сессию на сервере. Данные на этом устройстве очищены.')
+      toast.error(
+        'Не удалось завершить сессию на сервере. Данные на этом устройстве очищены.'
+      )
     }
     reset()
     queryClient.clear()

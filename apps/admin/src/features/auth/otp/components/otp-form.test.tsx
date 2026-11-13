@@ -8,16 +8,26 @@ import { OtpForm } from './otp-form'
 
 const navigate = vi.fn()
 const verifyMfa = vi.fn()
-const user = { id: 'u1', name: 'Эксперт', email: 'e@company.uz', roles: ['EXPERT'] }
+const user = {
+  id: 'u1',
+  name: 'Эксперт',
+  email: 'e@company.uz',
+  roles: ['EXPERT'],
+}
 
-vi.mock('../../api', () => ({ verifyMfa: (...a: unknown[]) => verifyMfa(...a), fetchMe: vi.fn() }))
+vi.mock('../../api', () => ({
+  verifyMfa: (...a: unknown[]) => verifyMfa(...a),
+  fetchMe: vi.fn(),
+}))
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()
   return { ...actual, useNavigate: () => navigate }
 })
 
 function renderForm(redirectTo?: string) {
-  const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+  const qc = new QueryClient({
+    defaultOptions: { mutations: { retry: false } },
+  })
   return render(
     <QueryClientProvider client={qc}>
       <OtpForm challengeId='ch-1' redirectTo={redirectTo} />
@@ -61,7 +71,9 @@ describe('OtpForm', () => {
     const { getByRole, getByText } = await renderForm()
     await userEvent.keyboard('000000')
     await userEvent.click(getByRole('button', { name: 'Войти' }))
-    await expect.element(getByText('Неверный или устаревший код.')).toBeInTheDocument()
+    await expect
+      .element(getByText('Неверный или устаревший код.'))
+      .toBeInTheDocument()
     expect(useAuthStore.getState().user).toBeNull()
   })
 })

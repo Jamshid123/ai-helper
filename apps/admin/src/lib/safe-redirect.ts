@@ -5,7 +5,11 @@
  */
 export function safeRedirect(target: unknown, fallback = '/'): string {
   if (typeof target !== 'string' || target.length === 0) return fallback
-  if (!target.startsWith('/') || target.startsWith('//') || target.startsWith('/\\')) {
+  if (
+    !target.startsWith('/') ||
+    target.startsWith('//') ||
+    target.startsWith('/\\')
+  ) {
     return fallback
   }
   // Управляющие символы и обратные слэши браузеры трактуют непредсказуемо.
