@@ -23,6 +23,7 @@
 - Раздел «Дизайн» (§10) в `docs/PROJECT_CONTEXT.md`.
 
 ### Changed
+- CI и server-inspect: раннер закреплён на `ubuntu-24.04` (на `ubuntu-latest` = 26.04 Playwright не ставит Chromium).
 - DNS `expertly.uz` в Vercel зафиксирован в решениях и скилле `deploy`.
 - Домен исправлен на `auksion.expertly.uz` во всех документах; админка — `auksion-admin.expertly.uz`.
 - Зафиксированы сервер, бот @auksionchi1_bot и соседний проект на сервере.
