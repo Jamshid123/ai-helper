@@ -18,6 +18,8 @@ export default function setup() {
     CORS_ORIGINS: 'https://auksion.expertly.uz',
     LOG_LEVEL: 'warn',
     PAYMENTS_MODE: 'fake',
+    TELEGRAM_BOT_TOKEN: '123456:TEST-TOKEN-not-real-xxxxxx',
+    JWT_SECRET: 'test-secret-'.padEnd(40, 'x'),
   })
   const run = (cmd: string, input?: string) =>
     execSync(cmd, { env: process.env, input, stdio: input ? ['pipe', 'inherit', 'inherit'] : 'inherit' })

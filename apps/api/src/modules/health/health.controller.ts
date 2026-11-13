@@ -1,10 +1,12 @@
 import { Controller, Get, HttpException, HttpStatus, Inject } from '@nestjs/common'
 import Redis from 'ioredis'
+import { Public } from '../../common/public.decorator'
 import { REDIS } from '../../common/redis.module'
 import { PrismaService } from '../../prisma/prisma.service'
 
 type Check = 'ok' | 'fail'
 
+@Public()
 @Controller('health')
 export class HealthController {
   constructor(

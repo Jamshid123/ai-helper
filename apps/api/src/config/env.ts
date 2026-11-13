@@ -25,6 +25,10 @@ export const envSchema = z.object({
   CORS_ORIGINS: csv.refine((list) => !list.includes('*'), 'CORS_ORIGINS не может содержать *'),
   /** disabled — оплата выключена (безопасно по умолчанию); fake — только демо/тесты; live — реальный партнёр. */
   PAYMENTS_MODE: z.enum(['disabled', 'fake', 'live']).default('disabled'),
+  /** Токен бота: проверка подписи initData и отправка уведомлений. */
+  TELEGRAM_BOT_TOKEN: z.string().regex(/^\d+:[A-Za-z0-9_-]{20,}$/, 'неверный формат токена бота'),
+  /** Секрет подписи сессий покупателей (HS256), не короче 32 символов. */
+  JWT_SECRET: z.string().min(32),
 })
 
 export type Env = z.infer<typeof envSchema>

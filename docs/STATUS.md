@@ -17,7 +17,8 @@ _Обновлено: 13.11.2026_
   - Этап 1, шаг 1 ✓: `apps/api` (NestJS + Fastify + Prisma), конфиг на zod, `/api/v1/health` (БД + Redis), логи с redact, Docker-образ, сервисы `api`/`redis` в compose, CI с Postgres/Redis.
   - Этап 1, шаг 2 ✓: схема БД домена (User, Restriction, Lot, Admission, Bid, Order, Obligation, OutboxEvent, AuditLog, Setting) + миграция с CHECK-ограничениями; тесты гарантий схемы.
   - Этап 2.4 (ядро торгов) ✓: `BidsService.placeBid` — транзакция + `FOR UPDATE`, идемпотентность (в т.ч. гонка одинаковых ключей), допуск, окно торгов, статус, ограничение, мин. цена по правилам ТЗ, монотонный `seq`, событие в outbox. 10 тестов сценариев приёмки (одновременные предложения, 17:59:59/18:00:00, повтор ключа и др.).
-  - Следующий шаг: авторизация Mini App (`POST /auth/telegram`: initData → сессия), затем HTTP-эндпоинты каталога и предложений.
+  - Этап 2.1 (вход) ✓: проверка подписи `initData` (HMAC, ≤ 1 ч, timing-safe), `POST /api/v1/auth/telegram` → покупатель (upsert по telegramId, публичное имя «Имя Ф.» / «Участник NNNN») + сессия JWT 1 ч; глобальный guard (всё закрыто, кроме `@Public`), `GET /api/v1/auth/me`. `JWT_SECRET` генерируется на сервере при выкладке.
+  - Следующий шаг: каталог (`GET /lots`, `/lots/:id`, `/schedule`) и `POST /lots/:id/bids` (HTTP поверх BidsService).
 
 ## Вопросы к заказчику
 - Лидер не может перебить собственное предложение (защита от «разгона» цены; ТЗ прямо не говорит) — выбран безопасный вариант, подтвердите.

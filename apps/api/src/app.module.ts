@@ -5,6 +5,7 @@ import { RedisModule } from './common/redis.module'
 import { ConfigModule, ENV } from './config/config.module'
 import type { Env } from './config/env'
 import { AuctionsModule } from './modules/auctions/auctions.module'
+import { AuthModule } from './modules/auth/auth.module'
 import { HealthModule } from './modules/health/health.module'
 import { PrismaModule } from './prisma/prisma.module'
 
@@ -38,6 +39,7 @@ export const LOG_REDACT = [
     PrismaModule,
     RedisModule,
     HealthModule,
+    AuthModule,
     AuctionsModule,
   ],
 })

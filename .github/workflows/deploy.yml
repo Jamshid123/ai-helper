@@ -63,6 +63,8 @@ jobs:
           ssh srv "set -e; cd /opt/auksion
             [ -f .deploy.env ] && cp .deploy.env .deploy.env.prev || true
             echo TAG=$TAG > .deploy.env
+            # Секрет сессий генерируется на сервере один раз и никуда не передаётся.
+            grep -q '^JWT_SECRET=' .env || { umask 077; echo \"JWT_SECRET=\$(openssl rand -hex 32)\" >> .env; }
             C='docker compose --env-file .env --env-file .deploy.env'
             \$C up -d --wait postgres redis
             \$C run --rm --no-deps api ./node_modules/.bin/prisma migrate deploy
