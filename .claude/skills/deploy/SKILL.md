@@ -12,12 +12,13 @@ description: Use when working on Dockerfiles, docker-compose, Caddy/reverse prox
 ```
 Internet ─▶ reverse proxy (TLS) ─┬─▶ miniapp (static, nginx-unprivileged)   auksion.expertly.uz
                                  ├─▶ api (NestJS, :3000)                     auksion.expertly.uz/api, /ws
-                                 └─▶ admin (static)                          admin.auksion.expertly.uz (уточнить)
+                                 └─▶ admin (static)                          auksion-admin.expertly.uz
 api ─▶ PostgreSQL (уже установлен на сервере, вне compose)
 api ─▶ Redis (контейнер в compose, только внутренняя сеть)
 worker (тот же образ api, команда worker) ─▶ BullMQ задачи
 ```
 
+- На сервере уже работает другой проект (`karnaychi-api`). Ничего чужого не останавливать и не переконфигурировать; свои сервисы — отдельный compose-проект `auksion`, свои виртуальные хосты в существующем proxy.
 - Reverse proxy: если на сервере уже есть nginx/Caddy для `expertly.uz` — добавляем в него виртуальный хост; иначе Caddy в compose (авто-TLS). Выяснить при получении доступа.
 - DNS: зона `expertly.uz` в **Vercel** → A-запись `auksion` (и админки) → IP сервера.
 
