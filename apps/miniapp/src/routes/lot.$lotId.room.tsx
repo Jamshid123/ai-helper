@@ -9,6 +9,7 @@ import { currentPrice, roomMinBid } from '@/entities/lot/engine'
 import { demoOnline, demoPlaceBid, getRoom, isAdmitted, startBots, useDemoVersion } from '@/entities/lot/demo-store'
 import { cn } from '@/shared/lib/cn'
 import { formatCountdown, useNow } from '@/shared/lib/use-now'
+import { AutoBidCard } from '@/features/auto-bid'
 import { Button } from '@/shared/ui/button'
 import { LiveBadge } from '@/shared/ui/live-badge'
 import { Price } from '@/shared/ui/price'
@@ -134,6 +135,8 @@ function RoomPage() {
       </section>
 
       {banner && <div className={cn('rounded-xl px-4 py-3 text-[14px] font-medium', banner.cls)}>{banner.text}</div>}
+
+      {admitted && !closed && <AutoBidCard lotId={lotId} minBid={min} step={room.step} />}
 
       <section className='grid gap-1'>
         <h2 className='text-[15px] font-semibold'>{t('room.history')}</h2>

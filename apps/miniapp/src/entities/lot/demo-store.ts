@@ -12,6 +12,8 @@ const BOT_NAMES = ['Дилшод Р.', 'Малика Т.', 'Участник 041
 
 const lots: Lot[] = buildDemoLots(new Date())
 const admissions = new Set<string>()
+/** Автопредложения пользователя (демо): lotId → максимум. */
+const autoBids = new Map<string, bigint>()
 const rooms = new Map<string, Room>()
 const listeners = new Set<() => void>()
 let version = 0
@@ -77,6 +79,29 @@ export function getRoom(lotId: string): Room {
   return room
 }
 
+export function getAutoBid(lotId: string): bigint | null {
+  return autoBids.get(lotId) ?? null
+}
+
+export function setAutoBid(lotId: string, max: bigint | null): void {
+  if (max === null) autoBids.delete(lotId)
+  else autoBids.set(lotId, max)
+  respondWithAutoBid(lotId)
+  emit()
+}
+
+/** Если пользователя перебили и его максимум позволяет — предлагаем за него минимальную цену. */
+function respondWithAutoBid(lotId: string): void {
+  const max = autoBids.get(lotId)
+  if (max === undefined || !admissions.has(lotId)) return
+  const room = getRoom(lotId)
+  if (room.bids.at(-1)?.isMe) return
+  const min = roomMinBid(room)
+  if (min > max) return
+  const r = placeBid(room, min, 'me', true, Date.now())
+  if (r.ok) rooms.set(lotId, r.room)
+}
+
 export function demoPlaceBid(lotId: string, amount: bigint): BidResult {
   const r = placeBid(getRoom(lotId), amount, 'me', true, Date.now())
   if (r.ok) {
@@ -96,6 +121,7 @@ export function startBots(lotId: string): () => void {
       const r = placeBid(room, roomMinBid(room), who, false, Date.now())
       if (r.ok) {
         rooms.set(lotId, r.room)
+        respondWithAutoBid(lotId)
         emit()
       }
     }

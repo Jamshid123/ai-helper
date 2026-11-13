@@ -8,6 +8,14 @@ import { telegramLanguage } from './telegram'
  */
 export const dict = {
   ru: {
+    'auto.title': 'Автопредложение',
+    'auto.text':
+      'Укажите свою максимальную цену — система будет предлагать за вас на шаг выше других, пока не дойдёт до максимума. Ваш максимум никто не видит.',
+    'auto.max': 'Мой максимум',
+    'auto.enable': 'Включить',
+    'auto.active': 'Автопредложение до',
+    'auto.off': 'Отключить',
+    'auto.exhausted': 'Ваш максимум превышен',
     'reg.title': 'Регистрация',
     'reg.step': 'Шаг',
     'reg.of': 'из',
@@ -143,6 +151,14 @@ export const dict = {
     'time.d': 'д',
   },
   uz: {
+    'auto.title': 'Avtotaklif',
+    'auto.text':
+      'Maksimal narxingizni kiriting — tizim siz uchun boshqalardan bir qadam yuqori taklif qiladi, maksimumga yetguncha. Maksimumingizni hech kim koʻrmaydi.',
+    'auto.max': 'Mening maksimumim',
+    'auto.enable': 'Yoqish',
+    'auto.active': 'Avtotaklif',
+    'auto.off': 'Oʻchirish',
+    'auto.exhausted': 'Maksimumingizdan oshib ketishdi',
     'reg.title': 'Roʻyxatdan oʻtish',
     'reg.step': 'Qadam',
     'reg.of': 'dan',
