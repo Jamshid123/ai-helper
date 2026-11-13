@@ -28,7 +28,7 @@ export function AppTitle() {
             >
               <Logo className='size-5 shrink-0' />
               <span className='grid'>
-                <span className='truncate font-semibold'>Auksion</span>
+                <span className='truncate font-semibold'>AuksionGO</span>
                 <span className='truncate text-xs text-muted-foreground'>
                   Панель сотрудников
                 </span>

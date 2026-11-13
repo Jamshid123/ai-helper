@@ -26,6 +26,7 @@
 - `infra/Dockerfile.spa` + `infra/nginx/spa.conf`: образ статики (Mini App / админка) на nginx-unprivileged без root, CSP (Mini App встраивается только в Telegram, админка — никуда), кэш ассетов, `/healthz`.
 
 ### Changed
+- Название в интерфейсе: AuksionGO.
 - `valibot` (необязательная зависимость `@hookform/resolvers`) закреплён на `^1.2.0` через `pnpm.overrides` — закрыта уязвимость ReDoS (GHSA-vqpr-j7v3-hqw9).
 - Расчёт пятничной сессии перенесён из админки в `packages/shared`.
 - CI и server-inspect: раннер закреплён на `ubuntu-24.04` (на `ubuntu-latest` = 26.04 Playwright не ставит Chromium).

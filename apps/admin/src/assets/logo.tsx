@@ -13,7 +13,7 @@ export function Logo({ className, ...props }: SVGProps<SVGSVGElement>) {
       className={cn('size-6', className)}
       {...props}
     >
-      <title>Auksion</title>
+      <title>AuksionGO</title>
       <rect width='24' height='24' rx='6' fill='var(--primary)' />
       <path
         d='M5 17h4v-4h4V9h4V5'
