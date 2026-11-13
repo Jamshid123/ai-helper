@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common'
 import { LoggerModule } from 'nestjs-pino'
+import { ClockModule } from './common/clock.module'
 import { RedisModule } from './common/redis.module'
 import { ConfigModule, ENV } from './config/config.module'
 import type { Env } from './config/env'
+import { AuctionsModule } from './modules/auctions/auctions.module'
 import { HealthModule } from './modules/health/health.module'
 import { PrismaModule } from './prisma/prisma.module'
 
@@ -32,9 +34,11 @@ export const LOG_REDACT = [
         },
       }),
     }),
+    ClockModule,
     PrismaModule,
     RedisModule,
     HealthModule,
+    AuctionsModule,
   ],
 })
 export class AppModule {}
