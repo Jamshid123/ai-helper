@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+### Deployed
+- 13.11.2026 — демо-стенд Mini App на https://auksion.expertly.uz (коммит `ed6e299`), кнопка меню @auksionchi1_bot.
+
 ### Added
 - `docs/spec/tz.md` — ТЗ в Markdown (эталон для сверки).
 - `docs/PROJECT_CONTEXT.md` — контекст проекта: роли, модули, инварианты, стек, решения, открытые вопросы.
