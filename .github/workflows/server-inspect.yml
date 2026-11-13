@@ -88,6 +88,30 @@ jobs:
           fi
           docker ps --format '{{.Names}} {{.Image}} {{.Ports}}' 2>/dev/null | grep -iE 'postgres|redis'
 
+          section "Databases: all containers (incl. stopped) / volumes"
+          docker ps -a --format '{{.Names}} | {{.Image}} | {{.Status}}' 2>/dev/null | grep -iE 'postgres|mysql|maria|mongo|redis|clickhouse' || echo "no DB containers"
+          docker volume ls --format '{{.Name}}' 2>/dev/null | grep -iE 'pg|postgres|mysql|maria|mongo|redis|data|db' || true
+          ls -d /var/lib/postgresql /var/lib/mysql /var/lib/mongodb /opt/*/data /opt/*/postgres* 2>/dev/null
+
+          section "ai-helper-postgres: who uses it"
+          docker inspect ai-helper-postgres --format 'created={{.Created}} restart={{.HostConfig.RestartPolicy.Name}} compose_project={{index .Config.Labels "com.docker.compose.project"}} compose_dir={{index .Config.Labels "com.docker.compose.project.working_dir"}}' 2>/dev/null
+          # только имена переменных и несекретные значения (USER/DB), пароль не выводим
+          docker inspect ai-helper-postgres --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null | grep -E '^POSTGRES_(USER|DB)=' || true
+          docker network inspect ai-helper-net --format '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null
+          PGU=$(docker inspect ai-helper-postgres --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null | sed -n 's/^POSTGRES_USER=//p'); PGU=${PGU:-postgres}
+          echo "Databases (name | size):"
+          docker exec ai-helper-postgres psql -U "$PGU" -d postgres -Atc "select datname || ' | ' || pg_size_pretty(pg_database_size(datname)) from pg_database where not datistemplate order by 1;" 2>&1 | head -30
+          echo "Roles:"
+          docker exec ai-helper-postgres psql -U "$PGU" -d postgres -Atc "select rolname || case when rolsuper then ' (superuser)' else '' end from pg_roles where rolname !~ '^pg_' order by 1;" 2>&1 | head -30
+          echo "Active connections per DB:"
+          docker exec ai-helper-postgres psql -U "$PGU" -d postgres -Atc "select coalesce(datname,'-') || ' | ' || count(*) from pg_stat_activity group by 1 order by 1;" 2>&1 | head -20
+
+          section "MySQL"
+          mysql --version 2>/dev/null; systemctl is-active mysql 2>/dev/null
+          # root через unix-socket (auth_socket) — только список баз и размеры
+          mysql -N -e "select table_schema, round(sum(data_length+index_length)/1024/1024,1) as mb from information_schema.tables group by table_schema order by 1;" 2>&1 | head -30
+          mysql -N -e "select user, host from mysql.user order by 1;" 2>&1 | head -30
+
           section "SSH config"
           sshd -T 2>/dev/null | grep -E '^(port|permitrootlogin|passwordauthentication|pubkeyauthentication) '
           getent passwd deploy >/dev/null && echo "user deploy exists" || echo "user deploy absent"
