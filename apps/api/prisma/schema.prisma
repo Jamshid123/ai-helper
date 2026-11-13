@@ -31,6 +31,7 @@ model User {
   admissions   Admission[]
   bids         Bid[]
   autoBids     AutoBid[]
+  reminders    LotReminder[]
   orders       Order[]
   obligations  Obligation[]
   restrictions Restriction[]
@@ -106,6 +107,7 @@ model Lot {
   admissions  Admission[]
   bids        Bid[]
   autoBids    AutoBid[]
+  reminders   LotReminder[]
   orders      Order[]
   obligations Obligation[]
 
@@ -157,6 +159,22 @@ model AutoBid {
 
   @@unique([lotId, userId])
   @@index([lotId, active, maxAmount(sort: Desc)])
+}
+
+/// Напоминание о начале торгов по лоту (за N минут до открытия). Отправляется ровно один раз.
+model LotReminder {
+  id            String    @id @default(uuid()) @db.Uuid
+  lotId         String    @db.Uuid
+  lot           Lot       @relation(fields: [lotId], references: [id])
+  userId        String    @db.Uuid
+  user          User      @relation(fields: [userId], references: [id])
+  minutesBefore Int
+  remindAt      DateTime  @db.Timestamptz
+  sentAt        DateTime? @db.Timestamptz
+  createdAt     DateTime  @default(now()) @db.Timestamptz
+
+  @@unique([lotId, userId])
+  @@index([sentAt, remindAt])
 }
 
 // ───────────── Платежи и выкуп ─────────────

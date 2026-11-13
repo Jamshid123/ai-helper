@@ -7,7 +7,7 @@ const next = () => ++n
 
 export async function cleanDb(db: PrismaClient) {
   await db.$executeRawUnsafe(
-    'TRUNCATE "Bid","AutoBid","Admission","Obligation","Order","Restriction","Lot","User","OutboxEvent","AuditLog","Setting" RESTART IDENTITY CASCADE'
+    'TRUNCATE "Bid","AutoBid","LotReminder","Admission","Obligation","Order","Restriction","Lot","User","OutboxEvent","AuditLog","Setting" RESTART IDENTITY CASCADE'
   )
 }
 

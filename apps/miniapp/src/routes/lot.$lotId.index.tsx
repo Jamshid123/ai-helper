@@ -10,6 +10,7 @@ import { admit, isAdmitted } from '@/entities/lot/demo-store'
 import { type Lot } from '@/entities/lot/types'
 import { cn } from '@/shared/lib/cn'
 import { formatCountdown, useNow } from '@/shared/lib/use-now'
+import { RemindCard } from '@/features/remind'
 import { Button } from '@/shared/ui/button'
 import { LiveBadge } from '@/shared/ui/live-badge'
 import { LotPhoto } from '@/shared/ui/lot-photo'
@@ -168,6 +169,8 @@ function LotPage() {
           </div>
         </div>
       </div>
+
+      {!live && <RemindCard lotId={lot.id} opensAt={opens} now={now} />}
 
       {admitted && (
         <div className='rounded-2xl border border-ok/30 px-4 py-3 text-[14px] font-medium text-ok'>

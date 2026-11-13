@@ -8,6 +8,13 @@ import { telegramLanguage } from './telegram'
  */
 export const dict = {
   ru: {
+    'remind.title': 'Напомнить о начале',
+    'remind.15': 'За 15 минут',
+    'remind.60': 'За 1 час',
+    'remind.1440': 'Накануне',
+    'remind.on': 'Напомним в боте',
+    'remind.off': 'Отменить',
+    'remind.demo': 'В демо сообщение не придёт — бот подключим вместе с уведомлениями',
     'auto.title': 'Автопредложение',
     'auto.text':
       'Укажите свою максимальную цену — система будет предлагать за вас на шаг выше других, пока не дойдёт до максимума. Ваш максимум никто не видит.',
@@ -151,6 +158,13 @@ export const dict = {
     'time.d': 'д',
   },
   uz: {
+    'remind.title': 'Boshlanishini eslatish',
+    'remind.15': '15 daqiqa oldin',
+    'remind.60': '1 soat oldin',
+    'remind.1440': 'Bir kun oldin',
+    'remind.on': 'Botda eslatamiz',
+    'remind.off': 'Bekor qilish',
+    'remind.demo': 'Demoda xabar kelmaydi — botni bildirishnomalar bilan ulaymiz',
     'auto.title': 'Avtotaklif',
     'auto.text':
       'Maksimal narxingizni kiriting — tizim siz uchun boshqalardan bir qadam yuqori taklif qiladi, maksimumga yetguncha. Maksimumingizni hech kim koʻrmaydi.',

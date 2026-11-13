@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger, type OnApplicationBootstrap, type OnModuleD
 import { ENV } from '../../config/config.module'
 import type { Env } from '../../config/env'
 import { PrismaService } from '../../prisma/prisma.service'
+import { RemindersService } from '../reminders/reminders.service'
 import { BidsService } from './bids.service'
 import { LotLifecycleService } from './lot-lifecycle.service'
 
@@ -23,7 +24,8 @@ export class LifecycleScheduler implements OnApplicationBootstrap, OnModuleDestr
     @Inject(ENV) private readonly env: Env,
     private readonly prisma: PrismaService,
     private readonly lifecycle: LotLifecycleService,
-    private readonly bids: BidsService
+    private readonly bids: BidsService,
+    private readonly reminders: RemindersService
   ) {}
 
   onApplicationBootstrap() {
@@ -49,6 +51,7 @@ export class LifecycleScheduler implements OnApplicationBootstrap, OnModuleDestr
         // Максимумы, заданные до открытия, начинают работать сразу в 09:00.
         for (const lotId of opened) await this.bids.runProxies(lotId)
         const closed = await this.lifecycle.closeDue()
+        await this.reminders.dispatchDue()
         if (opened.length || Object.keys(closed).length) this.log.log({ opened, closed }, 'lifecycle sweep')
       } finally {
         await this.prisma.$queryRaw`SELECT pg_advisory_unlock(${SWEEP_LOCK_KEY})`

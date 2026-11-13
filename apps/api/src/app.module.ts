@@ -8,6 +8,7 @@ import { AuctionsModule } from './modules/auctions/auctions.module'
 import { AuthModule } from './modules/auth/auth.module'
 import { CatalogModule } from './modules/catalog/catalog.module'
 import { PaymentsModule } from './modules/payments/payments.module'
+import { RemindersModule } from './modules/reminders/reminders.module'
 import { HealthModule } from './modules/health/health.module'
 import { PrismaModule } from './prisma/prisma.module'
 
@@ -44,6 +45,7 @@ export const LOG_REDACT = [
     AuthModule,
     CatalogModule,
     PaymentsModule,
+    RemindersModule,
     AuctionsModule,
   ],
 })
