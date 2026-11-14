@@ -1,5 +1,4 @@
 import { api } from '@/lib/api'
-import { type Enrollment } from './enrollment'
 
 export type StaffUser = {
   id: string
@@ -7,9 +6,6 @@ export type StaffUser = {
   email: string
   roles: string[]
 }
-
-/** enroll — ключ для приложения-аутентификатора, только пока код не подключён (первый вход). */
-export type LoginResult = { challengeId: string; enroll: Enrollment | null }
 
 /**
  * Демо-режим без backend: работает ТОЛЬКО в `vite dev` и только при
@@ -33,30 +29,18 @@ function demoUser(): StaffUser {
 
 let demoSignedIn = false
 
-/** Шаг 1: логин и пароль. Сервер отвечает идентификатором MFA-челленджа. */
+/** Вход по email и паролю (без второго фактора — решение заказчика 14.11.2026). Сервер ставит httpOnly-cookie сессии. */
 export async function login(
   email: string,
   password: string
-): Promise<LoginResult> {
-  if (DEMO) return { challengeId: 'demo', enroll: null }
-  return api<LoginResult>('/admin/auth/login', {
-    method: 'POST',
-    body: { email, password },
-  })
-}
-
-/** Шаг 2: TOTP-код. При успехе сервер ставит httpOnly-cookie сессии. */
-export async function verifyMfa(
-  challengeId: string,
-  code: string
 ): Promise<StaffUser> {
   if (DEMO) {
     demoSignedIn = true
     return demoUser()
   }
-  return api<StaffUser>('/admin/auth/mfa', {
+  return api<StaffUser>('/admin/auth/login', {
     method: 'POST',
-    body: { challengeId, code },
+    body: { email, password },
   })
 }
 

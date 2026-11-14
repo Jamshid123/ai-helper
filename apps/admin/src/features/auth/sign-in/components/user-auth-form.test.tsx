@@ -8,7 +8,10 @@ import { UserAuthForm } from './user-auth-form'
 const navigate = vi.fn()
 const login = vi.fn()
 
-vi.mock('../../api', () => ({ login: (...a: unknown[]) => login(...a) }))
+vi.mock('../../api', () => ({
+  login: (...a: unknown[]) => login(...a),
+  fetchMe: vi.fn(),
+}))
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()
   return { ...actual, useNavigate: () => navigate }
@@ -30,23 +33,25 @@ describe('UserAuthForm', () => {
 
   it('не отправляет пустую форму', async () => {
     const { getByRole, getByText } = await renderForm()
-    await userEvent.click(getByRole('button', { name: 'Продолжить' }))
+    await userEvent.click(getByRole('button', { name: 'Войти' }))
     await expect.element(getByText('Введите email.')).toBeInTheDocument()
     expect(login).not.toHaveBeenCalled()
   })
 
-  it('после пароля ведёт на шаг MFA с челленджем и redirect', async () => {
-    login.mockResolvedValue({ challengeId: 'ch-1' })
+  it('после пароля сразу входит и уходит на redirect', async () => {
+    login.mockResolvedValue({
+      id: 'u1',
+      name: 'Оператор',
+      email: 'op@company.uz',
+      roles: ['OPERATOR'],
+    })
     const { getByLabelText, getByRole } = await renderForm('/lots')
     await userEvent.fill(getByLabelText('Email'), 'op@company.uz')
     await userEvent.fill(getByLabelText('Пароль'), 'correct horse')
-    await userEvent.click(getByRole('button', { name: 'Продолжить' }))
+    await userEvent.click(getByRole('button', { name: 'Войти' }))
     await vi.waitFor(() => expect(navigate).toHaveBeenCalled())
     expect(login).toHaveBeenCalledWith('op@company.uz', 'correct horse')
-    expect(navigate).toHaveBeenCalledWith({
-      to: '/otp',
-      search: { challenge: 'ch-1', redirect: '/lots' },
-    })
+    expect(navigate).toHaveBeenCalledWith({ to: '/lots', replace: true })
   })
 
   it('на 401 показывает понятную ошибку и не уходит со страницы', async () => {
@@ -54,7 +59,7 @@ describe('UserAuthForm', () => {
     const { getByLabelText, getByRole, getByText } = await renderForm()
     await userEvent.fill(getByLabelText('Email'), 'op@company.uz')
     await userEvent.fill(getByLabelText('Пароль'), 'wrong')
-    await userEvent.click(getByRole('button', { name: 'Продолжить' }))
+    await userEvent.click(getByRole('button', { name: 'Войти' }))
     await expect
       .element(getByText('Неверный email или пароль.'))
       .toBeInTheDocument()

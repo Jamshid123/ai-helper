@@ -8,7 +8,6 @@ import { CSRF_COOKIE, SESSION_COOKIE, type StaffRequest } from './staff-auth.gua
 import { SESSION_TTL_S, StaffAuthService } from './staff-auth.service'
 
 const loginSchema = z.object({ email: z.string().email().max(200), password: z.string().min(1).max(200) })
-const mfaSchema = z.object({ challengeId: z.string().uuid(), code: z.string().regex(/^\d{6}$/) })
 
 @Controller('admin')
 export class StaffAuthController {
@@ -17,19 +16,10 @@ export class StaffAuthController {
   @Public()
   @Post('auth/login')
   @HttpCode(200)
-  login(@Body() body: unknown) {
+  async login(@Body() body: unknown, @Req() req: StaffRequest, @Res({ passthrough: true }) reply: FastifyReply) {
     const p = loginSchema.safeParse(body)
     if (!p.success) throw new BadRequestException({ code: 'BAD_REQUEST', message: 'Укажите email и пароль' })
-    return this.auth.login(p.data.email, p.data.password)
-  }
-
-  @Public()
-  @Post('auth/mfa')
-  @HttpCode(200)
-  async mfa(@Body() body: unknown, @Req() req: StaffRequest, @Res({ passthrough: true }) reply: FastifyReply) {
-    const p = mfaSchema.safeParse(body)
-    if (!p.success) throw new BadRequestException({ code: 'BAD_REQUEST', message: 'Введите 6 цифр кода' })
-    const r = await this.auth.verifyMfa(p.data.challengeId, p.data.code, req.ip ?? null)
+    const r = await this.auth.login(p.data.email, p.data.password, req.ip ?? null)
     reply.header('Set-Cookie', [
       serializeCookie(SESSION_COOKIE, r.token, { path: '/api', maxAge: SESSION_TTL_S, httpOnly: true }),
       serializeCookie(CSRF_COOKIE, r.csrfToken, { path: '/', maxAge: SESSION_TTL_S, httpOnly: false }),

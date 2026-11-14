@@ -1,6 +1,5 @@
 import type { StaffRole } from '@prisma/client'
 import { StaffAuthService } from '../src/modules/staff/staff-auth.service'
-import { totpCode } from '../src/modules/staff/totp'
 import type { NestFastifyApplication } from '@nestjs/platform-fastify'
 import { createApp } from '../src/bootstrap'
 import { signInitData } from '../src/modules/auth/telegram-init-data'
@@ -32,7 +31,7 @@ export async function loginAs(app: NestFastifyApplication, tgId: number, firstNa
   }
 }
 
-/** Вход сотрудника (создание + пароль + TOTP). Возвращает заголовки для чтения и для мутаций (с CSRF). */
+/** Вход сотрудника (создание + пароль). Возвращает заголовки для чтения и для мутаций (с CSRF). */
 export async function loginStaff(
   app: NestFastifyApplication,
   roles: StaffRole[] = ['ADMIN'],
@@ -41,13 +40,7 @@ export async function loginStaff(
   const auth = app.get(StaffAuthService)
   const password = 'test password 123456'
   await auth.createStaff({ email, name: 'Сотрудник', password, roles })
-  const login = await app.inject({ method: 'POST', url: '/api/v1/admin/auth/login', payload: { email, password } })
-  const { challengeId, enroll } = login.json()
-  const res = await app.inject({
-    method: 'POST',
-    url: '/api/v1/admin/auth/mfa',
-    payload: { challengeId, code: totpCode(enroll.secret, Math.floor(Date.now() / 30_000)) },
-  })
+  const res = await app.inject({ method: 'POST', url: '/api/v1/admin/auth/login', payload: { email, password } })
   const cookies = ([] as string[]).concat(res.headers['set-cookie'] as string | string[])
   const get = (n: string) =>
     cookies

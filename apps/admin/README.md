@@ -1,7 +1,7 @@
 # @auksion/admin — панель сотрудников
 
 Основа — шаблон [shadcn-admin](https://github.com/satnaing/shadcn-admin) (MIT, лицензия в `LICENSE.shadcn-admin`).
-Удалены Clerk, демо-разделы, мок-данные и вход через соцсети; добавлены вход с MFA, права по ролям, разделы по ТЗ.
+Удалены Clerk, демо-разделы, мок-данные и вход через соцсети; добавлены вход по паролю, права по ролям, разделы по ТЗ.
 
 ## Запуск
 
@@ -32,7 +32,7 @@ pnpm --filter @auksion/admin build
 | Guard раздела (→ 403) | `src/lib/require-section.ts`, используется в `src/routes/_authenticated/<раздел>/index.tsx` |
 | Проверка сессии (→ /sign-in) | `src/routes/_authenticated/route.tsx` |
 | HTTP-клиент: cookie-сессия, CSRF | `src/lib/api.ts` |
-| Вход: пароль → TOTP | `src/features/auth/` |
+| Вход: email + пароль | `src/features/auth/` |
 | Защита от open redirect | `src/lib/safe-redirect.ts` |
 | Пятничная сессия по Ташкенту | `src/lib/session-time.ts` |
 
@@ -40,7 +40,7 @@ pnpm --filter @auksion/admin build
 
 | Раздел | Где | API |
 |---|---|---|
-| Вход: пароль → код; при первом входе — QR/ключ для аутентификатора (ключ только в памяти вкладки) | `src/features/auth/` | `POST /admin/auth/login` → `{challengeId, enroll}` · `POST /admin/auth/mfa` → `StaffUser` + cookie · `GET /admin/me` · `POST /admin/auth/logout` |
+| Вход по email и паролю | `src/features/auth/` | `POST /admin/auth/login` → `StaffUser` + cookie · `GET /admin/me` · `POST /admin/auth/logout` |
 | Категории (ru/uz, вкл/выкл, порядок) | `src/features/manage/categories-page.tsx` | `GET/POST /admin/categories`, `PATCH /admin/categories/:id` |
 | Товары (карточка, акт, IMEI шифруется) | `products-page.tsx` | `GET/POST /admin/products`, `PATCH /admin/products/:id` |
 | Лоты (из товара, публикация, правка до открытия, отмена с возвратом) | `lots-page.tsx`, `lot-dialog.tsx` | `GET/POST /admin/lots`, `PATCH /admin/lots/:id`, `POST /admin/lots/:id/publish`, `POST /admin/lots/:id/cancel {reason}` |

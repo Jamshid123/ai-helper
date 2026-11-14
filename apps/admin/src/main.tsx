@@ -54,9 +54,11 @@ const queryClient = new QueryClient({
   }),
   mutationCache: new MutationCache({
     onError: (error, _vars, _ctx, mutation) => {
+      // silent-мутации (форма входа) сами показывают ошибку: неверный пароль — это не «сессия истекла»
+      if (mutation.meta?.silent) return
       if (error instanceof ApiError && error.status === 401)
         return onUnauthorized()
-      if (!mutation.meta?.silent) handleServerError(error)
+      handleServerError(error)
     },
   }),
 })

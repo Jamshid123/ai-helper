@@ -32,7 +32,7 @@ async function main() {
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error'] })
   try {
     const staff = await app.get(StaffAuthService).createStaff({ email, name, password, roles: ['ADMIN'] })
-    process.stdout.write(`Создан администратор ${staff.email}. Код подключается при первом входе.\n`)
+    process.stdout.write(`Создан администратор ${staff.email}.\n`)
   } finally {
     await app.close()
   }

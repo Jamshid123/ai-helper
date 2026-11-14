@@ -1,10 +1,12 @@
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { Loader2, LogIn } from 'lucide-react'
+import { useAuthStore } from '@/stores/auth-store'
 import { ApiError } from '@/lib/api'
+import { safeRedirect } from '@/lib/safe-redirect'
 import { cn } from '@/lib/utils'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -19,7 +21,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
 import { login } from '../../api'
-import { rememberEnrollment } from '../../enrollment'
+import { meQueryKey } from '../../queries'
 
 const formSchema = z.object({
   email: z.email({
@@ -52,6 +54,8 @@ export function UserAuthForm({
   ...props
 }: UserAuthFormProps) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const setUser = useAuthStore((s) => s.setUser)
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: '', password: '' },
@@ -60,13 +64,11 @@ export function UserAuthForm({
   const mutation = useMutation({
     mutationFn: (v: FormValues) => login(v.email, v.password),
     meta: { silent: true },
-    onSuccess: ({ challengeId, enroll }) => {
+    onSuccess: (user) => {
       form.resetField('password')
-      rememberEnrollment(challengeId, enroll)
-      navigate({
-        to: '/otp',
-        search: { challenge: challengeId, redirect: redirectTo },
-      })
+      setUser(user)
+      queryClient.setQueryData(meQueryKey, user)
+      navigate({ to: safeRedirect(redirectTo), replace: true })
     },
   })
 
@@ -120,7 +122,7 @@ export function UserAuthForm({
           ) : (
             <LogIn />
           )}
-          Продолжить
+          Войти
         </Button>
       </form>
     </Form>

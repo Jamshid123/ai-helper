@@ -20,8 +20,7 @@ export function SignIn() {
             Вход для сотрудников
           </CardTitle>
           <CardDescription>
-            Учётную запись выдаёт администратор. После пароля понадобится код из
-            приложения-аутентификатора.
+            Учётную запись выдаёт администратор.
           </CardDescription>
         </CardHeader>
         <CardContent>

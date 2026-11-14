@@ -1,19 +1,12 @@
-import { createHash, randomBytes, randomUUID } from 'node:crypto'
-import { HttpException, HttpStatus, Inject, Injectable, UnauthorizedException } from '@nestjs/common'
+import { createHash, randomBytes } from 'node:crypto'
+import { HttpException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common'
 import { hash, verify } from '@node-rs/argon2'
 import type { Staff, StaffRole } from '@prisma/client'
-import type Redis from 'ioredis'
 import { Clock } from '../../common/clock'
-import { open, seal } from '../../common/crypto-box'
-import { REDIS } from '../../common/redis.module'
-import { ENV } from '../../config/config.module'
-import type { Env } from '../../config/env'
 import { PrismaService } from '../../prisma/prisma.service'
 import { AuditService } from './audit.service'
-import { generateTotpSecret, otpauthUrl, verifyTotp } from './totp'
 
 export const SESSION_TTL_S = 8 * 3600
-const CHALLENGE_TTL_S = 300
 const MAX_FAILS = 5
 const LOCK_MS = 15 * 60_000
 const MIN_PASSWORD = 12
@@ -29,14 +22,12 @@ export class StaffAuthService {
   private dummyHash: Promise<string> | null = null
 
   constructor(
-    @Inject(ENV) private readonly env: Env,
-    @Inject(REDIS) private readonly redis: Redis,
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly clock: Clock
   ) {}
 
-  /** Создание сотрудника (CLI create-admin, позже — раздел «Сотрудники»). TOTP подключается при первом входе. */
+  /** Создание сотрудника (CLI create-admin, позже — раздел «Сотрудники»). */
   async createStaff(input: { email: string; name: string; password: string; roles: StaffRole[] }): Promise<StaffUser> {
     if (input.password.length < MIN_PASSWORD) throw new Error(`Пароль — не короче ${MIN_PASSWORD} символов`)
     if (!input.roles.length) throw new Error('Нужна хотя бы одна роль')
@@ -45,7 +36,6 @@ export class StaffAuthService {
         email: input.email.trim().toLowerCase(),
         name: input.name.trim(),
         passwordHash: await hash(input.password),
-        totpSecretEnc: seal(generateTotpSecret(), this.env.DATA_ENCRYPTION_KEY),
         roles: input.roles,
       },
     })
@@ -53,14 +43,11 @@ export class StaffAuthService {
     return toUser(staff)
   }
 
-  /** Только для CLI и тестов: расшифрованный TOTP-секрет. Наружу по HTTP не отдаётся. */
-  async secretFor(email: string): Promise<string> {
-    const s = await this.prisma.staff.findUniqueOrThrow({ where: { email: email.toLowerCase() } })
-    return open(s.totpSecretEnc, this.env.DATA_ENCRYPTION_KEY)
-  }
-
-  /** Шаг 1: пароль. Ответ одинаковый для неизвестного email и неверного пароля. */
-  async login(email: string, password: string) {
+  /**
+   * Вход по email и паролю (решение заказчика 14.11.2026: без второго фактора) → сессия.
+   * Ответ одинаковый для неизвестного email и неверного пароля.
+   */
+  async login(email: string, password: string, ip: string | null) {
     const staff = await this.prisma.staff.findUnique({ where: { email: email.trim().toLowerCase() } })
     if (!staff || staff.disabledAt) {
       await verify(await this.dummy(), password).catch(() => false)
@@ -71,47 +58,12 @@ export class StaffAuthService {
       await this.fail(staff)
       throw this.invalid('INVALID_CREDENTIALS', 'Неверный email или пароль')
     }
-    const challengeId = randomUUID()
-    await this.redis.set(`staff:challenge:${challengeId}`, staff.id, 'EX', CHALLENGE_TTL_S)
-    const enroll = staff.totpEnrolledAt
-      ? null
-      : (() => {
-          const secret = open(staff.totpSecretEnc, this.env.DATA_ENCRYPTION_KEY)
-          return { secret, otpauthUrl: otpauthUrl(secret, staff.email) }
-        })()
-    return { challengeId, enroll }
-  }
-
-  /** Шаг 2: код из приложения → сессия. */
-  async verifyMfa(challengeId: string, code: string, ip: string | null) {
-    const key = `staff:challenge:${challengeId}`
-    const staffId = await this.redis.get(key)
-    if (!staffId) throw new HttpException({ code: 'CHALLENGE_EXPIRED', message: 'Войдите заново' }, HttpStatus.GONE)
-    const staff = await this.prisma.staff.findUnique({ where: { id: staffId } })
-    if (!staff || staff.disabledAt) throw this.invalid('INVALID_CREDENTIALS', 'Неверный email или пароль')
-    this.assertNotLocked(staff)
-
-    const secret = open(staff.totpSecretEnc, this.env.DATA_ENCRYPTION_KEY)
-    const matched = verifyTotp(secret, code, this.clock.now())
-    if (matched === null || (staff.lastTotpStep !== null && matched <= staff.lastTotpStep)) {
-      await this.fail(staff)
-      throw this.invalid('INVALID_CODE', 'Неверный код')
-    }
-    await this.redis.del(key)
 
     const token = randomBytes(32).toString('base64url')
     const csrfToken = randomBytes(24).toString('base64url')
     const now = this.clock.now()
     const updated = await this.prisma.$transaction(async (tx) => {
-      const s = await tx.staff.update({
-        where: { id: staff.id },
-        data: {
-          lastTotpStep: matched,
-          failedLogins: 0,
-          lockedUntil: null,
-          totpEnrolledAt: staff.totpEnrolledAt ?? now,
-        },
-      })
+      const s = await tx.staff.update({ where: { id: staff.id }, data: { failedLogins: 0, lockedUntil: null } })
       await tx.staffSession.create({
         data: {
           tokenHash: sha256(token),
@@ -122,15 +74,7 @@ export class StaffAuthService {
         },
       })
       await this.audit.log(
-        {
-          actorType: 'staff',
-          actorId: staff.id,
-          action: 'staff.login',
-          entityType: 'staff',
-          entityId: staff.id,
-          ip,
-          meta: { enrolled: !staff.totpEnrolledAt },
-        },
+        { actorType: 'staff', actorId: staff.id, action: 'staff.login', entityType: 'staff', entityId: staff.id, ip },
         tx
       )
       return s
