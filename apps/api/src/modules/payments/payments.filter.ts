@@ -1,6 +1,6 @@
 import { type ArgumentsHost, Catch, type ExceptionFilter } from '@nestjs/common'
 import type { FastifyReply } from 'fastify'
-import { AdmissionError } from './admissions.service'
+import { AdmissionError } from './admission.errors'
 import { PaymentsDisabledError } from './payment-provider'
 
 const MAP: Record<string, { status: number; message: string }> = {
@@ -8,6 +8,9 @@ const MAP: Record<string, { status: number; message: string }> = {
   LOT_CLOSED: { status: 409, message: 'Торги по лоту завершены' },
   RULES_NOT_ACCEPTED: { status: 400, message: 'Примите правила торгов' },
   PAYMENTS_DISABLED: { status: 503, message: 'Оплата скоро будет доступна' },
+  RESTRICTED: { status: 403, message: 'Участие временно ограничено' },
+  LOT_STARTED: { status: 409, message: 'Торги уже начались — выйти с возвратом нельзя' },
+  NOT_ADMITTED: { status: 404, message: 'Допуска к этому лоту нет' },
 }
 
 @Catch(AdmissionError, PaymentsDisabledError)

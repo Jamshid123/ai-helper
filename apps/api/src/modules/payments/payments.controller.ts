@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   HttpCode,
@@ -41,6 +42,13 @@ export class PaymentsController {
     if (!parsed.success)
       throw new BadRequestException({ code: 'RULES_NOT_ACCEPTED', message: 'Примите правила торгов' })
     return this.admissions.start(req.userId, lotId, true)
+  }
+
+  /** Выйти из лота до начала торгов — возврат 100% (решение 14.11.2026). */
+  @Delete('lots/:lotId/admission')
+  @HttpCode(200)
+  leave(@Param('lotId', new ParseUUIDPipe()) lotId: string, @Req() req: AuthedRequest) {
+    return this.admissions.leave(req.userId, lotId)
   }
 
   /** Мои допуски — подтягиваются на любом устройстве (ТЗ «Доступ к просмотру»). */
