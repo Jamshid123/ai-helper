@@ -4,7 +4,8 @@ import { rawInitData } from '@/app/telegram'
  * Клиент API Mini App. Вход — по подписанной строке initData Telegram (проверяется на сервере),
  * сессия — короткий JWT в памяти вкладки (не в localStorage). Истёкшая сессия (401) → один повторный вход.
  */
-const BASE = import.meta.env.VITE_API_URL ?? '/api/v1'
+export const API_BASE = import.meta.env.VITE_API_URL ?? '/api/v1'
+const BASE = API_BASE
 
 export class ApiError extends Error {
   constructor(

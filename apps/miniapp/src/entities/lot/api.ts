@@ -1,7 +1,7 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { isInTelegram } from '@/app/telegram'
-import { ApiError, api } from '@/shared/api/client'
+import { API_BASE, ApiError, api } from '@/shared/api/client'
 import {
   admit as demoAdmit,
   admittedLotIds,
@@ -28,6 +28,8 @@ export const DEMO = import.meta.env.VITE_DEMO_DATA === 'true' || !isInTelegram()
 export const TEST_STAND = !DEMO && import.meta.env.VITE_DEMO_STAND === 'true'
 
 const ROOM_POLL_MS = 3_000
+/** Пока поток событий подключён, опрос — только страховка. */
+const ROOM_POLL_LIVE_MS = 20_000
 const LOTS_POLL_MS = 15_000
 
 export function useLots(): { data: Lot[] | undefined; isLoading: boolean } {
@@ -110,17 +112,47 @@ export type RoomView = {
   offer: (amount: bigint) => Promise<OfferResult>
 }
 
+/**
+ * Поток событий лота (SSE): на каждое событие и после (пере)подключения перечитываем состояние по HTTP.
+ * Браузер сам переподключается; пока соединения нет, комната чаще опрашивает сервер.
+ */
+function useLiveLot(lotId: string, enabled: boolean): boolean {
+  const qc = useQueryClient()
+  const [connected, setConnected] = useState(false)
+  useEffect(() => {
+    if (!enabled || !lotId || typeof EventSource === 'undefined') return
+    const es = new EventSource(`${API_BASE}/lots/${lotId}/events`)
+    const refresh = () => {
+      void qc.invalidateQueries({ queryKey: ['bids', lotId] })
+      void qc.invalidateQueries({ queryKey: ['lot', lotId] })
+    }
+    es.onopen = () => {
+      setConnected(true)
+      refresh()
+    }
+    es.onerror = () => setConnected(false)
+    es.addEventListener('bid', refresh)
+    es.addEventListener('lot', refresh)
+    return () => {
+      es.close()
+      setConnected(false)
+    }
+  }, [lotId, enabled, qc])
+  return connected
+}
+
 export function useRoom(lot: Lot | undefined): RoomView | undefined {
   useDemoVersion()
   const qc = useQueryClient()
   const lotId = lot?.id ?? ''
   const closesAt = lot ? Date.parse(lot.closesAt) : 0
+  const live = useLiveLot(lotId, !DEMO && Boolean(lot))
   const q = useQuery({
     queryKey: ['bids', lotId],
     queryFn: () => api<Feed>(`/lots/${lotId}/bids`),
     enabled: !DEMO && Boolean(lot),
     // после закрытия опрос не нужен (функция вызывается вне рендера)
-    refetchInterval: () => (Date.now() >= closesAt ? false : ROOM_POLL_MS),
+    refetchInterval: () => (Date.now() >= closesAt ? false : live ? ROOM_POLL_LIVE_MS : ROOM_POLL_MS),
   })
   useEffect(() => (DEMO && lotId ? startBots(lotId) : undefined), [lotId])
 
