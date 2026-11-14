@@ -1,9 +1,10 @@
 import { SetMetadata } from '@nestjs/common'
-import type { StaffRole } from '@prisma/client'
+import type { AdminModule } from './permissions'
 
-export const STAFF_ROLES = 'staffRoles'
+export const STAFF_MODULE = 'staffModule'
 /**
  * Эндпоинт админки: нужна сессия сотрудника (cookie), для мутаций — CSRF-токен.
- * Пустой список ролей — любой сотрудник; ADMIN допускается везде.
+ * module — право роли на модуль: чтение (GET) требует «просмотр», остальное — «изменение».
+ * 'owner' — только владелец (сотрудники, роли). Без аргумента — любой вошедший сотрудник.
  */
-export const StaffOnly = (...roles: StaffRole[]) => SetMetadata(STAFF_ROLES, roles)
+export const StaffOnly = (module: AdminModule | 'owner' | 'any' = 'any') => SetMetadata(STAFF_MODULE, module)

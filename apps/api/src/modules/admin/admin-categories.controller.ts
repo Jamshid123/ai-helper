@@ -28,7 +28,7 @@ const dto = (c: Category & { _count?: { lots: number; products: number } }) => (
 })
 
 /** Категории каталога: добавить, переименовать (ru/uz), включить/выключить, порядок. Удаления нет — выключение. */
-@StaffOnly('OPERATOR')
+@StaffOnly('categories')
 @Controller('admin/categories')
 export class AdminCategoriesController {
   constructor(

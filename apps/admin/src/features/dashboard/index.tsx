@@ -44,9 +44,9 @@ function useNow(intervalMs = 1000): Date {
 export function Dashboard() {
   const now = useNow()
   const session = currentOrNextSession(now)
-  const roles = useAuthStore((s) => s.user?.roles ?? [])
+  const user = useAuthStore((s) => s.user)
   const sections = SECTION_LIST.filter(
-    (s) => s.id !== 'dashboard' && canAccess(roles, s.id)
+    (s) => s.id !== 'dashboard' && canAccess(user, s.id)
   )
 
   return (

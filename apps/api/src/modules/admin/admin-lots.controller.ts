@@ -50,7 +50,7 @@ function toInput(d: Partial<z.infer<typeof patchSchema>>): LotInput {
 }
 
 /** Лоты: создать из товара, править до открытия, опубликовать, отменить с возвратом. Предложения и победителя не правим (ТЗ). */
-@StaffOnly('OPERATOR')
+@StaffOnly('lots')
 @Controller('admin/lots')
 export class AdminLotsController {
   constructor(private readonly lots: AdminLotsService) {}

@@ -28,6 +28,7 @@ import {
 } from './api'
 import { dateTime, digits } from './format'
 import { EmptyRow, Field, ReasonDialog } from './ui'
+import { useCanEdit } from './use-can-edit'
 
 function useDebounced(value: string, ms = 300) {
   const [v, setV] = useState(value)
@@ -120,6 +121,7 @@ function ParticipantSheet({
   const restrict = useRestrict()
   const lift = useLift()
   const cancel = useCancelAdmission()
+  const editable = useCanEdit('participants')
   const [dialog, setDialog] = useState<
     | null
     | { kind: 'restrict' }
@@ -146,7 +148,13 @@ function ParticipantSheet({
             <div className='grid gap-6 px-4 pb-6'>
               <section className='grid gap-2'>
                 <h3 className='text-sm font-semibold'>Ограничение участия</h3>
-                {u.restriction ? (
+                {!editable ? (
+                  <p className='text-sm text-muted-foreground'>
+                    {u.restriction
+                      ? `До ${dateTime(u.restriction.endsAt)}. Причина: ${u.restriction.reason}`
+                      : 'Нет'}
+                  </p>
+                ) : u.restriction ? (
                   <div className='rounded-md border border-destructive/40 p-3 text-sm'>
                     До {dateTime(u.restriction.endsAt)}. Причина:{' '}
                     {u.restriction.reason}
@@ -186,7 +194,7 @@ function ParticipantSheet({
                         торги {dateTime(a.opensAt)}
                       </span>
                     </span>
-                    {a.canCancel && (
+                    {editable && a.canCancel && (
                       <Button
                         variant='ghost'
                         size='sm'

@@ -97,9 +97,9 @@ describe('Админка: категории, товары, лоты', () => {
     expect((await app.inject({ method: 'GET', url: '/api/v1/admin/categories' })).statusCode).toBe(401)
     const buyer = await loginAs(app, 930_001)
     expect((await req('GET', '/admin/products', buyer.auth)).statusCode).toBe(401)
-    const support = await loginStaff(app, ['SUPPORT'])
+    const support = await loginStaff(app, { participants: 'edit' })
     expect((await req('GET', '/admin/products', support.read)).statusCode).toBe(403)
-    const op = await loginStaff(app, ['OPERATOR'])
+    const op = await loginStaff(app, { categories: 'edit', products: 'edit', lots: 'edit' })
     expect((await req('POST', '/admin/products', op.read, { title: 'x' })).statusCode).toBe(403) // без CSRF
     await product(op.write)
   })
@@ -124,7 +124,7 @@ describe('Админка: категории, товары, лоты', () => {
   })
 
   it('лот из товара: черновик → публикация → виден в каталоге; карточка копируется в лот', async () => {
-    const s = await loginStaff(app, ['OPERATOR'])
+    const s = await loginStaff(app, { categories: 'edit', products: 'edit', lots: 'edit' })
     const p = await product(s.write)
     const slot = fridaySlot()
     const r = await req('POST', '/admin/lots', s.write, {

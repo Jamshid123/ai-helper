@@ -58,7 +58,7 @@ const dto = (p: Product & { category: Pick<Category, 'slug' | 'nameRu'> }) => ({
 const include = { category: { select: { slug: true, nameRu: true } } } as const
 
 /** Товары площадки: карточка и акт проверки. Полный IMEI наружу не отдаётся (ТЗ: ограниченный доступ). */
-@StaffOnly('OPERATOR', 'EXPERT')
+@StaffOnly('products')
 @Controller('admin/products')
 export class AdminProductsController {
   constructor(

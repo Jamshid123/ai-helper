@@ -28,7 +28,7 @@
 | `infra/nginx/spa.conf` | nginx внутри образов SPA: статика + прокси `/api/` → контейнер `api` |
 | `.github/workflows/demo-seed.yml` | Вручную: тестовые лоты на демо-стенде (`dist/scripts/seed-demo.js`) |
 | `apps/api/src/modules/live/` | Поток событий лота (SSE): `live-events.service.ts` (outbox → подписчики), `live.controller.ts` |
-| `apps/api/src/modules/staff/` | Сотрудники: вход (`staff-auth.*`), guard `@StaffOnly(...roles)` (cookie + CSRF + роли), TOTP (`totp.ts`), журнал аудита (`audit.service.ts`) |
+| `apps/api/src/modules/staff/` | Сотрудники: вход по телефону (`staff-auth.*`), guard `@StaffOnly('<модуль>' | 'owner')` (cookie + CSRF + права роли), модули и уровни (`permissions.ts`), журнал аудита (`audit.service.ts`) |
 | `apps/api/src/modules/admin/` | API админки: категории, товары, лоты (`admin-lots.service.ts` — правила лота, отмена с возвратом), участники, журнал аудита |
 | `apps/api/src/modules/payments/refunds.service.ts` | Снятие допуска с возвратом 100% (выход, отмена допуска/лота) |
 | `apps/api/src/common/crypto-box.ts`, `cookies.ts` | AES-256-GCM для секретов в БД; разбор/сборка cookie |

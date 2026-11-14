@@ -2,10 +2,8 @@ import { useId, useState } from 'react'
 import { SECTIONS_BY_ID } from '@/config/sections'
 import { Plus, RefreshCw } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
-import { ROLES, ROLE_LABELS, type Role } from '@/lib/rbac'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -16,6 +14,13 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import {
   Table,
@@ -29,6 +34,7 @@ import { PageShell } from '@/components/layout/page-shell'
 import {
   type Staff,
   useCreateStaff,
+  useRoles,
   useSetStaffPassword,
   useStaff,
   useUpdateStaff,
@@ -37,7 +43,7 @@ import { EmptyRow, Field } from './ui'
 
 const MIN_PASSWORD = 12
 
-/** Пароль из 4 слов-слогов и цифр: легко продиктовать сотруднику, ~16 символов. */
+/** Пароль из трёх «слов» и числа: легко продиктовать сотруднику, ~20 символов. */
 function generatePassword(): string {
   const syll = [
     'ka',
@@ -65,53 +71,13 @@ function generatePassword(): string {
 
 type Draft = {
   id?: string
+  isOwner?: boolean
   firstName: string
   lastName: string
   phone: string
-  roles: Role[]
+  roleId: string
   password: string
   disabled: boolean
-}
-const blank = (): Draft => ({
-  firstName: '',
-  lastName: '',
-  phone: '+998 ',
-  roles: ['OPERATOR'],
-  password: generatePassword(),
-  disabled: false,
-})
-
-function RolePicker({
-  value,
-  onChange,
-  lockAdmin,
-}: {
-  value: Role[]
-  onChange: (r: Role[]) => void
-  lockAdmin?: boolean
-}) {
-  return (
-    <div className='grid grid-cols-2 gap-2'>
-      {ROLES.map((r) => {
-        const checked = value.includes(r)
-        const locked = lockAdmin && r === 'ADMIN'
-        return (
-          <label key={r} className='flex items-center gap-2 text-sm'>
-            <Checkbox
-              checked={checked}
-              disabled={locked}
-              onCheckedChange={(v) =>
-                onChange(
-                  v === true ? [...value, r] : value.filter((x) => x !== r)
-                )
-              }
-            />
-            {ROLE_LABELS[r]}
-          </label>
-        )
-      })}
-    </div>
-  )
 }
 
 function PasswordField({
@@ -155,6 +121,8 @@ export function StaffPage() {
   const meta = SECTIONS_BY_ID.staff
   const me = useAuthStore((s) => s.user)
   const { data = [], isLoading } = useStaff()
+  const { data: roleData } = useRoles()
+  const roles = roleData?.roles ?? []
   const create = useCreateStaff()
   const update = useUpdateStaff()
   const setPassword = useSetStaffPassword()
@@ -167,7 +135,7 @@ export function StaffPage() {
     draft !== null &&
     draft.firstName.trim() !== '' &&
     draft.phone.replace(/\D/g, '').length >= 9 &&
-    draft.roles.length > 0 &&
+    (draft.isOwner || draft.roleId !== '') &&
     (Boolean(draft.id) || draft.password.length >= MIN_PASSWORD)
 
   const save = () => {
@@ -176,20 +144,36 @@ export function StaffPage() {
       firstName: draft.firstName.trim(),
       lastName: draft.lastName.trim(),
       phone: draft.phone,
-      roles: draft.roles,
+      ...(!draft.isOwner && { roleId: draft.roleId }),
     }
     const done = { onSuccess: () => setDraft(null) }
     if (draft.id)
-      update.mutate({ id: draft.id, ...body, disabled: draft.disabled }, done)
+      update.mutate(
+        {
+          id: draft.id,
+          ...body,
+          ...(!draft.isOwner && { disabled: draft.disabled }),
+        },
+        done
+      )
     else create.mutate({ ...body, password: draft.password }, done)
   }
+
+  const blank = (): Draft => ({
+    firstName: '',
+    lastName: '',
+    phone: '+998 ',
+    roleId: roles.find((r) => r.name === 'Оператор')?.id ?? roles[0]?.id ?? '',
+    password: generatePassword(),
+    disabled: false,
+  })
 
   return (
     <PageShell
       title={meta.title}
       description={meta.description}
       actions={
-        <Button onClick={() => setDraft(blank())}>
+        <Button onClick={() => setDraft(blank())} disabled={!roles.length}>
           <Plus /> Добавить сотрудника
         </Button>
       }
@@ -200,7 +184,7 @@ export function StaffPage() {
             <TableRow>
               <TableHead>Сотрудник</TableHead>
               <TableHead>Телефон (логин)</TableHead>
-              <TableHead>Роли</TableHead>
+              <TableHead>Роль</TableHead>
               <TableHead>Доступ</TableHead>
               <TableHead />
             </TableRow>
@@ -230,13 +214,11 @@ export function StaffPage() {
                   )}
                 </TableCell>
                 <TableCell>
-                  <div className='flex flex-wrap gap-1'>
-                    {s.roles.map((r) => (
-                      <Badge key={r} variant='secondary'>
-                        {ROLE_LABELS[r as Role] ?? r}
-                      </Badge>
-                    ))}
-                  </div>
+                  {s.isOwner ? (
+                    <Badge>Владелец</Badge>
+                  ) : (
+                    <Badge variant='secondary'>{s.role?.name ?? '—'}</Badge>
+                  )}
                 </TableCell>
                 <TableCell>
                   {s.disabled ? (
@@ -262,10 +244,11 @@ export function StaffPage() {
                     onClick={() =>
                       setDraft({
                         id: s.id,
+                        isOwner: s.isOwner,
                         firstName: s.firstName,
                         lastName: s.lastName,
                         phone: s.phone ?? '+998 ',
-                        roles: s.roles as Role[],
+                        roleId: s.role?.id ?? '',
                         password: '',
                         disabled: s.disabled,
                       })
@@ -287,8 +270,8 @@ export function StaffPage() {
               {draft?.id ? 'Сотрудник' : 'Новый сотрудник'}
             </DialogTitle>
             <DialogDescription>
-              Вход в админку — по телефону и паролю. Доступ к разделам — по
-              ролям.
+              Вход в админку — по телефону и паролю. Что сотрудник видит и
+              меняет — задаёт его роль.
             </DialogDescription>
           </DialogHeader>
           {draft && (
@@ -327,15 +310,34 @@ export function StaffPage() {
                   onChange={(password) => setDraft({ ...draft, password })}
                 />
               )}
-              <div className='grid gap-1.5'>
-                <span className='text-sm font-medium'>Роли</span>
-                <RolePicker
-                  value={draft.roles}
-                  onChange={(roles) => setDraft({ ...draft, roles })}
-                  lockAdmin={isSelf(draft.id)}
-                />
-              </div>
-              {draft.id && !isSelf(draft.id) && (
+              {draft.isOwner ? (
+                <p className='text-sm text-muted-foreground'>
+                  Владелец: все разделы, сотрудники и роли.
+                </p>
+              ) : (
+                <div className='grid gap-1.5'>
+                  <span className='text-sm font-medium'>Роль</span>
+                  <Select
+                    value={draft.roleId}
+                    onValueChange={(roleId) => setDraft({ ...draft, roleId })}
+                  >
+                    <SelectTrigger className='w-full' aria-label='Роль'>
+                      <SelectValue placeholder='Выберите роль' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className='text-xs text-muted-foreground'>
+                    Права ролей настраиваются в разделе «Роли».
+                  </p>
+                </div>
+              )}
+              {draft.id && !draft.isOwner && !isSelf(draft.id) && (
                 <label className='flex items-center gap-2 text-sm'>
                   <Switch
                     checked={!draft.disabled}

@@ -1,6 +1,5 @@
 import { ChevronsUpDown, LogOut } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
-import { ROLE_LABELS, isRole } from '@/lib/rbac'
 import useDialogState from '@/hooks/use-dialog-state'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -34,10 +33,7 @@ export function NavUser() {
   const user = useAuthStore((s) => s.user)
   if (!user) return null
 
-  const roles = user.roles
-    .filter(isRole)
-    .map((r) => ROLE_LABELS[r])
-    .join(', ')
+  const roles = user.isOwner ? 'Владелец' : (user.role?.name ?? '')
 
   return (
     <>

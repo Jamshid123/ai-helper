@@ -4,7 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service'
 import { StaffOnly } from '../staff/staff.decorator'
 
 /** Журнал аудита — только чтение и только ADMIN (ТЗ: журналируем изменения, решения и доступ). */
-@StaffOnly('ADMIN')
+@StaffOnly('audit')
 @Controller('admin/audit')
 export class AdminAuditController {
   constructor(private readonly prisma: PrismaService) {}

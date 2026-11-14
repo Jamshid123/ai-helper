@@ -291,15 +291,15 @@ model Setting {
   updatedAt DateTime @updatedAt @db.Timestamptz
 }
 
-/// Роли сотрудников (ТЗ «Админка»). На старте выдаётся только ADMIN (решение 13.11.2026).
-enum StaffRole {
-  ADMIN
-  OPERATOR
-  EXPERT
-  RISK
-  FINANCE
-  FULFILLMENT
-  SUPPORT
+/// Роль сотрудника — настраивает владелец (решение заказчика 14.11.2026): права по модулям админки.
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  /// { "<модуль>": "view" | "edit" }; модуля нет в объекте — нет доступа. Список модулей — modules/staff/permissions.ts.
+  permissions Json     @default("{}")
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+  staff       Staff[]
 }
 
 /// Сотрудник админки: вход по email и паролю (argon2id); второй фактор отключён решением заказчика 14.11.2026.
@@ -312,7 +312,10 @@ model Staff {
   firstName    String
   lastName     String         @default("")
   passwordHash String
-  roles        StaffRole[]
+  /// Владелец: все модули + сотрудники и роли. Назначается только командой create-admin.
+  isOwner      Boolean        @default(false)
+  roleId       String?        @db.Uuid
+  role         Role?          @relation(fields: [roleId], references: [id], onDelete: Restrict)
   failedLogins Int            @default(0)
   lockedUntil  DateTime?      @db.Timestamptz
   disabledAt   DateTime?      @db.Timestamptz

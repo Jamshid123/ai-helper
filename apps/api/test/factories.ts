@@ -9,6 +9,27 @@ export async function cleanDb(db: PrismaClient) {
   await db.$executeRawUnsafe(
     'TRUNCATE "Bid","AutoBid","LotReminder","Admission","Obligation","Order","Restriction","Lot","Product","User","OutboxEvent","AuditLog","Setting","StaffSession","Staff" CASCADE'
   )
+  // роли засеяны миграцией: тестовые удаляем, стартовые возвращаем к исходным правам
+  await db.role.deleteMany({ where: { name: { notIn: ['Администратор', 'Оператор'] } } })
+  const seeds = {
+    Администратор: {
+      schedule: 'edit',
+      categories: 'edit',
+      products: 'edit',
+      lots: 'edit',
+      sellers: 'edit',
+      inspection: 'edit',
+      risk: 'edit',
+      participants: 'edit',
+      finance: 'edit',
+      fulfillment: 'edit',
+      audit: 'view',
+    },
+    Оператор: { categories: 'edit', products: 'edit', lots: 'edit', participants: 'view' },
+  }
+  for (const [name, permissions] of Object.entries(seeds)) {
+    await db.role.upsert({ where: { name }, create: { name, permissions }, update: { permissions } })
+  }
   // категории засеяны миграцией: возвращаем стартовое состояние, лишние удаляем
   await db.category.deleteMany({ where: { slug: { notIn: ['phones', 'travel'] } } })
   await db.category.update({

@@ -22,6 +22,7 @@ import { type Lot, useCancelLot, useLots, usePublishLot } from './api'
 import { sum, windowText } from './format'
 import { LotDialog } from './lot-dialog'
 import { EmptyRow, LotStatusBadge, ReasonDialog } from './ui'
+import { useCanEdit } from './use-can-edit'
 
 const beforeOpen = (l: Lot) =>
   ['DRAFT', 'SCHEDULED'].includes(l.status) &&
@@ -32,6 +33,7 @@ export function LotsPage() {
   const { data = [], isLoading } = useLots()
   const publish = usePublishLot()
   const cancel = useCancelLot()
+  const canEditLots = useCanEdit('lots')
   const [editing, setEditing] = useState<Lot | null>(null)
   const [cancelling, setCancelling] = useState<Lot | null>(null)
 
@@ -96,7 +98,7 @@ export function LotsPage() {
                   </TableCell>
                   <TableCell className='text-right whitespace-nowrap'>
                     <div className='flex items-center justify-end gap-1'>
-                      {l.status === 'DRAFT' && (
+                      {canEditLots && l.status === 'DRAFT' && (
                         <Button
                           size='sm'
                           disabled={publish.isPending}
@@ -105,7 +107,7 @@ export function LotsPage() {
                           Опубликовать
                         </Button>
                       )}
-                      {beforeOpen(l) && (
+                      {canEditLots && beforeOpen(l) && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button

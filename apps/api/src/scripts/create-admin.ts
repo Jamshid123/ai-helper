@@ -1,5 +1,5 @@
 /**
- * Создать сотрудника с ролью ADMIN:
+ * Создать владельца админки (все права, сотрудники и роли):
  *   printf '%s' "$PASSWORD" | node dist/scripts/create-admin.js --phone +998901234567 --first Имя --last Фамилия
  * Пароль — только из stdin (не из аргументов: они видны в списке процессов и логах).
  * Код TOTP подключается при первом входе в админку.
@@ -33,9 +33,7 @@ async function main() {
   const password = await readStdin()
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error'] })
   try {
-    const staff = await app
-      .get(StaffAuthService)
-      .createStaff({ phone, firstName, lastName, password, roles: ['ADMIN'] })
+    const staff = await app.get(StaffAuthService).createStaff({ phone, firstName, lastName, password, isOwner: true })
     process.stdout.write(`Создан администратор ${staff.name} (${staff.phone}).\n`)
   } finally {
     await app.close()

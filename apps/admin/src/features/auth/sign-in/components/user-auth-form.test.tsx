@@ -43,7 +43,7 @@ describe('UserAuthForm', () => {
       id: 'u1',
       name: 'Оператор',
       phone: '+998901234567',
-      roles: ['OPERATOR'],
+      permissions: { lots: 'edit' },
     })
     const { getByLabelText, getByRole } = await renderForm('/lots')
     await userEvent.fill(getByLabelText('Телефон'), '+998 90 123 45 67')

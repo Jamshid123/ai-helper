@@ -27,7 +27,7 @@ pnpm --filter @auksion/admin build
 
 | Что | Где |
 |---|---|
-| Роли и доступ к разделам | `src/lib/rbac.ts` (+ тест) |
+| Права по модулям (владелец / роль: просмотр или изменение) | `src/lib/rbac.ts` (+ тест), `src/features/manage/use-can-edit.ts` |
 | Разделы, меню, описания по ТЗ | `src/config/sections.ts` |
 | Guard раздела (→ 403) | `src/lib/require-section.ts`, используется в `src/routes/_authenticated/<раздел>/index.tsx` |
 | Проверка сессии (→ /sign-in) | `src/routes/_authenticated/route.tsx` |
@@ -46,6 +46,7 @@ pnpm --filter @auksion/admin build
 | Лоты (из товара, публикация, правка до открытия, отмена с возвратом) | `lots-page.tsx`, `lot-dialog.tsx` | `GET/POST /admin/lots`, `PATCH /admin/lots/:id`, `POST /admin/lots/:id/publish`, `POST /admin/lots/:id/cancel {reason}` |
 | Участники (поиск, ограничение/снятие, отмена допуска) | `participants-page.tsx` | `GET /admin/participants?q=`, `GET /admin/participants/:id`, `POST …/restrictions {days, reason}`, `POST …/restrictions/:rid/lift {reason}`, `POST …/admissions/:lotId/cancel {reason}` |
 | Журнал аудита | `audit-page.tsx` | `GET /admin/audit` |
-| Сотрудники (только ADMIN) | `staff-page.tsx` | `GET/POST /admin/staff`, `PATCH /admin/staff/:id`, `POST /admin/staff/:id/password` |
+| Сотрудники (только владелец) | `staff-page.tsx` | `GET/POST /admin/staff`, `PATCH /admin/staff/:id`, `POST /admin/staff/:id/password` |
+| Роли и права по модулям (только владелец) | `roles-page.tsx` | `GET/POST /admin/roles`, `PATCH/DELETE /admin/roles/:id` |
 
 Сессия — httpOnly-cookie; мутации отправляют `X-CSRF-Token` из cookie `csrf_token`. Ошибки — `{code, message}`; бизнес-отказы (400/409/422) показываются текстом сервера.

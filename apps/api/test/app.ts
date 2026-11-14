@@ -1,4 +1,5 @@
-import type { StaffRole } from '@prisma/client'
+import { PrismaService } from '../src/prisma/prisma.service'
+import type { Permissions } from '../src/modules/staff/permissions'
 import { StaffAuthService } from '../src/modules/staff/staff-auth.service'
 import type { NestFastifyApplication } from '@nestjs/platform-fastify'
 import { createApp } from '../src/bootstrap'
@@ -31,15 +32,19 @@ export async function loginAs(app: NestFastifyApplication, tgId: number, firstNa
   }
 }
 
-/** Вход сотрудника (создание + пароль). Возвращает заголовки для чтения и для мутаций (с CSRF). */
+/** Вход сотрудника: 'owner' — владелец, иначе роль с этими правами. Возвращает заголовки для чтения и для мутаций (с CSRF). */
 export async function loginStaff(
   app: NestFastifyApplication,
-  roles: StaffRole[] = ['ADMIN'],
+  access: 'owner' | Permissions = 'owner',
   phone = `+99890${String(Math.floor(Math.random() * 1e7)).padStart(7, '0')}`
 ) {
   const auth = app.get(StaffAuthService)
   const password = 'test password 123456'
-  await auth.createStaff({ phone, firstName: 'Сотрудник', lastName: '', password, roles })
+  const roleId =
+    access === 'owner'
+      ? undefined
+      : (await app.get(PrismaService).role.create({ data: { name: `test-${phone}`, permissions: access } })).id
+  await auth.createStaff({ phone, firstName: 'Сотрудник', lastName: '', password, isOwner: access === 'owner', roleId })
   const res = await app.inject({ method: 'POST', url: '/api/v1/admin/auth/login', payload: { login: phone, password } })
   const cookies = ([] as string[]).concat(res.headers['set-cookie'] as string | string[])
   const get = (n: string) =>

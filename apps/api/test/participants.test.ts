@@ -90,7 +90,7 @@ describe('Участники: выход до начала, ограничени
     await loginAs(app, 940_011, 'Малика')
     await admit(lot.id, a.auth)
 
-    const s = await loginStaff(app, ['SUPPORT'])
+    const s = await loginStaff(app, { participants: 'edit' })
     const find = async (q: string) =>
       (
         await app.inject({
@@ -121,7 +121,7 @@ describe('Участники: выход до начала, ограничени
     const live = await createLot(db)
     const a = await loginAs(app, 940_020)
     await admit(live.id, a.auth)
-    const s = await loginStaff(app, ['RISK'])
+    const s = await loginStaff(app, { participants: 'edit' })
     const url = `/api/v1/admin/participants/${a.userId}/restrictions`
 
     expect((await app.inject({ method: 'POST', url, headers: s.write, payload: { days: 14 } })).statusCode).toBe(400)
@@ -164,12 +164,12 @@ describe('Участники: выход до начала, ограничени
     const lot = await scheduled()
     const a = await loginAs(app, 940_030)
     const orderId = await admit(lot.id, a.auth)
-    const op = await loginStaff(app, ['OPERATOR'])
+    const op = await loginStaff(app, { lots: 'edit' })
     expect((await app.inject({ method: 'GET', url: '/api/v1/admin/participants', headers: op.read })).statusCode).toBe(
       403
     )
 
-    const s = await loginStaff(app, ['SUPPORT'])
+    const s = await loginStaff(app, { participants: 'edit' })
     const url = `/api/v1/admin/participants/${a.userId}/admissions/${lot.id}/cancel`
     expect((await app.inject({ method: 'POST', url, headers: s.write, payload: {} })).statusCode).toBe(400)
     const r = await app.inject({

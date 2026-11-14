@@ -6,7 +6,7 @@ const user = {
   name: 'Тест',
   email: 't@example.com',
   phone: null,
-  roles: ['EXPERT'],
+  permissions: { inspection: 'edit' as const },
 }
 
 describe('useAuthStore', () => {

@@ -7,7 +7,11 @@ export type StaffUser = {
   lastName?: string
   phone: string | null
   email?: string | null
-  roles: string[]
+  /** Владелец: все модули, сотрудники и роли. */
+  isOwner?: boolean
+  role?: { id: string; name: string } | null
+  /** { модуль: 'view' | 'edit' } — итоговые права с сервера. */
+  permissions?: Partial<Record<string, 'view' | 'edit'>>
 }
 
 /**
@@ -18,15 +22,19 @@ export type StaffUser = {
 const DEMO = import.meta.env.DEV && import.meta.env.VITE_DEMO_AUTH === 'true'
 
 function demoUser(): StaffUser {
-  const roles = (import.meta.env.VITE_DEMO_ROLES ?? 'ADMIN')
-    .split(',')
-    .map((r: string) => r.trim())
-    .filter(Boolean)
+  // VITE_DEMO_ROLES=owner — владелец; иначе список модулей с правом изменения: lots,products
+  const raw = (import.meta.env.VITE_DEMO_ROLES ?? 'owner').trim()
+  const permissions = Object.fromEntries(
+    raw === 'owner'
+      ? []
+      : raw.split(',').map((m: string) => [m.trim(), 'edit' as const])
+  )
   return {
     id: 'demo',
     name: 'Демо Сотрудник',
     phone: '+998900000000',
-    roles,
+    isOwner: raw === 'owner',
+    permissions,
   }
 }
 

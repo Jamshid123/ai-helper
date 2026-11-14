@@ -16,7 +16,7 @@ describe('Журнал аудита в админке', () => {
   })
 
   it('новые сверху, с именем сотрудника; фильтр по объекту; только ADMIN', async () => {
-    const admin = await loginStaff(app, ['ADMIN'])
+    const admin = await loginStaff(app)
     const phones = await db.category.findUniqueOrThrow({ where: { slug: 'phones' } })
     await app.inject({
       method: 'PATCH',
@@ -43,7 +43,7 @@ describe('Журнал аудита в админке', () => {
     ).json()
     expect(filtered.map((e: { action: string }) => e.action)).toEqual(['category.updated'])
 
-    const op = await loginStaff(app, ['OPERATOR'])
+    const op = await loginStaff(app, { lots: 'edit' })
     expect((await app.inject({ method: 'GET', url: '/api/v1/admin/audit', headers: op.read })).statusCode).toBe(403)
   })
 })

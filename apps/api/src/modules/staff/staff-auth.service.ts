@@ -1,11 +1,12 @@
 import { createHash, randomBytes } from 'node:crypto'
 import { ConflictException, HttpException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common'
 import { hash, verify } from '@node-rs/argon2'
-import type { Staff, StaffRole } from '@prisma/client'
+import type { Role, Staff } from '@prisma/client'
 import { Clock } from '../../common/clock'
 import { normalizeUzPhone } from '../../common/phone'
 import { PrismaService } from '../../prisma/prisma.service'
 import { AuditService } from './audit.service'
+import { ALL_EDIT, type Permissions, sanitizePermissions } from './permissions'
 
 export const SESSION_TTL_S = 8 * 3600
 const MAX_FAILS = 5
@@ -19,23 +20,45 @@ export type StaffUser = {
   lastName: string
   phone: string | null
   email: string | null
-  roles: StaffRole[]
+  isOwner: boolean
+  role: { id: string; name: string } | null
+  /** Итоговые права: у владельца — все модули на изменение. */
+  permissions: Permissions
   disabled: boolean
 }
-export type StaffInput = { firstName: string; lastName: string; phone: string; password: string; roles: StaffRole[] }
-export type StaffPrincipal = { id: string; roles: StaffRole[]; sessionId: string; csrfToken: string }
+export type StaffInput = {
+  firstName: string
+  lastName: string
+  phone: string
+  password: string
+  roleId?: string
+  isOwner?: boolean
+}
+export type StaffPrincipal = {
+  id: string
+  isOwner: boolean
+  permissions: Permissions
+  sessionId: string
+  csrfToken: string
+}
+type StaffWithRole = Staff & { role: Role | null }
 
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
-const toUser = (s: Staff): StaffUser => ({
+const permissionsOf = (s: StaffWithRole): Permissions =>
+  s.isOwner ? ALL_EDIT : sanitizePermissions(s.role?.permissions)
+const toUser = (s: StaffWithRole): StaffUser => ({
   id: s.id,
   name: `${s.firstName} ${s.lastName}`.trim(),
   firstName: s.firstName,
   lastName: s.lastName,
   phone: s.phone,
   email: s.email,
-  roles: s.roles,
+  isOwner: s.isOwner,
+  role: s.role ? { id: s.role.id, name: s.role.name } : null,
+  permissions: permissionsOf(s),
   disabled: s.disabledAt !== null,
 })
+const withRole = { role: true } as const
 
 @Injectable()
 export class StaffAuthService {
@@ -51,7 +74,9 @@ export class StaffAuthService {
   async createStaff(input: StaffInput, actorId: string | null = null, ip: string | null = null): Promise<StaffUser> {
     const phone = this.phoneOrThrow(input.phone)
     this.assertPassword(input.password)
-    if (!input.roles.length) throw new Error('Нужна хотя бы одна роль')
+    if (!input.isOwner && !input.roleId) {
+      throw new HttpException({ code: 'BAD_REQUEST', message: 'Выберите роль' }, HttpStatus.BAD_REQUEST)
+    }
     try {
       const staff = await this.prisma.staff.create({
         data: {
@@ -59,8 +84,10 @@ export class StaffAuthService {
           firstName: input.firstName.trim(),
           lastName: input.lastName.trim(),
           passwordHash: await hash(input.password),
-          roles: input.roles,
+          isOwner: input.isOwner === true,
+          roleId: input.isOwner ? null : input.roleId,
         },
+        include: withRole,
       })
       await this.audit.log({
         actorType: actorId ? 'staff' : 'system',
@@ -68,7 +95,7 @@ export class StaffAuthService {
         action: 'staff.created',
         entityType: 'staff',
         entityId: staff.id,
-        meta: { roles: input.roles },
+        meta: { roleId: input.roleId ?? null, isOwner: input.isOwner === true },
         ip,
       })
       return toUser(staff)
@@ -76,37 +103,42 @@ export class StaffAuthService {
       if ((e as { code?: string }).code === 'P2002') {
         throw new ConflictException({ code: 'PHONE_TAKEN', message: 'Сотрудник с таким телефоном уже есть' })
       }
+      if ((e as { code?: string }).code === 'P2003') {
+        throw new HttpException({ code: 'ROLE_NOT_FOUND', message: 'Роль не найдена' }, HttpStatus.BAD_REQUEST)
+      }
       throw e
     }
   }
 
   async list(): Promise<StaffUser[]> {
-    return (await this.prisma.staff.findMany({ orderBy: [{ disabledAt: 'asc' }, { createdAt: 'asc' }] })).map(toUser)
+    return (
+      await this.prisma.staff.findMany({
+        orderBy: [{ isOwner: 'desc' }, { disabledAt: 'asc' }, { createdAt: 'asc' }],
+        include: withRole,
+      })
+    ).map(toUser)
   }
 
   /**
-   * Изменить сотрудника. Себе нельзя снять роль ADMIN и отключить себя — иначе можно остаться без доступа.
-   * Отключение и смена ролей закрывают его сессии.
+   * Изменить сотрудника. Владельца нельзя отключить или перевести на роль; себя отключить нельзя.
+   * Отключение закрывает сессии; права роли меняются в «Ролях» и действуют сразу.
    */
   async update(
     id: string,
-    patch: Partial<Pick<StaffInput, 'firstName' | 'lastName' | 'phone' | 'roles'>> & { disabled?: boolean },
+    patch: Partial<Pick<StaffInput, 'firstName' | 'lastName' | 'phone' | 'roleId'>> & { disabled?: boolean },
     actorId: string,
     ip: string | null
   ): Promise<StaffUser> {
     const before = await this.prisma.staff.findUnique({ where: { id } })
     if (!before) throw new HttpException({ code: 'NOT_FOUND', message: 'Сотрудник не найден' }, HttpStatus.NOT_FOUND)
-    if (id === actorId && (patch.disabled === true || (patch.roles && !patch.roles.includes('ADMIN')))) {
-      throw new ConflictException({
-        code: 'SELF_LOCKOUT',
-        message: 'Нельзя отключить себя или снять с себя роль администратора',
-      })
+    if (before.isOwner && (patch.disabled === true || patch.roleId !== undefined)) {
+      throw new ConflictException({ code: 'OWNER_LOCKED', message: 'Владельца нельзя отключить или перевести на роль' })
     }
-    if (patch.roles && !patch.roles.length) {
-      throw new HttpException({ code: 'BAD_REQUEST', message: 'Нужна хотя бы одна роль' }, HttpStatus.BAD_REQUEST)
+    if (id === actorId && patch.disabled === true) {
+      throw new ConflictException({ code: 'SELF_LOCKOUT', message: 'Нельзя отключить себя' })
     }
     const phone = patch.phone !== undefined ? this.phoneOrThrow(patch.phone) : undefined
-    const revoke = patch.disabled === true || (patch.roles !== undefined && patch.roles.join() !== before.roles.join())
+    const revoke = patch.disabled === true
     try {
       const staff = await this.prisma.$transaction(async (tx) => {
         const s = await tx.staff.update({
@@ -115,9 +147,10 @@ export class StaffAuthService {
             ...(patch.firstName !== undefined && { firstName: patch.firstName.trim() }),
             ...(patch.lastName !== undefined && { lastName: patch.lastName.trim() }),
             ...(phone && { phone }),
-            ...(patch.roles && { roles: patch.roles }),
+            ...(patch.roleId && { roleId: patch.roleId }),
             ...(patch.disabled !== undefined && { disabledAt: patch.disabled ? this.clock.now() : null }),
           },
+          include: withRole,
         })
         if (revoke)
           await tx.staffSession.updateMany({
@@ -142,6 +175,9 @@ export class StaffAuthService {
     } catch (e) {
       if ((e as { code?: string }).code === 'P2002') {
         throw new ConflictException({ code: 'PHONE_TAKEN', message: 'Сотрудник с таким телефоном уже есть' })
+      }
+      if ((e as { code?: string }).code === 'P2003') {
+        throw new HttpException({ code: 'ROLE_NOT_FOUND', message: 'Роль не найдена' }, HttpStatus.BAD_REQUEST)
       }
       throw e
     }
@@ -171,6 +207,7 @@ export class StaffAuthService {
     const updated = await this.prisma.staff.update({
       where: { id: staff.id },
       data: { phone: this.phoneOrThrow(phone) },
+      include: withRole,
     })
     await this.audit.log({
       actorType: 'system',
@@ -204,7 +241,11 @@ export class StaffAuthService {
     const csrfToken = randomBytes(24).toString('base64url')
     const now = this.clock.now()
     const updated = await this.prisma.$transaction(async (tx) => {
-      const s = await tx.staff.update({ where: { id: staff.id }, data: { failedLogins: 0, lockedUntil: null } })
+      const s = await tx.staff.update({
+        where: { id: staff.id },
+        data: { failedLogins: 0, lockedUntil: null },
+        include: withRole,
+      })
       await tx.staffSession.create({
         data: {
           tokenHash: sha256(token),
@@ -228,14 +269,20 @@ export class StaffAuthService {
     if (!token) return null
     const s = await this.prisma.staffSession.findUnique({
       where: { tokenHash: sha256(token) },
-      include: { staff: true },
+      include: { staff: { include: withRole } },
     })
     if (!s || s.revokedAt || s.expiresAt <= this.clock.now() || s.staff.disabledAt) return null
-    return { id: s.staffId, roles: s.staff.roles, sessionId: s.id, csrfToken: s.csrfToken }
+    return {
+      id: s.staffId,
+      isOwner: s.staff.isOwner,
+      permissions: permissionsOf(s.staff),
+      sessionId: s.id,
+      csrfToken: s.csrfToken,
+    }
   }
 
   async me(staffId: string): Promise<StaffUser> {
-    return toUser(await this.prisma.staff.findUniqueOrThrow({ where: { id: staffId } }))
+    return toUser(await this.prisma.staff.findUniqueOrThrow({ where: { id: staffId }, include: withRole }))
   }
 
   async logout(p: StaffPrincipal, ip: string | null): Promise<void> {

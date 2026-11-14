@@ -59,15 +59,13 @@ async function openCommandPalette(
 describe('SearchProvider and CommandMenu', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useAuthStore
-      .getState()
-      .setUser({
-        id: 'u1',
-        name: 'Эксперт',
-        email: 'e@x.uz',
-        phone: null,
-        roles: ['EXPERT'],
-      })
+    useAuthStore.getState().setUser({
+      id: 'u1',
+      name: 'Эксперт',
+      email: 'e@x.uz',
+      phone: null,
+      permissions: { inspection: 'edit' },
+    })
   })
 
   it('renders the command palette when the palette is open', async () => {

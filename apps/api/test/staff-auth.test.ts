@@ -23,7 +23,7 @@ describe('Вход сотрудников: телефон + пароль, cookie
       firstName: 'Админ',
       lastName: 'Главный',
       password: PASSWORD,
-      roles: ['ADMIN'],
+      isOwner: true,
     })
   })
   afterAll(async () => {
@@ -56,7 +56,7 @@ describe('Вход сотрудников: телефон + пароль, cookie
       name: 'Админ Главный',
       phone: PHONE,
       email: null,
-      roles: ['ADMIN'],
+      isOwner: true,
       disabled: false,
     })
     const c = cookiesOf(res)
@@ -127,7 +127,7 @@ describe('Вход сотрудников: телефон + пароль, cookie
         email: 'old@auksion.uz',
         firstName: 'Старый',
         passwordHash: (await db.staff.findFirstOrThrow()).passwordHash,
-        roles: ['ADMIN'],
+        isOwner: true,
       },
     })
     expect((await login('Old@Auksion.uz', PASSWORD)).statusCode).toBe(200)

@@ -26,6 +26,7 @@ import { Route as AuthenticatedLotsIndexRouteImport } from './routes/_authentica
 import { Route as AuthenticatedParticipantsIndexRouteImport } from './routes/_authenticated/participants/index'
 import { Route as AuthenticatedProductsIndexRouteImport } from './routes/_authenticated/products/index'
 import { Route as AuthenticatedRiskIndexRouteImport } from './routes/_authenticated/risk/index'
+import { Route as AuthenticatedRolesIndexRouteImport } from './routes/_authenticated/roles/index'
 import { Route as AuthenticatedScheduleIndexRouteImport } from './routes/_authenticated/schedule/index'
 import { Route as AuthenticatedSellersIndexRouteImport } from './routes/_authenticated/sellers/index'
 import { Route as AuthenticatedStaffIndexRouteImport } from './routes/_authenticated/staff/index'
@@ -120,6 +121,11 @@ const AuthenticatedRiskIndexRoute = AuthenticatedRiskIndexRouteImport.update({
   path: '/risk/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRolesIndexRoute = AuthenticatedRolesIndexRouteImport.update({
+  id: '/roles/',
+  path: '/roles/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedScheduleIndexRoute =
   AuthenticatedScheduleIndexRouteImport.update({
     id: '/schedule/',
@@ -155,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/participants/': typeof AuthenticatedParticipantsIndexRoute
   '/products/': typeof AuthenticatedProductsIndexRoute
   '/risk/': typeof AuthenticatedRiskIndexRoute
+  '/roles/': typeof AuthenticatedRolesIndexRoute
   '/schedule/': typeof AuthenticatedScheduleIndexRoute
   '/sellers/': typeof AuthenticatedSellersIndexRoute
   '/staff/': typeof AuthenticatedStaffIndexRoute
@@ -176,6 +183,7 @@ export interface FileRoutesByTo {
   '/participants': typeof AuthenticatedParticipantsIndexRoute
   '/products': typeof AuthenticatedProductsIndexRoute
   '/risk': typeof AuthenticatedRiskIndexRoute
+  '/roles': typeof AuthenticatedRolesIndexRoute
   '/schedule': typeof AuthenticatedScheduleIndexRoute
   '/sellers': typeof AuthenticatedSellersIndexRoute
   '/staff': typeof AuthenticatedStaffIndexRoute
@@ -199,6 +207,7 @@ export interface FileRoutesById {
   '/_authenticated/participants/': typeof AuthenticatedParticipantsIndexRoute
   '/_authenticated/products/': typeof AuthenticatedProductsIndexRoute
   '/_authenticated/risk/': typeof AuthenticatedRiskIndexRoute
+  '/_authenticated/roles/': typeof AuthenticatedRolesIndexRoute
   '/_authenticated/schedule/': typeof AuthenticatedScheduleIndexRoute
   '/_authenticated/sellers/': typeof AuthenticatedSellersIndexRoute
   '/_authenticated/staff/': typeof AuthenticatedStaffIndexRoute
@@ -222,6 +231,7 @@ export interface FileRouteTypes {
     | '/participants/'
     | '/products/'
     | '/risk/'
+    | '/roles/'
     | '/schedule/'
     | '/sellers/'
     | '/staff/'
@@ -243,6 +253,7 @@ export interface FileRouteTypes {
     | '/participants'
     | '/products'
     | '/risk'
+    | '/roles'
     | '/schedule'
     | '/sellers'
     | '/staff'
@@ -265,6 +276,7 @@ export interface FileRouteTypes {
     | '/_authenticated/participants/'
     | '/_authenticated/products/'
     | '/_authenticated/risk/'
+    | '/_authenticated/roles/'
     | '/_authenticated/schedule/'
     | '/_authenticated/sellers/'
     | '/_authenticated/staff/'
@@ -401,6 +413,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRiskIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/roles/': {
+      id: '/_authenticated/roles/'
+      path: '/roles'
+      fullPath: '/roles/'
+      preLoaderRoute: typeof AuthenticatedRolesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/schedule/': {
       id: '/_authenticated/schedule/'
       path: '/schedule'
@@ -436,6 +455,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedParticipantsIndexRoute: typeof AuthenticatedParticipantsIndexRoute
   AuthenticatedProductsIndexRoute: typeof AuthenticatedProductsIndexRoute
   AuthenticatedRiskIndexRoute: typeof AuthenticatedRiskIndexRoute
+  AuthenticatedRolesIndexRoute: typeof AuthenticatedRolesIndexRoute
   AuthenticatedScheduleIndexRoute: typeof AuthenticatedScheduleIndexRoute
   AuthenticatedSellersIndexRoute: typeof AuthenticatedSellersIndexRoute
   AuthenticatedStaffIndexRoute: typeof AuthenticatedStaffIndexRoute
@@ -452,6 +472,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedParticipantsIndexRoute: AuthenticatedParticipantsIndexRoute,
   AuthenticatedProductsIndexRoute: AuthenticatedProductsIndexRoute,
   AuthenticatedRiskIndexRoute: AuthenticatedRiskIndexRoute,
+  AuthenticatedRolesIndexRoute: AuthenticatedRolesIndexRoute,
   AuthenticatedScheduleIndexRoute: AuthenticatedScheduleIndexRoute,
   AuthenticatedSellersIndexRoute: AuthenticatedSellersIndexRoute,
   AuthenticatedStaffIndexRoute: AuthenticatedStaffIndexRoute,

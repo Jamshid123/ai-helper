@@ -8,6 +8,7 @@ import {
   Package,
   PackageCheck,
   ShieldAlert,
+  ShieldCheck,
   Tags,
   UserCog,
   UserMinus,
@@ -169,7 +170,17 @@ export const SECTION_LIST: SectionMeta[] = [
     icon: UserCog,
     group: 'Система',
     description:
-      'Сотрудники и их роли. Вход — по телефону и паролю. Пароль виден только при вводе: передайте его сотруднику сразу.',
+      'Сотрудники админки: вход по телефону и паролю, доступ — по роли. Пароль виден только при вводе: передайте его сотруднику сразу.',
+    planned: [],
+  },
+  {
+    id: 'roles',
+    title: 'Роли',
+    url: '/roles',
+    icon: ShieldCheck,
+    group: 'Система',
+    description:
+      'Роли сотрудников и их права по каждому разделу: нет доступа, только просмотр или изменение. Настраивает владелец.',
     planned: [],
   },
   {

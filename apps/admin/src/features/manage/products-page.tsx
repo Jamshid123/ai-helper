@@ -33,6 +33,7 @@ import { type Product, useCategories, useProducts, useSaveProduct } from './api'
 import { conditionText, digits, sum } from './format'
 import { LotDialog } from './lot-dialog'
 import { EmptyRow, Field, ProductStatusBadge } from './ui'
+import { useCanEdit } from './use-can-edit'
 
 type Draft = {
   id?: string
@@ -80,6 +81,8 @@ export function ProductsPage() {
   const { data = [], isLoading } = useProducts()
   const { data: categories = [] } = useCategories()
   const save = useSaveProduct()
+  const editable = useCanEdit('products')
+  const canMakeLot = useCanEdit('lots')
   const [draft, setDraft] = useState<Draft | null>(null)
   const [lotFor, setLotFor] = useState<Product | null>(null)
 
@@ -132,9 +135,14 @@ export function ProductsPage() {
       title={meta.title}
       description={meta.description}
       actions={
-        <Button onClick={() => setDraft(blank())} disabled={!categories.length}>
-          <Plus /> Добавить товар
-        </Button>
+        editable && (
+          <Button
+            onClick={() => setDraft(blank())}
+            disabled={!categories.length}
+          >
+            <Plus /> Добавить товар
+          </Button>
+        )
       }
     >
       <div className='rounded-md border'>
@@ -176,18 +184,20 @@ export function ProductsPage() {
                   <ProductStatusBadge status={p.status} />
                 </TableCell>
                 <TableCell className='space-x-1 text-right whitespace-nowrap'>
-                  {p.status === 'AVAILABLE' && (
+                  {p.status === 'AVAILABLE' && canMakeLot && (
                     <Button size='sm' onClick={() => setLotFor(p)}>
                       Создать лот
                     </Button>
                   )}
-                  <Button
-                    variant='ghost'
-                    size='sm'
-                    onClick={() => setDraft(toDraft(p))}
-                  >
-                    Изменить
-                  </Button>
+                  {editable && (
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={() => setDraft(toDraft(p))}
+                    >
+                      Изменить
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

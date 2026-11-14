@@ -27,7 +27,7 @@ const restrictSchema = reasonSchema.extend({ days: z.number().int().min(1).max(3
  * отмена допуска до начала торгов с возвратом 100%. Править предложения и победителя нельзя (ТЗ).
  * Телефон — персональные данные: виден только этим ролям.
  */
-@StaffOnly('RISK', 'SUPPORT')
+@StaffOnly('participants')
 @Controller('admin/participants')
 export class AdminParticipantsController {
   constructor(

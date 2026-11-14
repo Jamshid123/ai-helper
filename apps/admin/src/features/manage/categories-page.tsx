@@ -24,6 +24,7 @@ import {
 import { PageShell } from '@/components/layout/page-shell'
 import { type Category, useCategories, useSaveCategory } from './api'
 import { EmptyRow, Field } from './ui'
+import { useCanEdit } from './use-can-edit'
 
 type Draft = {
   id?: string
@@ -45,6 +46,7 @@ export function CategoriesPage() {
   const meta = SECTIONS_BY_ID.categories
   const { data = [], isLoading } = useCategories()
   const save = useSaveCategory()
+  const editable = useCanEdit('categories')
   const [draft, setDraft] = useState<Draft | null>(null)
 
   const toggle = (c: Category) =>
@@ -61,9 +63,11 @@ export function CategoriesPage() {
       title={meta.title}
       description={meta.description}
       actions={
-        <Button onClick={() => setDraft(empty)}>
-          <Plus /> Добавить категорию
-        </Button>
+        editable && (
+          <Button onClick={() => setDraft(empty)}>
+            <Plus /> Добавить категорию
+          </Button>
+        )
       }
     >
       <div className='rounded-md border'>
@@ -101,21 +105,23 @@ export function CategoriesPage() {
                 <TableCell>
                   <Switch
                     checked={c.enabled}
-                    disabled={save.isPending}
+                    disabled={save.isPending || !editable}
                     onCheckedChange={() => toggle(c)}
                     aria-label={`Показывать категорию «${c.nameRu}»`}
                   />
                 </TableCell>
                 <TableCell className='text-right'>
-                  <Button
-                    variant='ghost'
-                    size='sm'
-                    onClick={() =>
-                      setDraft({ ...c, sortOrder: String(c.sortOrder) })
-                    }
-                  >
-                    Изменить
-                  </Button>
+                  {editable && (
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={() =>
+                        setDraft({ ...c, sortOrder: String(c.sortOrder) })
+                      }
+                    >
+                      Изменить
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

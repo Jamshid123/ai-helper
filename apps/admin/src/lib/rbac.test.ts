@@ -1,43 +1,35 @@
 import { describe, expect, it } from 'vitest'
-import { SECTIONS, canAccess } from './rbac'
+import { SECTIONS, canAccess, canEdit } from './rbac'
 
-describe('canAccess', () => {
-  it('без ролей нет доступа ни к одному разделу', () => {
-    for (const s of SECTIONS) expect(canAccess([], s)).toBe(false)
+describe('права в админке', () => {
+  it('без сотрудника или прав — только ничего; обзор виден любому вошедшему', () => {
+    for (const s of SECTIONS) expect(canAccess(null, s)).toBe(false)
+    expect(canAccess({ permissions: {} }, 'dashboard')).toBe(true)
+    expect(canAccess({ permissions: {} }, 'lots')).toBe(false)
   })
 
-  it('неизвестная роль не даёт доступа', () => {
-    expect(canAccess(['SUPERUSER'], 'dashboard')).toBe(false)
-    expect(canAccess(['admin'], 'staff')).toBe(false)
-  })
-
-  it('эксперт видит экспертизу, но не финансы и не сотрудников', () => {
-    expect(canAccess(['EXPERT'], 'inspection')).toBe(true)
-    expect(canAccess(['EXPERT'], 'finance')).toBe(false)
-    expect(canAccess(['EXPERT'], 'staff')).toBe(false)
-  })
-
-  it('поддержка видит ограничения участия, но не сигналы риска', () => {
-    expect(canAccess(['SUPPORT'], 'participants')).toBe(true)
-    expect(canAccess(['SUPPORT'], 'risk')).toBe(false)
-  })
-
-  it('управление сотрудниками и аудит — только у администратора', () => {
-    for (const r of [
-      'OPERATOR',
-      'EXPERT',
-      'RISK',
-      'FINANCE',
-      'FULFILLMENT',
-      'SUPPORT',
-    ]) {
-      expect(canAccess([r], 'staff')).toBe(false)
-      expect(canAccess([r], 'audit')).toBe(false)
+  it('«просмотр» показывает раздел без действий, «изменение» — с действиями', () => {
+    const a = {
+      permissions: { lots: 'view' as const, products: 'edit' as const },
     }
-    expect(canAccess(['ADMIN'], 'staff')).toBe(true)
+    expect(canAccess(a, 'lots')).toBe(true)
+    expect(canEdit(a, 'lots')).toBe(false)
+    expect(canEdit(a, 'products')).toBe(true)
   })
 
-  it('несколько ролей объединяют доступ', () => {
-    expect(canAccess(['EXPERT', 'FULFILLMENT'], 'fulfillment')).toBe(true)
+  it('сотрудники и роли — только владелец, даже если права роли подделаны', () => {
+    const forged = {
+      permissions: { staff: 'edit' as const, roles: 'edit' as const },
+    }
+    expect(canAccess(forged, 'staff')).toBe(false)
+    expect(canAccess(forged, 'roles')).toBe(false)
+    expect(canEdit({ isOwner: true }, 'staff')).toBe(true)
+    for (const s of SECTIONS) expect(canEdit({ isOwner: true }, s)).toBe(true)
+  })
+
+  it('неизвестный уровень не даёт доступа', () => {
+    expect(canAccess({ permissions: { lots: 'admin' as never } }, 'lots')).toBe(
+      false
+    )
   })
 })

@@ -1,33 +1,8 @@
 /**
- * Роли сотрудников и доступ к разделам админки.
- *
- * Это только UX: меню и маршруты скрываются по ролям, но каждое действие
- * обязательно проверяется на сервере. Источник ролей — ответ `/admin/me`.
- * Роли из ТЗ: оператор, эксперт, риск-менеджер, финансист, выдача, поддержка.
- * ADMIN — управление сотрудниками и журнал аудита (в ТЗ не описан, нужен для эксплуатации).
+ * Права сотрудника в админке (решение заказчика 14.11.2026): владелец настраивает роли —
+ * по каждому модулю «нет доступа», «просмотр» или «изменение». Источник прав — ответ `/admin/me`.
+ * Это только UX (меню, кнопки): каждое действие проверяется на сервере.
  */
-export const ROLES = [
-  'ADMIN',
-  'OPERATOR',
-  'EXPERT',
-  'RISK',
-  'FINANCE',
-  'FULFILLMENT',
-  'SUPPORT',
-] as const
-
-export type Role = (typeof ROLES)[number]
-
-export const ROLE_LABELS: Record<Role, string> = {
-  ADMIN: 'Администратор',
-  OPERATOR: 'Оператор',
-  EXPERT: 'Эксперт',
-  RISK: 'Риск-менеджер',
-  FINANCE: 'Финансы',
-  FULFILLMENT: 'Выдача',
-  SUPPORT: 'Поддержка',
-}
-
 export const SECTIONS = [
   'dashboard',
   'schedule',
@@ -41,37 +16,55 @@ export const SECTIONS = [
   'finance',
   'fulfillment',
   'staff',
+  'roles',
   'audit',
 ] as const
-
 export type Section = (typeof SECTIONS)[number]
 
-const ALL: readonly Role[] = ROLES
-
-const ACCESS: Record<Section, readonly Role[]> = {
-  dashboard: ALL,
-  schedule: ['ADMIN', 'OPERATOR'],
-  categories: ['ADMIN', 'OPERATOR'],
-  products: ['ADMIN', 'OPERATOR', 'EXPERT'],
-  lots: ['ADMIN', 'OPERATOR'],
-  sellers: ['ADMIN', 'OPERATOR', 'RISK'],
-  inspection: ['ADMIN', 'EXPERT'],
-  risk: ['ADMIN', 'RISK'],
-  participants: ['ADMIN', 'RISK', 'SUPPORT'],
-  finance: ['ADMIN', 'FINANCE'],
-  fulfillment: ['ADMIN', 'FULFILLMENT'],
-  staff: ['ADMIN'],
-  audit: ['ADMIN'],
+/** Модули с настраиваемыми правами (совпадают с API `modules/staff/permissions.ts`). */
+export const MODULES = [
+  'schedule',
+  'categories',
+  'products',
+  'lots',
+  'sellers',
+  'inspection',
+  'risk',
+  'participants',
+  'finance',
+  'fulfillment',
+  'audit',
+] as const
+export type AdminModule = (typeof MODULES)[number]
+export type Level = 'view' | 'edit'
+export type Access = {
+  isOwner?: boolean
+  permissions?: Partial<Record<string, Level>>
 }
 
-export function isRole(value: unknown): value is Role {
-  return (
-    typeof value === 'string' && (ROLES as readonly string[]).includes(value)
-  )
+const OWNER_ONLY: readonly Section[] = ['staff', 'roles']
+
+function level(a: Access | null | undefined, section: Section): Level | null {
+  if (!a) return null
+  if (a.isOwner) return 'edit'
+  if (section === 'dashboard') return 'view'
+  if (OWNER_ONLY.includes(section)) return null
+  const v = a.permissions?.[section]
+  return v === 'view' || v === 'edit' ? v : null
 }
 
-/** Есть ли у сотрудника хотя бы одна роль с доступом к разделу. Неизвестные роли игнорируются. */
-export function canAccess(roles: readonly string[], section: Section): boolean {
-  const allowed = ACCESS[section]
-  return roles.some((r) => isRole(r) && allowed.includes(r))
+/** Виден ли раздел (просмотр или изменение). */
+export function canAccess(
+  a: Access | null | undefined,
+  section: Section
+): boolean {
+  return level(a, section) !== null
+}
+
+/** Можно ли менять данные раздела (показывать кнопки действий). */
+export function canEdit(
+  a: Access | null | undefined,
+  section: Section
+): boolean {
+  return level(a, section) === 'edit'
 }

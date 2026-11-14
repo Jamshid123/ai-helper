@@ -77,7 +77,8 @@
 }
 
 @theme inline {
-  --font-rubik: 'Rubik Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-rubik:
+    'Rubik Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

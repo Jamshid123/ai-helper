@@ -302,7 +302,8 @@ export type Staff = {
   lastName: string
   phone: string | null
   email: string | null
-  roles: string[]
+  isOwner: boolean
+  role: { id: string; name: string } | null
   disabled: boolean
 }
 export const useStaff = () =>
@@ -311,7 +312,7 @@ export type StaffInput = {
   firstName: string
   lastName: string
   phone: string
-  roles: string[]
+  roleId?: string
 }
 export const useCreateStaff = () =>
   useAction(
@@ -339,4 +340,40 @@ export const useSetStaffPassword = () =>
       }),
     [['staff']],
     'Пароль изменён — старые входы закрыты'
+  )
+
+/* Роли */
+export type Level = 'none' | 'view' | 'edit'
+export type RoleRow = {
+  id: string
+  name: string
+  permissions: Partial<Record<string, 'view' | 'edit'>>
+  staff: number
+}
+export const useRoles = () =>
+  useQuery({
+    queryKey: ['roles'],
+    queryFn: () => api<{ modules: string[]; roles: RoleRow[] }>('/admin/roles'),
+  })
+export const useSaveRole = () =>
+  useAction(
+    ({
+      id,
+      ...body
+    }: {
+      id?: string
+      name: string
+      permissions: Record<string, Level>
+    }) =>
+      id
+        ? api<RoleRow>(`/admin/roles/${id}`, { method: 'PATCH', body })
+        : api<RoleRow>('/admin/roles', { method: 'POST', body }),
+    [['roles'], ['staff']],
+    'Роль сохранена — права действуют сразу'
+  )
+export const useDeleteRole = () =>
+  useAction(
+    (id: string) => api<void>(`/admin/roles/${id}`, { method: 'DELETE' }),
+    [['roles']],
+    'Роль удалена'
   )
