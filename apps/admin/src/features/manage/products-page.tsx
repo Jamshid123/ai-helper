@@ -225,7 +225,7 @@ export function ProductsPage() {
                   }
                 />
               </Field>
-              <div className='grid grid-cols-2 gap-3'>
+              <div className='grid grid-cols-1 gap-3 min-[400px]:grid-cols-2'>
                 <Field label='Категория'>
                   <Select
                     value={draft.categoryId}
@@ -279,7 +279,7 @@ export function ProductsPage() {
                   }
                 />
               </Field>
-              <div className='grid grid-cols-2 gap-3'>
+              <div className='grid grid-cols-1 gap-3 min-[400px]:grid-cols-2'>
                 <Field label='Батарея, %' hint='Пусто — для новых'>
                   <Input
                     inputMode='numeric'
@@ -302,7 +302,7 @@ export function ProductsPage() {
                   IMEI сверен
                 </label>
               </div>
-              <div className='grid grid-cols-2 gap-3'>
+              <div className='grid grid-cols-1 gap-3 min-[400px]:grid-cols-2'>
                 <Field label='Комплект' hint='По одному в строке'>
                   <Textarea
                     rows={3}
@@ -322,7 +322,7 @@ export function ProductsPage() {
                   />
                 </Field>
               </div>
-              <div className='grid grid-cols-3 gap-3'>
+              <div className='grid grid-cols-1 gap-3 sm:grid-cols-3'>
                 <Field
                   label='IMEI / серийный'
                   hint={

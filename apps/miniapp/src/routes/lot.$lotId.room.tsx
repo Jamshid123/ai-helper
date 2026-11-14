@@ -235,13 +235,17 @@ function RoomScreen({ lot, view }: { lot: Lot; view: RoomView }) {
           <div className='mx-auto grid w-full max-w-lg gap-3'>
             {canOffer && (
               <>
-                <div className='flex items-baseline justify-between text-[13px]'>
+                <div className='flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-[13px]'>
                   <span className='text-muted'>{t('room.yourOffer')}</span>
                   <span className='text-muted'>
                     {t('room.minBid')} <Price value={min} className='font-semibold text-fg' />
                   </span>
                 </div>
-                <div className='grid grid-cols-4 gap-2' role='radiogroup' aria-label={t('room.yourOffer')}>
+                <div
+                  className='grid grid-cols-2 gap-2 min-[360px]:grid-cols-4'
+                  role='radiogroup'
+                  aria-label={t('room.yourOffer')}
+                >
                   {stepOptions.map((n) => {
                     const value = min + n * room.step
                     const active = extra === n

@@ -197,7 +197,7 @@ export function LotDialog({ open, onOpenChange, product: given, lot }: Props) {
             />
           </Field>
 
-          <div className='grid grid-cols-2 gap-3'>
+          <div className='grid grid-cols-1 gap-3 min-[400px]:grid-cols-2'>
             <Field label='Начало (Ташкент)'>
               <Input
                 type='datetime-local'
@@ -240,7 +240,7 @@ export function LotDialog({ open, onOpenChange, product: given, lot }: Props) {
             ))}
           </div>
 
-          <div className='grid grid-cols-3 gap-3'>
+          <div className='grid grid-cols-1 gap-3 sm:grid-cols-3'>
             <Field
               label='Мин. участников'
               hint='Меньше к началу — отмена с возвратом'
@@ -290,7 +290,7 @@ export function LotDialog({ open, onOpenChange, product: given, lot }: Props) {
             </div>
           </div>
 
-          <div className='grid grid-cols-3 gap-3'>
+          <div className='grid grid-cols-1 gap-3 sm:grid-cols-3'>
             <Field
               label='Старт, сум'
               hint={

@@ -67,7 +67,7 @@ export function AutoBidCard({ lotId, minBid, step }: { lotId: string; minBid: bi
           inputMode='numeric'
           value={value}
           onChange={(e) => setValue(formatSum(e.target.value.replace(/\D/g, '') || '0', locale, false))}
-          className='tabular h-11 min-w-0 flex-1 rounded-xl border border-line bg-bg px-3 text-[16px] outline-none focus:border-primary'
+          className='tabular h-11 w-0 min-w-0 flex-1 rounded-xl border border-line bg-bg px-3 text-[16px] outline-none focus:border-primary'
         />
         <button
           type='button'

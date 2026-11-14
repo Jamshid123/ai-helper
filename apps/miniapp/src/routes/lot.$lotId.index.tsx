@@ -17,7 +17,14 @@ import { LiveBadge } from '@/shared/ui/live-badge'
 import { LotPhoto } from '@/shared/ui/lot-photo'
 import { Price } from '@/shared/ui/price'
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({ label, children, stacked }: { label: string; children: React.ReactNode; stacked?: boolean }) {
+  if (stacked)
+    return (
+      <div className='grid gap-0.5 py-2.5'>
+        <span className='text-[14px] text-muted'>{label}</span>
+        <span className='text-[14px]'>{children}</span>
+      </div>
+    )
   return (
     <div className='flex items-baseline justify-between gap-4 py-2.5'>
       <span className='shrink-0 text-[14px] text-muted'>{label}</span>
@@ -101,7 +108,7 @@ function AdmissionSheet({ lot, onClose, onPaid }: { lot: Lot; onClose: () => voi
             {error}
           </p>
         )}
-        <div className='grid grid-cols-2 gap-2'>
+        <div className='flex flex-col-reverse gap-2 min-[360px]:grid min-[360px]:grid-cols-2'>
           <Button variant='ghost' onClick={onClose}>
             {t('admission.cancel')}
           </Button>
@@ -185,11 +192,14 @@ function LotPage() {
       <div className='grid grid-cols-2 gap-2'>
         <div className='rounded-2xl bg-surface px-4 py-3'>
           <div className='text-[12px] text-muted'>{lot.currentPrice ? t('lot.current') : t('lot.start')}</div>
-          <Price value={lot.currentPrice ?? lot.startPrice} className='text-xl font-bold text-brand-ink' />
+          <Price
+            value={lot.currentPrice ?? lot.startPrice}
+            className='text-lg font-bold whitespace-normal text-brand-ink min-[360px]:text-xl'
+          />
         </div>
         <div className='rounded-2xl bg-surface px-4 py-3'>
           <div className='text-[12px] text-muted'>{live ? t('lot.endsIn') : t('lot.opensIn')}</div>
-          <div className={`tabular text-xl font-bold ${live ? 'text-hot' : ''}`}>
+          <div className={`tabular text-lg font-bold min-[360px]:text-xl ${live ? 'text-hot' : ''}`}>
             {formatCountdown((live ? closes : opens) - now, t('time.d'))}
           </div>
         </div>
@@ -235,8 +245,10 @@ function LotPage() {
         <div className='divide-y divide-line'>
           {lot.inspection.battery !== null && <Row label={t('lot.battery')}>{lot.inspection.battery}%</Row>}
           <Row label='IMEI'>{lot.inspection.imeiChecked ? '✓' : '—'}</Row>
-          <Row label={t('lot.kit')}>{lot.inspection.kit.join(', ')}</Row>
-          <Row label={t('lot.defects')}>
+          <Row stacked label={t('lot.kit')}>
+            {lot.inspection.kit.join(', ')}
+          </Row>
+          <Row stacked label={t('lot.defects')}>
             {lot.inspection.defects.length ? lot.inspection.defects.join('; ') : t('lot.noDefects')}
           </Row>
         </div>
@@ -246,8 +258,12 @@ function LotPage() {
         <h2 className='text-[15px] font-semibold'>{t('lot.terms')}</h2>
         <p className='text-[13.5px] leading-relaxed text-muted'>{t('lot.terms.text')}</p>
         <div className='divide-y divide-line'>
-          <Row label={t('lot.refund')}>{t('lot.refund.text')}</Row>
-          <Row label={t('lot.pickup')}>{t('lot.pickup.text')}</Row>
+          <Row stacked label={t('lot.refund')}>
+            {t('lot.refund.text')}
+          </Row>
+          <Row stacked label={t('lot.pickup')}>
+            {t('lot.pickup.text')}
+          </Row>
         </div>
       </section>
 

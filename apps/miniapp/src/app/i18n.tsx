@@ -87,7 +87,7 @@ export const dict = {
       'Победили — подтвердите покупку за 15 минут, внесите 30% за 2 часа, остаток и получение товара — за 24 часа',
     'lot.refund': 'Возврат взноса',
     'lot.refund.text':
-      'Возвращаем, если до открытия торгов описание лота существенно исправлено или если оплата пришла после закрытия торгов',
+      'Вернём 100%, если выйдете из лота до начала торгов, если торги отменят (например, не наберётся участников) или если оплата придёт, когда мест уже нет или торги закрыты',
     'lot.pickup': 'Пункт выдачи',
     'lot.pickup.text': 'Ташкент — адрес и график сообщим до начала торгов',
     'room.confirm': 'Подтвердить',
@@ -266,7 +266,7 @@ export const dict = {
       'Yutdingizmi — 15 daqiqada xaridni tasdiqlang, 2 soatda 30% toʻlang, qolganini toʻlash va tovarni olish — 24 soat ichida',
     'lot.refund': 'Badalni qaytarish',
     'lot.refund.text':
-      'Savdo ochilishidan oldin lot tavsifi jiddiy tuzatilsa yoki toʻlov savdo yopilgandan keyin kelsa, qaytaramiz',
+      '100% qaytaramiz: savdo boshlanguncha lotdan chiqsangiz, savdo bekor qilinsa (masalan, ishtirokchilar yetarli boʻlmasa) yoki toʻlov oʻrinlar tugagach yoki savdo yopilgach kelsa',
     'lot.pickup': 'Topshirish punkti',
     'lot.pickup.text': 'Toshkent — manzil va ish vaqtini savdodan oldin xabar qilamiz',
     'room.confirm': 'Tasdiqlash',
