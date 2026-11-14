@@ -96,7 +96,9 @@ function HowTo() {
 function LotCard({ lot }: { lot: Lot }) {
   const { t } = useI18n()
   const live = lot.status === 'live'
-  const admitted = useAdmissions().has(lot.id)
+  const admissions = useAdmissions()
+  const admitted = admissions.has(lot.id)
+  const count = admissions.count(lot.id)
   const full = !admitted && isFull(lot)
   return (
     <div className='grid gap-2 border-b border-line pb-4 last:border-b-0'>
@@ -111,9 +113,12 @@ function LotCard({ lot }: { lot: Lot }) {
         <div className='flex min-w-0 flex-col gap-1 py-1'>
           <span className='line-clamp-2 text-[15px] leading-snug font-medium'>{lot.title}</span>
           <span className='text-[12.5px] text-muted'>
-            {t(lot.condition === 'new' ? 'lot.condition.new' : 'lot.condition.used')} · {t('lot.admitted')}:{' '}
-            {lot.admittedCount}
-            {lot.maxParticipants ? ` ${t('lot.of')} ${lot.maxParticipants}` : ''}
+            {t(lot.condition === 'new' ? 'lot.condition.new' : 'lot.condition.used')}
+            {count !== null
+              ? ` · ${t('lot.admitted')}: ${count}${lot.maxParticipants ? ` ${t('lot.of')} ${lot.maxParticipants}` : ''}`
+              : lot.maxParticipants
+                ? ` · ${t('lot.seats')}: ${lot.maxParticipants}`
+                : ''}
           </span>
           <div className='mt-auto flex items-baseline justify-between gap-2'>
             <span className='grid'>

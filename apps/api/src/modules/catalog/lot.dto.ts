@@ -15,7 +15,8 @@ export type LotDto = {
   startPrice: string
   step: string
   currentPrice: string | null
-  admittedCount: number
+  /** Мест нет (набран максимум). Само число участников видно только допущенным — `GET /me/admissions` (решение 14.11.2026). */
+  full: boolean
   fee: string
   opensAt: string
   closesAt: string
@@ -78,7 +79,7 @@ export function toLotDto(lot: LotWithCategory): LotDto {
     startPrice: lot.startPrice.toString(),
     step: lot.step.toString(),
     currentPrice: lot.currentPrice?.toString() ?? null,
-    admittedCount: lot.admittedCount,
+    full: lot.maxParticipants !== null && lot.admittedCount >= lot.maxParticipants,
     fee: lot.fee.toString(),
     opensAt: lot.opensAt.toISOString(),
     closesAt: lot.closesAt.toISOString(),

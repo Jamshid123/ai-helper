@@ -41,7 +41,8 @@ function RoomScreen({ lot, view }: { lot: Lot; view: RoomView }) {
   const iLead = Boolean(last?.isMe)
   const iBid = room.bids.some((b) => b.isMe)
   const closed = now >= room.closesAt
-  const admitted = useAdmissions().has(lotId)
+  const admissions = useAdmissions()
+  const admitted = admissions.has(lotId)
   const [extra, setExtra] = useState(0n)
   // Если пока выбирали, цену перебили — выбор пересчитывается от новой минимальной.
   const amount = min + extra * room.step
@@ -130,7 +131,9 @@ function RoomScreen({ lot, view }: { lot: Lot; view: RoomView }) {
         <h1 className='text-[17px] leading-snug font-semibold'>{lot.title}</h1>
         <span className='inline-flex shrink-0 items-center gap-1 text-[12.5px] text-muted'>
           <Users className='size-3.5' aria-hidden='true' />{' '}
-          {online !== null ? `${online} ${t('room.online')}` : `${t('lot.admitted')}: ${lot.admittedCount}`}
+          {online !== null
+            ? `${online} ${t('room.online')}`
+            : `${t('lot.admitted')}: ${admissions.count(lot.id) ?? '—'}`}
         </span>
       </header>
 

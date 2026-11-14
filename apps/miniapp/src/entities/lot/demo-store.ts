@@ -140,7 +140,7 @@ export function startBots(lotId: string): () => void {
 
 /** Сколько человек «в комнате» — только для отображения, на правила не влияет. */
 export function demoOnline(lot: Lot): number {
-  return Math.max(3, Math.round(lot.admittedCount * 0.6))
+  return Math.max(3, Math.round((lot.admittedCount ?? 0) * 0.6))
 }
 
 // Живые лоты сразу получают пару ставок, чтобы каталог и комната показывали одну цену.

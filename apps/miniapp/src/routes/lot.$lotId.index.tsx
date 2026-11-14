@@ -139,6 +139,7 @@ function LotPage() {
 
   const admissions = useAdmissions()
   const admitted = lot ? admissions.has(lot.id) : false
+  const count = lot ? admissions.count(lot.id) : null
   const live = lot?.status === 'live'
   const full = Boolean(lot && !admitted && isFull(lot))
   const primary = useCallback(() => {
@@ -210,10 +211,19 @@ function LotPage() {
         <Row label={t('lot.step')}>
           <Price value={lot.step} />
         </Row>
-        <Row label={t('lot.admitted')}>
-          {lot.admittedCount}
-          {lot.maxParticipants ? ` ${t('lot.of')} ${lot.maxParticipants}` : ''}
-        </Row>
+        {count !== null ? (
+          <Row label={t('lot.admitted')}>
+            {count}
+            {lot.maxParticipants ? ` ${t('lot.of')} ${lot.maxParticipants}` : ''}
+          </Row>
+        ) : (
+          <Row label={t('lot.admitted')}>
+            <span className='text-muted'>
+              {lot.maxParticipants ? `${t('lot.seats')}: ${lot.maxParticipants} · ` : ''}
+              {t('lot.countAfterAdmission')}
+            </span>
+          </Row>
+        )}
         <Row label={t('lot.fee')}>
           <Price value={lot.fee} />
         </Row>

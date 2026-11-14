@@ -51,14 +51,21 @@ export class PaymentsController {
     return this.admissions.leave(req.userId, lotId)
   }
 
-  /** Мои допуски — подтягиваются на любом устройстве (ТЗ «Доступ к просмотру»). */
+  /**
+   * Мои допуски — подтягиваются на любом устройстве (ТЗ «Доступ к просмотру»).
+   * Число участников лота видно только допущенным (решение 14.11.2026).
+   */
   @Get('me/admissions')
   async mine(@Req() req: AuthedRequest) {
     const list = await this.prisma.admission.findMany({
       where: { userId: req.userId },
-      select: { lotId: true, createdAt: true },
+      select: { lotId: true, createdAt: true, lot: { select: { admittedCount: true } } },
     })
-    return list.map((a) => ({ lotId: a.lotId, admittedAt: a.createdAt.toISOString() }))
+    return list.map((a) => ({
+      lotId: a.lotId,
+      admittedAt: a.createdAt.toISOString(),
+      admittedCount: a.lot.admittedCount,
+    }))
   }
 
   /** Имитация успешной оплаты — ТОЛЬКО при PAYMENTS_MODE=fake (демо/тесты). Идёт через тот же путь подтверждения. */

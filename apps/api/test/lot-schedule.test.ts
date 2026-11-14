@@ -125,7 +125,13 @@ describe('Параметры торгов: любой день, ожидание
     expect(full.statusCode).toBe(409)
     expect(full.json().code).toBe('LOT_FULL')
     const dto = (await app.inject({ method: 'GET', url: `/api/v1/lots/${lot.id}` })).json()
-    expect(dto).toMatchObject({ maxParticipants: 1, admittedCount: 1 })
+    expect(dto).toMatchObject({ maxParticipants: 1, full: true })
+    // число участников до оплаты не показываем (решение 14.11.2026, п. 9)
+    expect(dto).not.toHaveProperty('admittedCount')
+    const list = (await app.inject({ method: 'GET', url: '/api/v1/lots' })).json()
+    expect(list[0]).not.toHaveProperty('admittedCount')
+    const mine = (await app.inject({ method: 'GET', url: '/api/v1/me/admissions', headers: a.auth })).json()
+    expect(mine).toEqual([expect.objectContaining({ lotId: lot.id, admittedCount: 1 })])
   })
 
   it('каталог отдаёт фактическое окончание (endsAt) и ожидание предложения', async () => {

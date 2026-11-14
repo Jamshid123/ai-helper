@@ -12,7 +12,10 @@ export type Lot = {
   startPrice: string
   step: string
   currentPrice: string | null
-  admittedCount: number
+  /** Мест нет (набран максимум). В API приходит вместо числа участников. */
+  full?: boolean
+  /** Только демо-данные: в API число участников видно допущенным (`/me/admissions`), решение 14.11.2026. */
+  admittedCount?: number
   fee: string
   opensAt: string
   closesAt: string

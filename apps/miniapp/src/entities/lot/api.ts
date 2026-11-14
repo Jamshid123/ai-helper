@@ -31,7 +31,8 @@ export const TEST_STAND = !DEMO && import.meta.env.VITE_DEMO_STAND === 'true'
 const ROOM_POLL_MS = 3_000
 
 /** Мест нет: набран максимум участников (решение 14.11.2026). */
-export const isFull = (lot: Lot) => lot.maxParticipants != null && lot.admittedCount >= lot.maxParticipants
+export const isFull = (lot: Lot) =>
+  lot.full ?? (lot.maxParticipants != null && (lot.admittedCount ?? 0) >= lot.maxParticipants)
 /** Фактическое окончание торгов (с «ожиданием следующей ставки»), мс. */
 export const endsAtOf = (lot: Lot) => Date.parse(lot.endsAt ?? lot.closesAt)
 /** Пока поток событий подключён, опрос — только страховка. */
@@ -80,15 +81,28 @@ export function useCategories(): Category[] {
 
 /* ── Допуски ─────────────────────────────────────────────── */
 
-export function useAdmissions(): { ids: string[]; has: (lotId: string) => boolean; ready: boolean } {
+type Admissions = {
+  ids: string[]
+  has: (lotId: string) => boolean
+  /** Число участников лота — только после допуска, иначе null (решение 14.11.2026). */
+  count: (lotId: string) => number | null
+  ready: boolean
+}
+
+export function useAdmissions(): Admissions {
   useDemoVersion()
   const q = useQuery({
     queryKey: ['admissions'],
-    queryFn: () => api<{ lotId: string }[]>('/me/admissions'),
+    queryFn: () => api<{ lotId: string; admittedCount: number }[]>('/me/admissions'),
     enabled: !DEMO,
   })
   const ids = DEMO ? admittedLotIds() : (q.data ?? []).map((a) => a.lotId)
-  return { ids, has: (lotId) => ids.includes(lotId), ready: DEMO || q.isSuccess }
+  const count = (lotId: string): number | null => {
+    if (!ids.includes(lotId)) return null
+    if (DEMO) return demoLot(lotId)?.admittedCount ?? null
+    return q.data?.find((a) => a.lotId === lotId)?.admittedCount ?? null
+  }
+  return { ids, has: (lotId) => ids.includes(lotId), count, ready: DEMO || q.isSuccess }
 }
 
 type AdmissionStart =
@@ -165,6 +179,7 @@ function useLiveLot(lotId: string, enabled: boolean): boolean {
     const refresh = () => {
       void qc.invalidateQueries({ queryKey: ['bids', lotId] })
       void qc.invalidateQueries({ queryKey: ['lot', lotId] })
+      void qc.invalidateQueries({ queryKey: ['admissions'] })
     }
     es.onopen = () => {
       setConnected(true)
