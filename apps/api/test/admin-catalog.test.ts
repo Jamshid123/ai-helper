@@ -162,7 +162,7 @@ describe('Админка: категории, товары, лоты', () => {
     expect(await db.auditLog.count({ where: { action: { in: ['lot.created', 'lot.published'] } } })).toBe(2)
   })
 
-  it('правила лота: шаг ≥ 100 000, старт не ниже себестоимости, только пятничный слот 09:00–18:00', async () => {
+  it('правила лота: шаг ≥ 100 000, старт не ниже себестоимости', async () => {
     const s = await loginStaff(app)
     const p = await product(s.write)
     const slot = fridaySlot()
@@ -171,8 +171,6 @@ describe('Админка: категории, товары, лоты', () => {
     expect((await req('POST', '/admin/lots', s.write, { ...base, startPrice: '3900000' })).json().code).toBe(
       'START_BELOW_COST'
     )
-    const wrongTime = { ...base, closesAt: new Date(Date.parse(slot.closesAt) - 3_600_000).toISOString() }
-    expect((await req('POST', '/admin/lots', s.write, wrongTime)).json().code).toBe('NOT_FRIDAY_SLOT')
     expect((await req('POST', '/admin/lots', s.write, base)).statusCode).toBe(201)
   })
 

@@ -1,13 +1,14 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common'
+import { Injectable, NotFoundException } from '@nestjs/common'
 import type { Category, Lot, Prisma } from '@prisma/client'
-import { RULES, currentOrNextSession } from '@auksion/shared'
+import { RULES } from '@auksion/shared'
 import { Clock } from '../../common/clock'
-import { ENV } from '../../config/config.module'
-import type { Env } from '../../config/env'
 import { PrismaService } from '../../prisma/prisma.service'
 import { RefundsService } from '../payments/refunds.service'
 import { AuditService } from '../staff/audit.service'
 import { conflict, unprocessable } from './admin.schemas'
+
+const MIN_DURATION_MIN = 5
+const MAX_DURATION_MIN = 14 * 24 * 60
 
 /** Взнос за допуск по умолчанию (решение заказчика: 12 000 сум, меняется для лота). */
 export const DEFAULT_FEE = 12_000n
@@ -21,6 +22,9 @@ export type LotInput = {
   fee?: bigint
   opensAt?: Date
   closesAt?: Date
+  maxParticipants?: number | null
+  minParticipants?: number | null
+  bidTimeoutSec?: number | null
 }
 type Actor = { staffId: string; ip: string | null }
 type LotFull = Lot & { category: Pick<Category, 'slug' | 'nameRu'> }
@@ -44,19 +48,21 @@ export const lotDto = (l: LotFull) => ({
   inspection: l.inspection,
   opensAt: l.opensAt.toISOString(),
   closesAt: l.closesAt.toISOString(),
+  maxParticipants: l.maxParticipants,
+  minParticipants: l.minParticipants,
+  bidTimeoutSec: l.bidTimeoutSec,
   createdAt: l.createdAt.toISOString(),
 })
 const include = { category: { select: { slug: true, nameRu: true } } } as const
 
 /**
  * Лоты в админке. Правила: шаг ≥ минимального (ТЗ), старт не ниже себестоимости (решение 13.11.2026),
- * на проде — только пятничный слот 09:00–18:00 по Ташкенту (на демо-стенде — любое окно в будущем),
- * после открытия торгов лот не меняется (ТЗ «Защита от подмены»).
+ * торги в любой день и время, длительность 5 минут…14 дней, минимум участников не больше максимума
+ * (решение 14.11.2026); после открытия торгов лот не меняется (ТЗ «Защита от подмены»).
  */
 @Injectable()
 export class AdminLotsService {
   constructor(
-    @Inject(ENV) private readonly env: Env,
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly refunds: RefundsService,
@@ -108,6 +114,9 @@ export class AdminLotsService {
           fee: values.fee,
           opensAt: values.opensAt,
           closesAt: values.closesAt,
+          maxParticipants: values.maxParticipants ?? null,
+          minParticipants: values.minParticipants ?? null,
+          bidTimeoutSec: values.bidTimeoutSec ?? null,
           status: 'DRAFT',
         },
         include,
@@ -140,6 +149,8 @@ export class AdminLotsService {
           fee: input.fee ?? l.fee,
           opensAt: input.opensAt ?? l.opensAt,
           closesAt: input.closesAt ?? l.closesAt,
+          maxParticipants: input.maxParticipants !== undefined ? input.maxParticipants : l.maxParticipants,
+          minParticipants: input.minParticipants !== undefined ? input.minParticipants : l.minParticipants,
         },
         product?.costPrice ?? null
       )
@@ -220,7 +231,8 @@ export class AdminLotsService {
   }
 
   private validate(
-    v: Required<Pick<LotInput, 'startPrice' | 'step' | 'opensAt' | 'closesAt' | 'fee'>>,
+    v: Required<Pick<LotInput, 'startPrice' | 'step' | 'opensAt' | 'closesAt' | 'fee'>> &
+      Pick<LotInput, 'maxParticipants' | 'minParticipants'>,
     costPrice: bigint | null
   ) {
     if (v.step < RULES.MIN_STEP_SUM) throw unprocessable('STEP_TOO_SMALL', `Шаг — не меньше ${RULES.MIN_STEP_SUM} сум`)
@@ -228,13 +240,14 @@ export class AdminLotsService {
       throw unprocessable('START_BELOW_COST', 'Стартовая цена ниже себестоимости товара')
     }
     if (v.fee < 0n) throw unprocessable('BAD_FEE', 'Взнос не может быть отрицательным')
-    if (v.closesAt <= v.opensAt) throw unprocessable('BAD_WINDOW', 'Окончание должно быть позже начала')
     if (v.opensAt <= this.clock.now()) throw unprocessable('LOT_IN_PAST', 'Время начала уже прошло')
-    if (!this.env.DEMO_STAND) {
-      const s = currentOrNextSession(new Date(v.opensAt.getTime() - 1))
-      if (s.opensAt.getTime() !== v.opensAt.getTime() || s.closesAt.getTime() !== v.closesAt.getTime()) {
-        throw unprocessable('NOT_FRIDAY_SLOT', 'Торги — только в пятницу с 09:00 до 18:00 по Ташкенту')
-      }
+    const minutes = (v.closesAt.getTime() - v.opensAt.getTime()) / 60_000
+    if (minutes < MIN_DURATION_MIN || minutes > MAX_DURATION_MIN) {
+      throw unprocessable('BAD_DURATION', 'Продолжительность торгов — от 5 минут до 14 дней')
+    }
+    const { minParticipants: min, maxParticipants: max } = v
+    if (min != null && max != null && min > max) {
+      throw unprocessable('BAD_PARTICIPANTS', 'Минимум участников не может быть больше максимума')
     }
   }
 

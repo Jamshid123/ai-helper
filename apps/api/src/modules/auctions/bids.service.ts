@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { Injectable } from '@nestjs/common'
 import { Prisma, type Bid } from '@prisma/client'
-import { minNextBid } from '@auksion/shared'
+import { effectiveEnd, minNextBid } from '@auksion/shared'
 import { Clock } from '../../common/clock'
 import { PrismaService } from '../../prisma/prisma.service'
 import { BidRejectedError } from './bid.errors'
@@ -16,6 +16,8 @@ type LockedLotRow = {
   last_seq: number
   opens_at: Date
   closes_at: Date
+  last_bid_at: Date | null
+  bid_timeout_sec: number | null
 }
 
 /** Состояние лота внутри транзакции (под блокировкой), меняется по мере записи предложений. */
@@ -29,6 +31,8 @@ type LotState = {
   lastSeq: number
   opensAt: Date
   closesAt: Date
+  lastBidAt: Date | null
+  bidTimeoutSec: number | null
 }
 
 export type BidResult = {
@@ -98,7 +102,7 @@ export class BidsService {
       const lot = await this.lockLot(tx, lotId)
       const now = this.clock.now()
       const min = this.minOf(lot)
-      if (now >= lot.closesAt) throw new BidRejectedError('LOT_CLOSED', min)
+      if (now >= this.endOf(lot)) throw new BidRejectedError('LOT_CLOSED', min)
       if (!['SCHEDULED', 'LIVE'].includes(lot.status)) throw new BidRejectedError('LOT_NOT_LIVE', min)
       await this.assertMayBid(tx, lot, userId, now, min, { allowLeader: true })
       if (maxAmount < min) throw new BidRejectedError('BID_TOO_LOW', min)
@@ -165,7 +169,7 @@ export class BidsService {
     await this.tx(async (tx) => {
       const lot = await this.lockLot(tx, lotId)
       const now = this.clock.now()
-      if (lot.status === 'LIVE' && now >= lot.opensAt && now < lot.closesAt) await this.resolveProxies(tx, lot, now)
+      if (lot.status === 'LIVE' && now >= lot.opensAt && now < this.endOf(lot)) await this.resolveProxies(tx, lot, now)
     })
   }
 
@@ -228,7 +232,8 @@ export class BidsService {
   private async lockLot(tx: Prisma.TransactionClient, lotId: string): Promise<LotState> {
     const [row] = await tx.$queryRaw<LockedLotRow[]>`
       SELECT id, status::text AS status, "startPrice" AS start_price, step, "currentPrice" AS current_price,
-             "leaderUserId" AS leader_user_id, "lastSeq" AS last_seq, "opensAt" AS opens_at, "closesAt" AS closes_at
+             "leaderUserId" AS leader_user_id, "lastSeq" AS last_seq, "opensAt" AS opens_at, "closesAt" AS closes_at,
+             "lastBidAt" AS last_bid_at, "bidTimeoutSec" AS bid_timeout_sec
       FROM "Lot" WHERE id = ${lotId}::uuid FOR UPDATE`
     if (!row) throw new BidRejectedError('LOT_NOT_FOUND')
     return {
@@ -241,7 +246,14 @@ export class BidsService {
       lastSeq: row.last_seq,
       opensAt: row.opens_at,
       closesAt: row.closes_at,
+      lastBidAt: row.last_bid_at,
+      bidTimeoutSec: row.bid_timeout_sec,
     }
+  }
+
+  /** Фактическое окончание: назначенное время или раньше — после «ожидания следующего предложения». */
+  private endOf(lot: Pick<LotState, 'closesAt' | 'lastBidAt' | 'bidTimeoutSec'>): Date {
+    return effectiveEnd(lot.closesAt, lot.lastBidAt, lot.bidTimeoutSec)
   }
 
   private minOf(lot: Pick<LotState, 'startPrice' | 'step' | 'currentPrice'>): bigint {
@@ -249,7 +261,7 @@ export class BidsService {
   }
 
   private assertOpen(lot: LotState, now: Date, min: bigint) {
-    if (now >= lot.closesAt) throw new BidRejectedError('LOT_CLOSED', min)
+    if (now >= this.endOf(lot)) throw new BidRejectedError('LOT_CLOSED', min)
     if (lot.status !== 'LIVE' || now < lot.opensAt) throw new BidRejectedError('LOT_NOT_LIVE', min)
   }
 
@@ -303,7 +315,11 @@ export class BidsService {
       data: { lotId: lot.id, userId, amount, seq, idempotencyKey, createdAt: now },
       select: { id: true, seq: true, amount: true, createdAt: true },
     })
-    await tx.lot.update({ where: { id: lot.id }, data: { currentPrice: amount, lastSeq: seq, leaderUserId: userId } })
+    await tx.lot.update({
+      where: { id: lot.id },
+      data: { currentPrice: amount, lastSeq: seq, leaderUserId: userId, lastBidAt: now },
+    })
+    lot.lastBidAt = now
     lot.currentPrice = amount
     lot.lastSeq = seq
     lot.leaderUserId = userId

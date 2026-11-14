@@ -1,4 +1,5 @@
 import type { Category, Lot } from '@prisma/client'
+import { effectiveEnd } from '@auksion/shared'
 
 /**
  * Лот в формате, который ждёт Mini App (apps/miniapp/src/entities/lot/types.ts).
@@ -18,6 +19,12 @@ export type LotDto = {
   fee: string
   opensAt: string
   closesAt: string
+  /** Фактическое окончание: closesAt или раньше — после «ожидания следующего предложения». */
+  endsAt: string
+  /** Ожидание следующего предложения, сек (null — без досрочного завершения). */
+  bidTimeoutSec: number | null
+  maxParticipants: number | null
+  minParticipants: number | null
   status: 'scheduled' | 'live' | 'closed'
   inspection: { summary: string; battery: number | null; imeiChecked: boolean; kit: string[]; defects: string[] }
   hue: number
@@ -75,6 +82,10 @@ export function toLotDto(lot: LotWithCategory): LotDto {
     fee: lot.fee.toString(),
     opensAt: lot.opensAt.toISOString(),
     closesAt: lot.closesAt.toISOString(),
+    endsAt: effectiveEnd(lot.closesAt, lot.lastBidAt, lot.bidTimeoutSec).toISOString(),
+    bidTimeoutSec: lot.bidTimeoutSec,
+    maxParticipants: lot.maxParticipants,
+    minParticipants: lot.minParticipants,
     status: STATUS[lot.status] ?? 'closed',
     inspection: inspectionOf(lot.inspection),
     hue: hueOf(lot.id),

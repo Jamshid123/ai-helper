@@ -17,17 +17,6 @@ export function dateTime(iso: string | null | undefined): string {
   }).format(new Date(iso))
 }
 
-/** Пятница → окно торгов 09:00–18:00 по Ташкенту (ISO). */
-export function fridaySlot(date: string): {
-  opensAt: string
-  closesAt: string
-} {
-  return {
-    opensAt: `${date}T09:00:00${TASHKENT_OFFSET}`,
-    closesAt: `${date}T18:00:00${TASHKENT_OFFSET}`,
-  }
-}
-
 /** Значение <input type=datetime-local> как время Ташкента. */
 export const tashkentLocal = (v: string) => `${v}:00${TASHKENT_OFFSET}`
 
@@ -35,17 +24,6 @@ export const tashkentLocal = (v: string) => `${v}:00${TASHKENT_OFFSET}`
 export function toTashkentLocal(iso: string): string {
   const d = new Date(new Date(iso).getTime() + 5 * 3_600_000)
   return d.toISOString().slice(0, 16)
-}
-
-export const isFriday = (date: string) =>
-  new Date(`${date}T12:00:00${TASHKENT_OFFSET}`).getUTCDay() === 5
-
-/** Ближайшая пятница (YYYY-MM-DD) по Ташкенту, начиная с завтрашнего дня. */
-export function nextFriday(from = new Date()): string {
-  const d = new Date(from.getTime() + 5 * 3_600_000)
-  d.setUTCDate(d.getUTCDate() + 1)
-  while (d.getUTCDay() !== 5) d.setUTCDate(d.getUTCDate() + 1)
-  return d.toISOString().slice(0, 10)
 }
 
 /** Только цифры из ввода суммы. */

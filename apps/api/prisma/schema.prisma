@@ -77,32 +77,40 @@ enum LotStatus {
 }
 
 model Lot {
-  id            String       @id @default(uuid()) @db.Uuid
-  title         String
-  categoryId    String       @db.Uuid
-  category      Category     @relation(fields: [categoryId], references: [id])
+  id              String       @id @default(uuid()) @db.Uuid
+  title           String
+  categoryId      String       @db.Uuid
+  category        Category     @relation(fields: [categoryId], references: [id])
   /// Товар, из которого создан лот (данные карточки копируются в лот и фиксируются после открытия торгов).
-  productId     String?      @db.Uuid
-  product       Product?     @relation(fields: [productId], references: [id])
-  condition     LotCondition
-  sellerType    SellerType   @default(PLATFORM)
-  description   String       @default("")
+  productId       String?      @db.Uuid
+  product         Product?     @relation(fields: [productId], references: [id])
+  condition       LotCondition
+  sellerType      SellerType   @default(PLATFORM)
+  description     String       @default("")
   /// Акт проверки для карточки: summary, battery, imeiChecked, kit[], defects[]. Полный IMEI здесь не хранится.
-  inspection    Json         @default("{}")
-  startPrice    BigInt
-  step          BigInt
-  fee           BigInt
-  currentPrice  BigInt?
-  leaderUserId  String?      @db.Uuid
+  inspection      Json         @default("{}")
+  startPrice      BigInt
+  step            BigInt
+  fee             BigInt
+  currentPrice    BigInt?
+  leaderUserId    String?      @db.Uuid
   /// Последний порядковый номер ставки (монотонный, меняется только под FOR UPDATE).
-  lastSeq       Int          @default(0)
-  admittedCount Int          @default(0)
-  status        LotStatus    @default(DRAFT)
-  opensAt       DateTime     @db.Timestamptz
-  closesAt      DateTime     @db.Timestamptz
-  closedAt      DateTime?    @db.Timestamptz
-  createdAt     DateTime     @default(now()) @db.Timestamptz
-  updatedAt     DateTime     @updatedAt @db.Timestamptz
+  lastSeq         Int          @default(0)
+  admittedCount   Int          @default(0)
+  /// Максимум участников: при заполнении допуск закрывается. null — без ограничения.
+  maxParticipants Int?
+  /// Минимум участников к началу: меньше — торги отменяются с возвратом. null — без ограничения.
+  minParticipants Int?
+  /// Ожидание следующего предложения, сек: столько без новых предложений после последнего — торги завершаются досрочно.
+  bidTimeoutSec   Int?
+  /// Время последнего принятого предложения (для досрочного завершения).
+  lastBidAt       DateTime?    @db.Timestamptz
+  status          LotStatus    @default(DRAFT)
+  opensAt         DateTime     @db.Timestamptz
+  closesAt        DateTime     @db.Timestamptz
+  closedAt        DateTime?    @db.Timestamptz
+  createdAt       DateTime     @default(now()) @db.Timestamptz
+  updatedAt       DateTime     @updatedAt @db.Timestamptz
 
   admissions  Admission[]
   bids        Bid[]

@@ -5,6 +5,7 @@ export type AdmissionErrorCode =
   | 'RESTRICTED'
   | 'LOT_STARTED'
   | 'NOT_ADMITTED'
+  | 'LOT_FULL'
 
 export class AdmissionError extends Error {
   constructor(readonly code: AdmissionErrorCode) {

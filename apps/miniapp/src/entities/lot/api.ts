@@ -29,6 +29,11 @@ export const DEMO = import.meta.env.VITE_DEMO_DATA === 'true' || !isInTelegram()
 export const TEST_STAND = !DEMO && import.meta.env.VITE_DEMO_STAND === 'true'
 
 const ROOM_POLL_MS = 3_000
+
+/** Мест нет: набран максимум участников (решение 14.11.2026). */
+export const isFull = (lot: Lot) => lot.maxParticipants != null && lot.admittedCount >= lot.maxParticipants
+/** Фактическое окончание торгов (с «ожиданием следующей ставки»), мс. */
+export const endsAtOf = (lot: Lot) => Date.parse(lot.endsAt ?? lot.closesAt)
 /** Пока поток событий подключён, опрос — только страховка. */
 const ROOM_POLL_LIVE_MS = 20_000
 const LOTS_POLL_MS = 15_000
@@ -180,7 +185,7 @@ export function useRoom(lot: Lot | undefined): RoomView | undefined {
   useDemoVersion()
   const qc = useQueryClient()
   const lotId = lot?.id ?? ''
-  const closesAt = lot ? Date.parse(lot.closesAt) : 0
+  const closesAt = lot ? endsAtOf(lot) : 0
   const live = useLiveLot(lotId, !DEMO && Boolean(lot))
   const q = useQuery({
     queryKey: ['bids', lotId],
@@ -227,7 +232,7 @@ export function useRoom(lot: Lot | undefined): RoomView | undefined {
     lotId: lot.id,
     start: BigInt(lot.startPrice),
     step: BigInt(lot.step),
-    closesAt: Date.parse(lot.closesAt),
+    closesAt: endsAtOf(lot),
     bids: q.data.bids
       .slice()
       .reverse()

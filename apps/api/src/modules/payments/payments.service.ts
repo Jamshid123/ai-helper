@@ -10,7 +10,13 @@ export type PaymentConfirmation = {
   paidAt: Date
 }
 
-export type ConfirmOutcome = 'ADMITTED' | 'ALREADY_PROCESSED' | 'REFUND_LATE' | 'REFUND_DUPLICATE' | 'AMOUNT_MISMATCH'
+export type ConfirmOutcome =
+  | 'ADMITTED'
+  | 'ALREADY_PROCESSED'
+  | 'REFUND_LATE'
+  | 'REFUND_DUPLICATE'
+  | 'REFUND_FULL'
+  | 'AMOUNT_MISMATCH'
 
 type LockedOrder = { id: string; status: string; amount: bigint; purpose: string; user_id: string; lot_id: string }
 
@@ -37,8 +43,9 @@ export class PaymentsService {
         return 'AMOUNT_MISMATCH'
       }
 
-      const [lot] = await tx.$queryRaw<{ closes_at: Date; status: string }[]>`
-        SELECT "closesAt" AS closes_at, status::text AS status FROM "Lot" WHERE id = ${order.lot_id}::uuid FOR UPDATE`
+      const [lot] = await tx.$queryRaw<{ closes_at: Date; status: string; admitted: number; max: number | null }[]>`
+        SELECT "closesAt" AS closes_at, status::text AS status, "admittedCount" AS admitted, "maxParticipants" AS max
+        FROM "Lot" WHERE id = ${order.lot_id}::uuid FOR UPDATE`
       const paid = { status: 'PAID' as const, providerTxId: c.providerTxId, paidAt: c.paidAt }
 
       // Поздняя оплата (по подтверждённому времени операции) → на возврат, допуск не выдаётся.
@@ -57,6 +64,13 @@ export class PaymentsService {
         await tx.order.update({ where: { id: order.id }, data: { ...paid, status: 'REFUND_PENDING' } })
         await this.audit(tx, order.id, 'payment.refund_duplicate', {})
         return 'REFUND_DUPLICATE'
+      }
+
+      // Места кончились, пока шла оплата → на возврат (лот заблокирован, счётчик точный).
+      if (lot.max !== null && lot.admitted >= lot.max) {
+        await tx.order.update({ where: { id: order.id }, data: { ...paid, status: 'REFUND_PENDING' } })
+        await this.audit(tx, order.id, 'payment.refund_full', {})
+        return 'REFUND_FULL'
       }
 
       await tx.order.update({ where: { id: order.id }, data: paid })

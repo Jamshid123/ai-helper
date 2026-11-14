@@ -47,6 +47,8 @@ export class AdmissionsService {
 
     const admission = await this.prisma.admission.findUnique({ where: { lotId_userId: { lotId, userId } } })
     if (admission) return { status: 'ADMITTED' as const, orderId: admission.orderId, checkoutUrl: null }
+    // мест нет — заказ не создаём (решение заказчика 14.11.2026: максимум участников)
+    if (lot.maxParticipants !== null && lot.admittedCount >= lot.maxParticipants) throw new AdmissionError('LOT_FULL')
 
     await this.prisma.user.update({
       where: { id: userId },

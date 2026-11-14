@@ -12,6 +12,7 @@ const KNOWN = new Set([
   'PAYMENTS_DISABLED',
   'NETWORK',
   'LOT_STARTED',
+  'LOT_FULL',
 ])
 const SESSION = new Set(['INVALID_INIT_DATA', 'NO_INIT_DATA', 'UNAUTHORIZED'])
 

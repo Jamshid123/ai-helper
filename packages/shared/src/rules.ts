@@ -30,3 +30,13 @@ export function prepaymentAmount(winningBid: bigint): bigint {
   const p = RULES.PREPAYMENT_PERCENT
   return (winningBid * p + 99n) / 100n
 }
+
+/**
+ * Фактическое окончание торгов (решение заказчика 14.11.2026): назначенное время закрытия
+ * или раньше — если после последнего предложения прошло «ожидание следующего предложения».
+ */
+export function effectiveEnd(closesAt: Date, lastBidAt: Date | null, bidTimeoutSec: number | null): Date {
+  if (!lastBidAt || !bidTimeoutSec) return closesAt
+  const idle = new Date(lastBidAt.getTime() + bidTimeoutSec * 1000)
+  return idle < closesAt ? idle : closesAt
+}

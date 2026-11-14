@@ -3,7 +3,10 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { FakeClock } from '../src/common/clock'
 import { BidsService } from '../src/modules/auctions/bids.service'
 import { LotLifecycleService } from '../src/modules/auctions/lot-lifecycle.service'
+import { FakePaymentProvider } from '../src/modules/payments/payment-provider'
+import { RefundsService } from '../src/modules/payments/refunds.service'
 import { RemindersService } from '../src/modules/reminders/reminders.service'
+import { AuditService } from '../src/modules/staff/audit.service'
 import type { PrismaService } from '../src/prisma/prisma.service'
 import { cleanDb, createLot, createUser, key } from './factories'
 
@@ -11,7 +14,12 @@ const db = new PrismaClient()
 const OPEN = new Date('2026-11-20T04:00:00Z') // пт 09:00 Ташкент
 const CLOSE = new Date('2026-11-20T13:00:00Z') // пт 18:00 Ташкент
 const clock = new FakeClock(OPEN)
-const lifecycle = new LotLifecycleService(db as unknown as PrismaService, clock)
+const prisma = db as unknown as PrismaService
+const lifecycle = new LotLifecycleService(
+  prisma,
+  clock,
+  new RefundsService(prisma, new FakePaymentProvider(), new AuditService(prisma), clock)
+)
 
 async function bid(lotId: string, amount: bigint, seq: number) {
   const u = await createUser(db)

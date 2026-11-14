@@ -160,6 +160,12 @@ function RoomScreen({ lot, view }: { lot: Lot; view: RoomView }) {
 
       {banner && <div className={cn('rounded-xl px-4 py-3 text-[14px] font-medium', banner.cls)}>{banner.text}</div>}
 
+      {!closed && lot.bidTimeoutSec ? (
+        <p className='-mt-2 text-[12.5px] text-muted'>
+          {t('room.idle').replace('{n}', String(Math.round(lot.bidTimeoutSec / 60)))}
+        </p>
+      ) : null}
+
       {error && (
         <div role='alert' className='rounded-xl bg-hot/10 px-4 py-3 text-[14px] font-medium text-hot-text'>
           {error}

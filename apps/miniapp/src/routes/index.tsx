@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { currentOrNextSession } from '@auksion/shared'
 import { useI18n } from '@/app/i18n'
-import { DEMO, useAdmissions, useCategories, useLots } from '@/entities/lot/api'
+import { DEMO, isFull, useAdmissions, useCategories, useLots } from '@/entities/lot/api'
 import { type Condition, type Lot } from '@/entities/lot/types'
 import { cn } from '@/shared/lib/cn'
 import { formatSessionDate } from '@/shared/lib/format-date'
@@ -14,27 +13,33 @@ import { Price } from '@/shared/ui/price'
 
 type Filter = 'all' | Condition
 
-function SessionStrip({ liveUntil }: { liveUntil: Date | null }) {
+/** Полоса сверху: идущие торги — «идут до…», иначе ближайшее начало по лотам (торги в любой день — решение 14.11.2026). */
+function SessionStrip({ lots }: { lots: Lot[] }) {
   const { t, locale } = useI18n()
   const now = useNow()
-  const s = currentOrNextSession(new Date(now))
-  // В демо часть лотов «идёт» в любой день — полоса не должна противоречить LIVE-карточкам.
-  const live = liveUntil !== null || s.isLive
-  const target = liveUntil ?? (s.isLive ? s.closesAt : s.opensAt)
-  const title = liveUntil && DEMO ? t('catalog.demoLive') : live ? t('catalog.liveNow') : t('catalog.nextSession')
+  const live = lots.filter((l) => l.status === 'live')
+  const upcoming = lots.filter((l) => l.status === 'scheduled' && Date.parse(l.opensAt) > now)
+  const target = live.length
+    ? new Date(Math.min(...live.map((l) => Date.parse(l.endsAt ?? l.closesAt))))
+    : upcoming.length
+      ? new Date(Math.min(...upcoming.map((l) => Date.parse(l.opensAt))))
+      : null
+  if (!target) return null
+  const isLive = live.length > 0
+  const title = isLive && DEMO ? t('catalog.demoLive') : isLive ? t('catalog.liveNow') : t('catalog.nextSession')
   return (
     <div className='flex items-center justify-between rounded-2xl bg-surface px-4 py-3'>
       <div className='grid'>
         <span className='text-[13px] text-muted'>{title}</span>
         <span className='text-[13px]'>
-          {live
+          {isLive
             ? locale === 'uz'
               ? `${formatSessionDate(target, locale)} ${t('catalog.until')}`
               : `${t('catalog.until')} ${formatSessionDate(target, locale)}`
             : formatSessionDate(target, locale)}
         </span>
       </div>
-      <span className={cn('tabular text-lg font-semibold', live && 'text-hot-text')}>
+      <span className={cn('tabular text-lg font-semibold', isLive && 'text-hot-text')}>
         {formatCountdown(target.getTime() - now, t('time.d'))}
       </span>
     </div>
@@ -92,6 +97,7 @@ function LotCard({ lot }: { lot: Lot }) {
   const { t } = useI18n()
   const live = lot.status === 'live'
   const admitted = useAdmissions().has(lot.id)
+  const full = !admitted && isFull(lot)
   return (
     <div className='grid gap-2 border-b border-line pb-4 last:border-b-0'>
       <Link
@@ -107,6 +113,7 @@ function LotCard({ lot }: { lot: Lot }) {
           <span className='text-[12.5px] text-muted'>
             {t(lot.condition === 'new' ? 'lot.condition.new' : 'lot.condition.used')} · {t('lot.admitted')}:{' '}
             {lot.admittedCount}
+            {lot.maxParticipants ? ` ${t('lot.of')} ${lot.maxParticipants}` : ''}
           </span>
           <div className='mt-auto flex items-baseline justify-between gap-2'>
             <span className='grid'>
@@ -120,7 +127,12 @@ function LotCard({ lot }: { lot: Lot }) {
           </div>
         </div>
       </Link>
-      {live && (
+      {live && full && (
+        <span className='flex h-12 items-center justify-center rounded-xl bg-surface text-[15px] font-semibold text-muted'>
+          {t('lot.full')}
+        </span>
+      )}
+      {live && !full && (
         <Link
           to={admitted ? '/lot/$lotId/room' : '/lot/$lotId'}
           params={{ lotId: lot.id }}
@@ -144,13 +156,10 @@ function Catalog() {
   const visible = lots.filter(
     (l) => (category === null || l.category === category) && (filter === 'all' || l.condition === filter)
   )
-  // Полоса сверху следует за лотами: если торги по лоту уже идут (демо, тестовый запуск), показываем «идут до…».
-  const liveLot = lots.find((l) => l.status === 'live')
-  const liveUntil = liveLot ? new Date(liveLot.closesAt) : null
 
   return (
     <div className='flex flex-col gap-4 px-4 pt-4'>
-      <SessionStrip liveUntil={liveUntil} />
+      <SessionStrip lots={lots} />
       <HowTo />
 
       <div className='flex gap-2 overflow-x-auto' role='tablist' aria-label={t('catalog.categories')}>

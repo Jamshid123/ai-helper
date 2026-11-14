@@ -59,6 +59,9 @@ export type Lot = {
   inspection: Inspection
   opensAt: string
   closesAt: string
+  maxParticipants: number | null
+  minParticipants: number | null
+  bidTimeoutSec: number | null
 }
 export type Restriction = {
   id: string
@@ -186,6 +189,9 @@ export type LotInput = {
   closesAt: string
   title?: string
   description?: string
+  maxParticipants: number | null
+  minParticipants: number | null
+  bidTimeoutSec: number | null
 }
 export const useCreateLot = () =>
   useAction(

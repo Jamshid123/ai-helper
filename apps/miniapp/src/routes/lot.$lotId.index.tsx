@@ -4,7 +4,7 @@ import { BadgeCheck } from 'lucide-react'
 import { formatSum } from '@auksion/shared'
 import { useI18n } from '@/app/i18n'
 import { haptic, useBackButton, useMainButton } from '@/app/telegram'
-import { useAdmissions, useAdmit, useLot } from '@/entities/lot/api'
+import { endsAtOf, isFull, useAdmissions, useAdmit, useLot } from '@/entities/lot/api'
 import { isRegistered, useAccount } from '@/entities/account/demo-account'
 import { errorText } from '@/shared/api/error-text'
 import { type Lot } from '@/entities/lot/types'
@@ -140,23 +140,25 @@ function LotPage() {
   const admissions = useAdmissions()
   const admitted = lot ? admissions.has(lot.id) : false
   const live = lot?.status === 'live'
+  const full = Boolean(lot && !admitted && isFull(lot))
   const primary = useCallback(() => {
     if (!lot) return
     if (admitted && live) navigate({ to: '/lot/$lotId/room', params: { lotId: lot.id } })
-    else if (!admitted) {
+    else if (!admitted && !full) {
       if (registered) setSheet(true)
       else toRegister()
     }
-  }, [admitted, live, lot, navigate, registered, toRegister])
+  }, [admitted, full, live, lot, navigate, registered, toRegister])
   const native = useMainButton({
-    text: admitted ? t('lot.toRoom') : t('lot.participate'),
+    text: admitted ? t('lot.toRoom') : full ? t('lot.full') : t('lot.participate'),
     onClick: primary,
+    enabled: admitted || !full,
     visible: !sheet && Boolean(lot) && (!admitted || live),
   })
 
   if (!lot) return null
   const opens = Date.parse(lot.opensAt)
-  const closes = Date.parse(lot.closesAt)
+  const closes = endsAtOf(lot)
 
   return (
     <div className={cn('flex flex-col gap-4 px-4 pt-4', !native && (!admitted || live) && 'pb-24')}>
@@ -208,7 +210,10 @@ function LotPage() {
         <Row label={t('lot.step')}>
           <Price value={lot.step} />
         </Row>
-        <Row label={t('lot.admitted')}>{lot.admittedCount}</Row>
+        <Row label={t('lot.admitted')}>
+          {lot.admittedCount}
+          {lot.maxParticipants ? ` ${t('lot.of')} ${lot.maxParticipants}` : ''}
+        </Row>
         <Row label={t('lot.fee')}>
           <Price value={lot.fee} />
         </Row>
@@ -238,8 +243,8 @@ function LotPage() {
 
       {!native && (!admitted || live) && (
         <div className='fixed inset-x-0 bottom-0 z-10 border-t border-line bg-bg px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]'>
-          <Button onClick={primary} className='mx-auto flex w-full max-w-lg'>
-            {admitted ? t('lot.toRoom') : t('lot.participate')}
+          <Button onClick={primary} disabled={!admitted && full} className='mx-auto flex w-full max-w-lg'>
+            {admitted ? t('lot.toRoom') : full ? t('lot.full') : t('lot.participate')}
           </Button>
         </div>
       )}

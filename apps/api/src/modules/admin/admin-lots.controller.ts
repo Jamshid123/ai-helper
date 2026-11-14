@@ -16,6 +16,10 @@ const editable = {
   fee: z.string().regex(/^\d{1,12}$/),
   opensAt: iso,
   closesAt: iso,
+  maxParticipants: z.number().int().min(1).max(100_000).nullable(),
+  minParticipants: z.number().int().min(1).max(100_000).nullable(),
+  /** Ожидание следующего предложения: 30 с…24 ч; null — без досрочного завершения. */
+  bidTimeoutSec: z.number().int().min(30).max(86_400).nullable(),
 }
 const createSchema = z.object({
   productId: z.string().uuid(),
@@ -24,6 +28,9 @@ const createSchema = z.object({
   description: editable.description.optional(),
   inspection: editable.inspection.optional(),
   fee: editable.fee.optional(),
+  maxParticipants: editable.maxParticipants.optional(),
+  minParticipants: editable.minParticipants.optional(),
+  bidTimeoutSec: editable.bidTimeoutSec.optional(),
 })
 const patchSchema = z.object(editable).partial().strict()
 const STATUSES: LotStatus[] = [
@@ -46,6 +53,9 @@ function toInput(d: Partial<z.infer<typeof patchSchema>>): LotInput {
     ...(d.fee !== undefined && { fee: BigInt(d.fee) }),
     ...(d.opensAt && { opensAt: new Date(d.opensAt) }),
     ...(d.closesAt && { closesAt: new Date(d.closesAt) }),
+    ...(d.maxParticipants !== undefined && { maxParticipants: d.maxParticipants }),
+    ...(d.minParticipants !== undefined && { minParticipants: d.minParticipants }),
+    ...(d.bidTimeoutSec !== undefined && { bidTimeoutSec: d.bidTimeoutSec }),
   }
 }
 
