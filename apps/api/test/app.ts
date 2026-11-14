@@ -1,3 +1,6 @@
+import type { StaffRole } from '@prisma/client'
+import { StaffAuthService } from '../src/modules/staff/staff-auth.service'
+import { totpCode } from '../src/modules/staff/totp'
 import type { NestFastifyApplication } from '@nestjs/platform-fastify'
 import { createApp } from '../src/bootstrap'
 import { signInitData } from '../src/modules/auth/telegram-init-data'
@@ -26,5 +29,37 @@ export async function loginAs(app: NestFastifyApplication, tgId: number, firstNa
     token: body.token as string,
     userId: body.user.id as string,
     auth: { authorization: `Bearer ${body.token}` },
+  }
+}
+
+/** Вход сотрудника (создание + пароль + TOTP). Возвращает заголовки для чтения и для мутаций (с CSRF). */
+export async function loginStaff(
+  app: NestFastifyApplication,
+  roles: StaffRole[] = ['ADMIN'],
+  email = `staff-${Math.random().toString(36).slice(2, 8)}@auksion.uz`
+) {
+  const auth = app.get(StaffAuthService)
+  const password = 'test password 123456'
+  await auth.createStaff({ email, name: 'Сотрудник', password, roles })
+  const login = await app.inject({ method: 'POST', url: '/api/v1/admin/auth/login', payload: { email, password } })
+  const { challengeId, enroll } = login.json()
+  const res = await app.inject({
+    method: 'POST',
+    url: '/api/v1/admin/auth/mfa',
+    payload: { challengeId, code: totpCode(enroll.secret, Math.floor(Date.now() / 30_000)) },
+  })
+  const cookies = ([] as string[]).concat(res.headers['set-cookie'] as string | string[])
+  const get = (n: string) =>
+    cookies
+      .find((c) => c.startsWith(`${n}=`))!
+      .split(';')[0]
+      .split('=')
+      .slice(1)
+      .join('=')
+  const cookie = `staff_session=${get('staff_session')}; csrf_token=${get('csrf_token')}`
+  return {
+    id: res.json().id as string,
+    read: { cookie },
+    write: { cookie, 'x-csrf-token': get('csrf_token') },
   }
 }

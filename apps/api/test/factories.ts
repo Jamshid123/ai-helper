@@ -7,8 +7,18 @@ const next = () => ++n
 
 export async function cleanDb(db: PrismaClient) {
   await db.$executeRawUnsafe(
-    'TRUNCATE "Bid","AutoBid","LotReminder","Admission","Obligation","Order","Restriction","Lot","User","OutboxEvent","AuditLog","Setting","StaffSession","Staff" CASCADE'
+    'TRUNCATE "Bid","AutoBid","LotReminder","Admission","Obligation","Order","Restriction","Lot","Product","User","OutboxEvent","AuditLog","Setting","StaffSession","Staff" CASCADE'
   )
+  // категории засеяны миграцией: возвращаем стартовое состояние, лишние удаляем
+  await db.category.deleteMany({ where: { slug: { notIn: ['phones', 'travel'] } } })
+  await db.category.update({
+    where: { slug: 'phones' },
+    data: { nameRu: 'Телефоны', nameUz: 'Telefonlar', enabled: true, sortOrder: 10 },
+  })
+  await db.category.update({
+    where: { slug: 'travel' },
+    data: { nameRu: 'Путешествия', nameUz: 'Sayohatlar', enabled: false, sortOrder: 20 },
+  })
 }
 
 export function createUser(db: PrismaClient, data: Partial<Prisma.UserCreateInput> = {}) {
@@ -35,6 +45,7 @@ export function createLot(db: PrismaClient, data: Partial<Prisma.LotCreateInput>
       status: 'LIVE',
       opensAt: new Date(now - 3_600_000),
       closesAt: new Date(now + 3_600_000),
+      category: { connect: { slug: 'phones' } },
       ...data,
     },
   })

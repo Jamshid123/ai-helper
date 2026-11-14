@@ -11,7 +11,7 @@ import {
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import { Public } from '../../common/public.decorator'
 import { PrismaService } from '../../prisma/prisma.service'
-import { PUBLIC_STATUSES } from '../catalog/lot.dto'
+import { PUBLIC_LOT_WHERE } from '../catalog/lot.dto'
 import { LiveEventsService, MAX_STREAMS, type LiveEvent } from './live-events.service'
 
 const HEARTBEAT_MS = 20_000
@@ -35,7 +35,7 @@ export class LiveController {
     @Req() req: FastifyRequest,
     @Res() reply: FastifyReply
   ): Promise<void> {
-    const exists = await this.prisma.lot.count({ where: { id: lotId, status: { in: PUBLIC_STATUSES } } })
+    const exists = await this.prisma.lot.count({ where: { id: lotId, ...PUBLIC_LOT_WHERE } })
     if (!exists) throw new NotFoundException({ code: 'LOT_NOT_FOUND', message: 'Лот не найден' })
     if (this.live.openStreams >= MAX_STREAMS) {
       throw new ServiceUnavailableException({ code: 'BUSY', message: 'Попробуйте позже' })

@@ -56,10 +56,6 @@ model Restriction {
 
 // ───────────── Лоты и торги ─────────────
 
-enum LotCategory {
-  PHONES
-}
-
 enum LotCondition {
   NEW
   USED
@@ -83,7 +79,11 @@ enum LotStatus {
 model Lot {
   id            String       @id @default(uuid()) @db.Uuid
   title         String
-  category      LotCategory  @default(PHONES)
+  categoryId    String       @db.Uuid
+  category      Category     @relation(fields: [categoryId], references: [id])
+  /// Товар, из которого создан лот (данные карточки копируются в лот и фиксируются после открытия торгов).
+  productId     String?      @db.Uuid
+  product       Product?     @relation(fields: [productId], references: [id])
   condition     LotCondition
   sellerType    SellerType   @default(PLATFORM)
   description   String       @default("")
@@ -112,6 +112,7 @@ model Lot {
   obligations Obligation[]
 
   @@index([status, opensAt])
+  @@index([categoryId])
 }
 
 /// Допуск к конкретному лоту. Один на пару (лот, пользователь).
@@ -336,4 +337,50 @@ model StaffSession {
   createdAt DateTime  @default(now()) @db.Timestamptz
 
   @@index([staffId])
+}
+
+/// Категория каталога (решение 14.11.2026): названия ru/uz, выключенная не видна в Mini App вместе с её лотами.
+model Category {
+  id        String    @id @default(uuid()) @db.Uuid
+  /// Неизменяемый код: phones, travel.
+  slug      String    @unique
+  nameRu    String
+  nameUz    String
+  enabled   Boolean   @default(false)
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now()) @db.Timestamptz
+  updatedAt DateTime  @updatedAt @db.Timestamptz
+  products  Product[]
+  lots      Lot[]
+}
+
+enum ProductStatus {
+  /// На складе, можно выставить.
+  AVAILABLE
+  /// Выставлен в лот (черновик, запланирован или идёт).
+  IN_LOT
+  SOLD
+  ARCHIVED
+}
+
+/// Товар площадки: карточка и акт проверки. Лот создаётся из товара.
+model Product {
+  id          String        @id @default(uuid()) @db.Uuid
+  categoryId  String        @db.Uuid
+  category    Category      @relation(fields: [categoryId], references: [id])
+  title       String
+  condition   LotCondition
+  description String        @default("")
+  /// Акт для карточки: summary, battery, imeiChecked, kit[], defects[].
+  inspection  Json          @default("{}")
+  /// Полный IMEI/серийный номер — зашифрован (ТЗ: ограниченный доступ). В админке показываются последние 4 цифры.
+  imeiEnc     String?
+  imeiLast4   String?
+  inventoryNo String?       @unique
+  /// Себестоимость, сумы: стартовая цена лота не ниже (решение 13.11.2026).
+  costPrice   BigInt?
+  status      ProductStatus @default(AVAILABLE)
+  createdAt   DateTime      @default(now()) @db.Timestamptz
+  updatedAt   DateTime      @updatedAt @db.Timestamptz
+  lots        Lot[]
 }

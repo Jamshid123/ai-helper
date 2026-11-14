@@ -7,7 +7,7 @@ import { currentOrNextSession } from '@auksion/shared'
  * Первые два открываются сразу и идут до конца ближайшей пятничной сессии, остальные — на следующую сессию.
  * Допуски, предложения и счётчики не подделываются.
  */
-type Seed = Pick<Prisma.LotCreateInput, 'title' | 'condition' | 'startPrice' | 'inspection'>
+type Seed = { title: string; condition: 'NEW' | 'USED'; startPrice: bigint; inspection: Prisma.InputJsonValue }
 
 const SEEDS: Seed[] = [
   {
@@ -78,22 +78,38 @@ export async function seedDemoLots(db: PrismaClient, now: Date): Promise<{ creat
   const active = await db.lot.count({ where: { status: { in: ['SCHEDULED', 'LIVE'] } } })
   if (active > 0) throw new Error(`В базе уже есть идущие или запланированные лоты (${active}) — ничего не делаю`)
 
+  const phones = await db.category.findUniqueOrThrow({ where: { slug: 'phones' } })
   const first = currentOrNextSession(now)
   const next = currentOrNextSession(new Date(first.closesAt.getTime() + 60_000))
-  const data: Prisma.LotCreateManyInput[] = SEEDS.map((s, i) => {
+  let created = 0
+  for (const [i, s] of SEEDS.entries()) {
     const openNow = i < OPEN_NOW
-    return {
-      title: s.title,
-      condition: s.condition,
-      startPrice: s.startPrice,
-      inspection: s.inspection,
-      step: 100_000n,
-      fee: 12_000n,
-      status: 'SCHEDULED',
-      opensAt: openNow ? new Date(now.getTime() - 60_000) : next.opensAt,
-      closesAt: openNow ? first.closesAt : next.closesAt,
-    }
-  })
-  const r = await db.lot.createMany({ data })
-  return { created: r.count }
+    // товар → лот из него (как в админке), данные карточки копируются в лот
+    const product = await db.product.create({
+      data: {
+        categoryId: phones.id,
+        title: s.title,
+        condition: s.condition,
+        inspection: s.inspection,
+        status: 'IN_LOT',
+      },
+    })
+    await db.lot.create({
+      data: {
+        categoryId: phones.id,
+        productId: product.id,
+        title: s.title,
+        condition: s.condition,
+        startPrice: s.startPrice,
+        inspection: s.inspection,
+        step: 100_000n,
+        fee: 12_000n,
+        status: 'SCHEDULED',
+        opensAt: openNow ? new Date(now.getTime() - 60_000) : next.opensAt,
+        closesAt: openNow ? first.closesAt : next.closesAt,
+      },
+    })
+    created++
+  }
+  return { created }
 }

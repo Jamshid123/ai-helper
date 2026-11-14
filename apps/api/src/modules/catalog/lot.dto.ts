@@ -1,4 +1,4 @@
-import type { Lot } from '@prisma/client'
+import type { Category, Lot } from '@prisma/client'
 
 /**
  * Лот в формате, который ждёт Mini App (apps/miniapp/src/entities/lot/types.ts).
@@ -7,7 +7,8 @@ import type { Lot } from '@prisma/client'
 export type LotDto = {
   id: string
   title: string
-  category: 'phones'
+  /** Код категории (phones, travel, …). */
+  category: string
   condition: 'new' | 'used'
   seller: 'platform' | 'external'
   startPrice: string
@@ -37,6 +38,9 @@ export const PUBLIC_STATUSES = Object.entries(STATUS)
   .filter(([, v]) => v !== null)
   .map(([k]) => k as Lot['status'])
 
+/** Видимый покупателю лот: публичный статус и включённая категория (решение 14.11.2026). */
+export const PUBLIC_LOT_WHERE = { status: { in: PUBLIC_STATUSES }, category: { enabled: true } }
+
 function hueOf(id: string): number {
   let h = 0
   for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) % 360
@@ -55,11 +59,13 @@ function inspectionOf(raw: unknown): LotDto['inspection'] {
   }
 }
 
-export function toLotDto(lot: Lot): LotDto {
+export type LotWithCategory = Lot & { category: Pick<Category, 'slug'> }
+
+export function toLotDto(lot: LotWithCategory): LotDto {
   return {
     id: lot.id,
     title: lot.title,
-    category: 'phones',
+    category: lot.category.slug,
     condition: lot.condition === 'NEW' ? 'new' : 'used',
     seller: lot.sellerType === 'PLATFORM' ? 'platform' : 'external',
     startPrice: lot.startPrice.toString(),

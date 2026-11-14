@@ -7,12 +7,14 @@ import { DisabledPaymentProvider, FakePaymentProvider, PAYMENT_PROVIDER } from '
 import { PaymentsController } from './payments.controller'
 import { PaymentsFilter } from './payments.filter'
 import { PaymentsService } from './payments.service'
+import { RefundsService } from './refunds.service'
 
 @Module({
   controllers: [PaymentsController],
   providers: [
     AdmissionsService,
     PaymentsService,
+    RefundsService,
     { provide: APP_FILTER, useClass: PaymentsFilter },
     {
       provide: PAYMENT_PROVIDER,
@@ -22,6 +24,6 @@ import { PaymentsService } from './payments.service'
         env.PAYMENTS_MODE === 'fake' ? new FakePaymentProvider() : new DisabledPaymentProvider(),
     },
   ],
-  exports: [PaymentsService],
+  exports: [PaymentsService, RefundsService],
 })
 export class PaymentsModule {}
