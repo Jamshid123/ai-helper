@@ -17,3 +17,6 @@ coverage/
 playwright-report/
 test-results/
 dist-cjs/
+
+# Локальные дампы Redis
+dump.rdb
