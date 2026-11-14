@@ -52,6 +52,7 @@ export class LifecycleScheduler implements OnApplicationBootstrap, OnModuleDestr
         for (const lotId of opened) await this.bids.runProxies(lotId)
         const closed = await this.lifecycle.closeDue()
         await this.reminders.dispatchDue()
+        await this.reminders.dispatchIdleBidders()
         if (opened.length || Object.keys(closed).length) this.log.log({ opened, closed }, 'lifecycle sweep')
       } finally {
         await this.prisma.$queryRaw`SELECT pg_advisory_unlock(${SWEEP_LOCK_KEY})`

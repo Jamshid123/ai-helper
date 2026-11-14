@@ -1,4 +1,4 @@
-import { minNextBid } from '@auksion/shared'
+import { maxNextBid, minNextBid } from '@auksion/shared'
 
 /**
  * Движок ставок для демо-стенда. Повторяет серверные правила ТЗ:
@@ -21,7 +21,9 @@ export type Room = {
   bids: Bid[]
 }
 
-export type BidResult = { ok: true; room: Room; bid: Bid } | { ok: false; reason: 'TOO_LOW' | 'CLOSED'; minBid: bigint }
+export type BidResult =
+  | { ok: true; room: Room; bid: Bid }
+  | { ok: false; reason: 'TOO_LOW' | 'TOO_HIGH' | 'CLOSED'; minBid: bigint }
 
 export function currentPrice(room: Room): bigint | null {
   return room.bids.length ? room.bids[room.bids.length - 1].amount : null
@@ -31,10 +33,16 @@ export function roomMinBid(room: Room): bigint {
   return minNextBid(room.start, room.step, currentPrice(room))
 }
 
+/** Не больше чем на 50% выше текущей цены (первое — старта), решение 14.11.2026. */
+export function roomMaxBid(room: Room): bigint {
+  return maxNextBid(room.start, room.step, currentPrice(room))
+}
+
 export function placeBid(room: Room, amount: bigint, bidder: string, isMe: boolean, now: number): BidResult {
   if (now >= room.closesAt) return { ok: false, reason: 'CLOSED', minBid: roomMinBid(room) }
   const min = roomMinBid(room)
   if (amount < min) return { ok: false, reason: 'TOO_LOW', minBid: min }
+  if (amount > roomMaxBid(room)) return { ok: false, reason: 'TOO_HIGH', minBid: min }
   const bid: Bid = { seq: room.bids.length + 1, amount, bidder, isMe, at: now }
   return { ok: true, room: { ...room, bids: [...room.bids, bid] }, bid }
 }

@@ -39,4 +39,9 @@ describe('demo bid engine', () => {
     })
     expect(placeBid(base, 2_000_000n, 'a', true, 999).ok).toBe(true)
   })
+
+  it('не больше чем на 50% выше текущей цены', () => {
+    expect(placeBid(base, 3_000_001n, 'a', true, 0)).toMatchObject({ ok: false, reason: 'TOO_HIGH' })
+    expect(placeBid(base, 3_000_000n, 'a', true, 0).ok).toBe(true)
+  })
 })

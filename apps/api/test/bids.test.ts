@@ -143,6 +143,17 @@ describe('BidsService.placeBid — сценарии приёмки ТЗ', () => 
     expect((await rejected(bids.placeBid(a.id, lot.id, 2_100_000n, key()))).code).toBe('ALREADY_LEADING')
   })
 
+  it('предложение выше предыдущего больше чем на 50% — отказ с максимальной ценой (решение 14.11.2026)', async () => {
+    const lot = await liveLot()
+    const [a, b] = [await admitted(lot.id), await admitted(lot.id)]
+    const first = await rejected(bids.placeBid(a.id, lot.id, 3_000_001n, key()))
+    expect(first.code).toBe('BID_TOO_HIGH')
+    expect(first.maxBid).toBe(3_000_000n)
+    await bids.placeBid(a.id, lot.id, 3_000_000n, key())
+    expect((await rejected(bids.placeBid(b.id, lot.id, 4_500_001n, key()))).code).toBe('BID_TOO_HIGH')
+    await bids.placeBid(b.id, lot.id, 4_500_000n, key())
+  })
+
   it('принятое предложение пишет событие в outbox в той же транзакции', async () => {
     const lot = await liveLot()
     const a = await admitted(lot.id)

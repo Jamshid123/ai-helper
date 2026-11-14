@@ -132,6 +132,8 @@ model Admission {
   user      User     @relation(fields: [userId], references: [id])
   orderId   String   @unique @db.Uuid
   createdAt DateTime @default(now()) @db.Timestamptz
+  /// Напоминание «готовы предложить больше?» отправлено (одно на лот, решение 14.11.2026).
+  nudgedAt  DateTime? @db.Timestamptz
 
   @@unique([lotId, userId])
 }

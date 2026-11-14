@@ -10,6 +10,7 @@ const MESSAGES: Record<BidRejectCode, { status: number; message: string }> = {
   RESTRICTED: { status: 403, message: 'Участие временно ограничено' },
   CONFLICT_OF_INTEREST: { status: 403, message: 'Нельзя предлагать цену на этот лот' },
   BID_TOO_LOW: { status: 409, message: 'Цена ниже минимальной — предложите больше' },
+  BID_TOO_HIGH: { status: 409, message: 'Не больше чем на 50% выше текущей цены' },
   ALREADY_LEADING: { status: 409, message: 'Ваша цена уже лучшая' },
 }
 
@@ -22,6 +23,6 @@ export class BidRejectedFilter implements ExceptionFilter {
       .switchToHttp()
       .getResponse<FastifyReply>()
       .status(status)
-      .send({ code: e.code, message, minBid: e.minBid?.toString() ?? null })
+      .send({ code: e.code, message, minBid: e.minBid?.toString() ?? null, maxBid: e.maxBid?.toString() ?? null })
   }
 }

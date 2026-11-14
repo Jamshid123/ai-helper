@@ -59,6 +59,19 @@ describe('Автопредложение до максимума', () => {
     expect(seqs).toEqual(seqs.map((_, i) => i + 1)) // номера подряд
   })
 
+  it('автопредложения не поднимают цену больше чем на 50% за ход', async () => {
+    const lot = await liveLot()
+    const [a, b, c] = [await admitted(lot.id), await admitted(lot.id), await admitted(lot.id)]
+    await bids.placeBid(c.id, lot.id, M(2), key())
+    await bids.setAutoBid(a.id, lot.id, M(10))
+    await bids.setAutoBid(b.id, lot.id, M(8))
+    const s = await lotState(lot.id)
+    expect(s.leaderUserId).toBe(a.id)
+    expect(s.currentPrice).toBe(M(8.1))
+    const amounts = (await db.bid.findMany({ where: { lotId: lot.id }, orderBy: { seq: 'asc' } })).map((x) => x.amount)
+    for (let i = 1; i < amounts.length; i++) expect(amounts[i] * 2n).toBeLessThanOrEqual(amounts[i - 1] * 3n)
+  })
+
   it('равные максимумы — выигрывает тот, кто установил раньше', async () => {
     const lot = await liveLot()
     const [a, b, c] = [await admitted(lot.id), await admitted(lot.id), await admitted(lot.id)]

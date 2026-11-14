@@ -7,12 +7,15 @@ export type BidRejectCode =
   | 'RESTRICTED'
   | 'CONFLICT_OF_INTEREST'
   | 'BID_TOO_LOW'
+  | 'BID_TOO_HIGH'
   | 'ALREADY_LEADING'
 
 export class BidRejectedError extends Error {
   constructor(
     readonly code: BidRejectCode,
-    readonly minBid: bigint | null = null
+    readonly minBid: bigint | null = null,
+    /** Максимальная допустимая цена — для BID_TOO_HIGH (не выше предыдущей + 50%). */
+    readonly maxBid: bigint | null = null
   ) {
     super(code)
     this.name = 'BidRejectedError'

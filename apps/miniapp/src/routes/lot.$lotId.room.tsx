@@ -5,7 +5,7 @@ import { formatSum } from '@auksion/shared'
 import { useI18n } from '@/app/i18n'
 import { haptic, isInTelegram, useBackButton, useMainButton } from '@/app/telegram'
 import { type RoomView, useAdmissions, useLot, useRoom } from '@/entities/lot/api'
-import { currentPrice, roomMinBid } from '@/entities/lot/engine'
+import { currentPrice, roomMaxBid, roomMinBid } from '@/entities/lot/engine'
 import { type Lot } from '@/entities/lot/types'
 import { errorText } from '@/shared/api/error-text'
 import { cn } from '@/shared/lib/cn'
@@ -36,6 +36,9 @@ function RoomScreen({ lot, view }: { lot: Lot; view: RoomView }) {
   const now = useNow()
   const { room, online } = view
   const min = roomMinBid(room)
+  // варианты суммы — не выше +50% к текущей цене (решение 14.11.2026)
+  const max = roomMaxBid(room)
+  const stepOptions = STEP_OPTIONS.filter((n) => n === 0n || min + n * room.step <= max)
   const price = currentPrice(room)
   const last = room.bids.at(-1)
   const iLead = Boolean(last?.isMe)
@@ -224,7 +227,7 @@ function RoomScreen({ lot, view }: { lot: Lot; view: RoomView }) {
                   </span>
                 </div>
                 <div className='grid grid-cols-4 gap-2' role='radiogroup' aria-label={t('room.yourOffer')}>
-                  {STEP_OPTIONS.map((n) => {
+                  {stepOptions.map((n) => {
                     const value = min + n * room.step
                     const active = extra === n
                     return (

@@ -15,6 +15,10 @@ export const RULES = {
   REMAINDER_WINDOW_H: 24,
   /** Невыкуп без уважительной причины: 1-й раз — предупреждение, 2-й — 14 дней, далее — 50 дней (решение 13.11). */
   NO_BUYOUT_BAN_DAYS: [0, 14, 50] as const,
+  /** Предложение не выше предыдущей принятой цены (первое — старта) больше чем на N% (решение 14.11.2026). */
+  MAX_RAISE_PERCENT: 50n,
+  /** Участник предлагал цену, его перебили и он молчит N минут — одно напоминание на лот (решение 14.11.2026). */
+  IDLE_NUDGE_MIN: 30,
 } as const
 
 /**
@@ -23,6 +27,18 @@ export const RULES = {
  */
 export function minNextBid(start: bigint, step: bigint, current: bigint | null): bigint {
   return current === null ? start : current + step
+}
+
+/**
+ * Максимальная допустимая цена: предыдущая принятая (или старт) + 50%, округление вниз.
+ * Не ниже минимальной — чтобы крупный шаг не делал предложение невозможным.
+ * Пример партнёра: после 1 000 000 — не больше 1 500 000.
+ */
+export function maxNextBid(start: bigint, step: bigint, current: bigint | null): bigint {
+  const base = current ?? start
+  const cap = base + (base * RULES.MAX_RAISE_PERCENT) / 100n
+  const min = minNextBid(start, step, current)
+  return cap > min ? cap : min
 }
 
 /** 30% предоплаты, округление вверх до целого сума. */

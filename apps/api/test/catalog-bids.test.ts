@@ -98,7 +98,7 @@ describe('Каталог и предложение цены по HTTP', () => {
     await admit(lot.id, b.userId)
     const low = await app.inject({ method: 'POST', url, headers: b.auth, payload: payload('2050000') })
     expect(low.statusCode).toBe(409)
-    expect(low.json()).toEqual({ code: 'BID_TOO_LOW', message: expect.any(String), minBid: '2100000' })
+    expect(low.json()).toEqual({ code: 'BID_TOO_LOW', message: expect.any(String), minBid: '2100000', maxBid: null })
   })
 
   it('ход торгов: новые сверху, «мои» помечены, без id/telegramId участников; без входа 401, чужой лот 404', async () => {
@@ -110,7 +110,13 @@ describe('Каталог и предложение цены по HTTP', () => {
     const b = await loginAs(app, 900_021, 'Малика')
     const empty = await app.inject({ method: 'GET', url, headers: a.auth })
     expect(empty.statusCode).toBe(200)
-    expect(empty.json()).toEqual({ currentPrice: null, minNextBid: '2000000', lastSeq: 0, bids: [] })
+    expect(empty.json()).toEqual({
+      currentPrice: null,
+      minNextBid: '2000000',
+      maxNextBid: '3000000',
+      lastSeq: 0,
+      bids: [],
+    })
 
     await admit(lot.id, a.userId)
     await admit(lot.id, b.userId)

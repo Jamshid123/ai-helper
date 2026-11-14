@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { Injectable } from '@nestjs/common'
 import { Prisma, type Bid } from '@prisma/client'
-import { effectiveEnd, minNextBid } from '@auksion/shared'
+import { effectiveEnd, maxNextBid, minNextBid } from '@auksion/shared'
 import { Clock } from '../../common/clock'
 import { PrismaService } from '../../prisma/prisma.service'
 import { BidRejectedError } from './bid.errors'
@@ -88,6 +88,8 @@ export class BidsService {
     this.assertOpen(lot, now, min)
     await this.assertMayBid(tx, lot, userId, now, min)
     if (amount < min) throw new BidRejectedError('BID_TOO_LOW', min)
+    const max = this.maxOf(lot)
+    if (amount > max) throw new BidRejectedError('BID_TOO_HIGH', min, max)
 
     const bid = await this.insertBid(tx, lot, userId, amount, key, now, false)
     await this.resolveProxies(tx, lot, now)
@@ -146,6 +148,7 @@ export class BidsService {
     return {
       currentPrice: lot.currentPrice?.toString() ?? null,
       minNextBid: this.minOf(lot).toString(),
+      maxNextBid: this.maxOf(lot).toString(),
       lastSeq: lot.lastSeq,
       bids: bids.map((b) => ({
         seq: b.seq,
@@ -204,13 +207,14 @@ export class BidsService {
 
       if (!leaderStronger) {
         const target = leaderProxy ? leaderProxy.maxAmount + lot.step : min
-        const amount = bigMin(challenger.maxAmount, bigMax(min, target))
+        // не больше +50% за ход (решение 14.11.2026): крупный разрыв закрывается за несколько ходов
+        const amount = bigMin(bigMin(challenger.maxAmount, bigMax(min, target)), this.maxOf(lot))
         await this.insertBid(tx, lot, challenger.userId, amount, key(), now, true)
         continue
       }
 
       // Лидер сильнее: претендент поднимает цену, оставляя лидеру место ответить на шаг.
-      const challengerBid = bigMin(challenger.maxAmount, leaderProxy!.maxAmount - lot.step)
+      const challengerBid = bigMin(bigMin(challenger.maxAmount, leaderProxy!.maxAmount - lot.step), this.maxOf(lot))
       if (challengerBid < min) {
         await tx.autoBid.update({ where: { id: challenger.id }, data: { active: false } })
         continue
@@ -258,6 +262,10 @@ export class BidsService {
 
   private minOf(lot: Pick<LotState, 'startPrice' | 'step' | 'currentPrice'>): bigint {
     return minNextBid(lot.startPrice, lot.step, lot.currentPrice)
+  }
+
+  private maxOf(lot: Pick<LotState, 'startPrice' | 'step' | 'currentPrice'>): bigint {
+    return maxNextBid(lot.startPrice, lot.step, lot.currentPrice)
   }
 
   private assertOpen(lot: LotState, now: Date, min: bigint) {

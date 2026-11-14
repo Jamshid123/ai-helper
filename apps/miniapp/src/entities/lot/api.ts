@@ -157,6 +157,8 @@ type Feed = {
   bids: { seq: number; amount: string; bidder: string; mine: boolean; createdAt: string }[]
 }
 
+const DEMO_CODES = { CLOSED: 'LOT_CLOSED', TOO_LOW: 'BID_TOO_LOW', TOO_HIGH: 'BID_TOO_HIGH' } as const
+
 export type OfferResult = { ok: true } | { ok: false; code: string; minBid: bigint | null }
 
 export type RoomView = {
@@ -215,9 +217,7 @@ export function useRoom(lot: Lot | undefined): RoomView | undefined {
     async (amount: bigint): Promise<OfferResult> => {
       if (DEMO) {
         const r = demoPlaceBid(lotId, amount)
-        return r.ok
-          ? { ok: true }
-          : { ok: false, code: r.reason === 'CLOSED' ? 'LOT_CLOSED' : 'BID_TOO_LOW', minBid: r.minBid }
+        return r.ok ? { ok: true } : { ok: false, code: DEMO_CODES[r.reason], minBid: r.minBid }
       }
       try {
         await api(`/lots/${lotId}/bids`, {

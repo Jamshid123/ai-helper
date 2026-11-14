@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import { RULES } from '@auksion/shared'
 import { Clock } from '../../common/clock'
 import { PrismaService } from '../../prisma/prisma.service'
 
@@ -59,6 +60,39 @@ export class RemindersService {
           type: 'reminder.due',
           aggregateId: d.lot_id,
           payload: { lotId: d.lot_id, userId: d.user_id, minutesBefore: d.minutes_before },
+        })),
+      })
+      return due.length
+    })
+  }
+
+  /**
+   * «Готовы предложить больше?» (решение 14.11.2026): участник предлагал цену, его перебили, и с его последнего
+   * предложения прошло 30 минут, а торги ещё идут → событие `bid.nudge` в outbox (отправит бот) и отметка
+   * `Admission.nudgedAt` — одно напоминание на лот, ровно один раз (SKIP LOCKED).
+   */
+  async dispatchIdleBidders(): Promise<number> {
+    const now = this.clock.now()
+    const idleSince = new Date(now.getTime() - RULES.IDLE_NUDGE_MIN * 60_000)
+    return this.prisma.$transaction(async (tx) => {
+      const due = await tx.$queryRaw<{ id: string; lot_id: string; user_id: string; current_price: bigint }[]>`
+        SELECT a.id, a."lotId" AS lot_id, a."userId" AS user_id, l."currentPrice" AS current_price
+        FROM "Admission" a JOIN "Lot" l ON l.id = a."lotId"
+        WHERE a."nudgedAt" IS NULL AND l.status = 'LIVE' AND l."closesAt" > ${now}
+          AND l."leaderUserId" IS DISTINCT FROM a."userId"
+          AND (l."bidTimeoutSec" IS NULL OR l."lastBidAt" IS NULL
+               OR l."lastBidAt" + make_interval(secs => l."bidTimeoutSec") > ${now})
+          AND (SELECT max(b."createdAt") FROM "Bid" b WHERE b."lotId" = a."lotId" AND b."userId" = a."userId")
+              <= ${idleSince}
+        LIMIT 500
+        FOR UPDATE OF a SKIP LOCKED`
+      if (!due.length) return 0
+      await tx.admission.updateMany({ where: { id: { in: due.map((d) => d.id) } }, data: { nudgedAt: now } })
+      await tx.outboxEvent.createMany({
+        data: due.map((d) => ({
+          type: 'bid.nudge',
+          aggregateId: d.lot_id,
+          payload: { lotId: d.lot_id, userId: d.user_id, currentPrice: d.current_price.toString() },
         })),
       })
       return due.length

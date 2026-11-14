@@ -3,6 +3,7 @@ import { ApiError } from './client'
 
 const KNOWN = new Set([
   'BID_TOO_LOW',
+  'BID_TOO_HIGH',
   'ALREADY_LEADING',
   'NO_ADMISSION',
   'RESTRICTED',
