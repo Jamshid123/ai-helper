@@ -11,7 +11,8 @@ COPY packages/shared packages/shared
 COPY apps/${APP} apps/${APP}
 # Только публичные значения: всё из VITE_* попадает в бандл.
 ARG VITE_DEMO_DATA=false
-ENV VITE_DEMO_DATA=${VITE_DEMO_DATA}
+ARG VITE_DEMO_STAND=false
+ENV VITE_DEMO_DATA=${VITE_DEMO_DATA} VITE_DEMO_STAND=${VITE_DEMO_STAND}
 RUN pnpm --filter "@auksion/${APP}" exec vite build
 
 FROM nginxinc/nginx-unprivileged:1.27-alpine

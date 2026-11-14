@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, HttpCode, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common'
+import { BadRequestException, Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common'
 import { z } from 'zod'
 import type { AuthedRequest } from '../auth/buyer-auth.guard'
 import { BidsService } from './bids.service'
@@ -12,6 +12,12 @@ const bodySchema = z.object({
 @Controller('lots/:lotId/bids')
 export class BidsController {
   constructor(private readonly bids: BidsService) {}
+
+  /** Ход торгов (комната опрашивает каждые несколько секунд, пока нет WebSocket). */
+  @Get()
+  history(@Param('lotId', new ParseUUIDPipe()) lotId: string, @Req() req: AuthedRequest) {
+    return this.bids.history(req.userId, lotId)
+  }
 
   /** Предложить цену. Повтор с тем же idempotencyKey возвращает исходный результат. */
   @Post()

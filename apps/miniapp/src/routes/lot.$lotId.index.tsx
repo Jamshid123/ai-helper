@@ -4,9 +4,9 @@ import { BadgeCheck } from 'lucide-react'
 import { formatSum } from '@auksion/shared'
 import { useI18n } from '@/app/i18n'
 import { haptic, useBackButton, useMainButton } from '@/app/telegram'
-import { useLot } from '@/entities/lot/api'
+import { useAdmissions, useAdmit, useLot } from '@/entities/lot/api'
 import { isRegistered, useAccount } from '@/entities/account/demo-account'
-import { admit, isAdmitted } from '@/entities/lot/demo-store'
+import { errorText } from '@/shared/api/error-text'
 import { type Lot } from '@/entities/lot/types'
 import { cn } from '@/shared/lib/cn'
 import { formatCountdown, useNow } from '@/shared/lib/use-now'
@@ -28,17 +28,32 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 function AdmissionSheet({ lot, onClose, onPaid }: { lot: Lot; onClose: () => void; onPaid: () => void }) {
   const { t, locale } = useI18n()
   const [agree, setAgree] = useState(false)
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const admit = useAdmit()
   const pay = useCallback(() => {
-    if (!agree) return
-    // Демо: оплата имитируется. На проде — заказ у платёжного партнёра и подтверждение сервером.
+    if (!agree || pending) return
+    // Демо — имитация в браузере; в Telegram — заказ на сервере (на тестовом запуске оплату имитирует сервер).
+    setPending(true)
+    setError(null)
     admit(lot.id)
-    haptic('success')
-    onPaid()
-  }, [agree, lot.id, onPaid])
+      .then(
+        () => {
+          haptic('success')
+          onPaid()
+        },
+        (e: unknown) => {
+          haptic('error')
+          setError(errorText(t, e))
+        }
+      )
+      .finally(() => setPending(false))
+  }, [agree, pending, admit, lot.id, onPaid, t])
   const native = useMainButton({
     text: `${t('admission.pay')} ${formatSum(lot.fee, locale)}`,
     onClick: pay,
-    enabled: agree,
+    enabled: agree && !pending,
+    loading: pending,
   })
 
   return (
@@ -80,12 +95,17 @@ function AdmissionSheet({ lot, onClose, onPaid }: { lot: Lot; onClose: () => voi
           />
           {t('admission.agree')}
         </label>
+        {error && (
+          <p role='alert' className='mb-4 rounded-xl bg-hot/10 px-4 py-3 text-[14px] font-medium text-hot-text'>
+            {error}
+          </p>
+        )}
         <div className='grid grid-cols-2 gap-2'>
           <Button variant='ghost' onClick={onClose}>
             {t('admission.cancel')}
           </Button>
           {!native && (
-            <Button onClick={pay} disabled={!agree}>
+            <Button onClick={pay} disabled={!agree || pending}>
               {t('admission.pay')} <Price value={lot.fee} />
             </Button>
           )}
@@ -116,7 +136,8 @@ function LotPage() {
   const back = useCallback(() => navigate({ to: '/' }), [navigate])
   useBackButton(sheet ? null : back)
 
-  const admitted = lot ? isAdmitted(lot.id) : false
+  const admissions = useAdmissions()
+  const admitted = lot ? admissions.has(lot.id) : false
   const live = lot?.status === 'live'
   const primary = useCallback(() => {
     if (!lot) return

@@ -10,9 +10,14 @@ cp apps/miniapp/.env.example apps/miniapp/.env.local   # VITE_DEMO_DATA=true —
 pnpm --filter @auksion/miniapp dev                      # открывается и в обычном браузере в демо-режиме
 ```
 
+## Режимы
+
+- **Внутри Telegram** (есть `initData`) — данные API `/api/v1`: вход по `initData`, допуск, комната (опрос каждые 3 с), автопредложение, напоминания. `VITE_DEMO_STAND=true` — плашка «Тестовый запуск» (сервер имитирует оплату).
+- **В обычном браузере** или при `VITE_DEMO_DATA=true` — демо-стенд на тестовых данных.
+
 ## Демо-стенд
 
-`VITE_DEMO_DATA=true` — тестовые лоты, имитация оплаты допуска, комната торгов с «другими участниками».
+Тестовые лоты, имитация оплаты допуска, комната торгов с «другими участниками».
 Ставки проверяются теми же правилами, что и на сервере (`src/entities/lot/engine.ts` + `@auksion/shared`).
 Плашка «Демо-стенд» показывается всегда в этом режиме. Без демо-режима приложение работает только внутри Telegram.
 
@@ -23,13 +28,14 @@ pnpm --filter @auksion/miniapp dev                      # открывается
 | Telegram: MainButton, BackButton, haptics, initData | `src/app/telegram.ts` |
 | Тексты ru/uz (+ тест совпадения ключей) | `src/app/i18n.tsx` |
 | Контракт лота | `src/entities/lot/types.ts` |
-| Загрузка лотов (API или демо) | `src/entities/lot/api.ts` |
+| Хуки данных (API в Telegram / демо в браузере) | `src/entities/lot/api.ts` |
+| Клиент API (вход по initData, ошибки) | `src/shared/api/` |
 | Правила ставок для демо (+ тесты) | `src/entities/lot/engine.ts` |
 | Тестовые данные и имитация комнаты | `src/entities/lot/demo-data.ts`, `demo-store.ts` |
 | Экраны | `src/routes/`: каталог `index.tsx`, лот `lot.$lotId.index.tsx`, комната `lot.$lotId.room.tsx`, профиль `me.tsx` |
 
 ## Что дальше (с API)
 
-Авторизация по `initData` → сессия; допуск через платёжного партнёра; комната по WebSocket (`lastSeq`, ресинк);
+Допуск через платёжного партнёра; комната по WebSocket вместо опроса (`lastSeq`, ресинк);
 телефон через «Поделиться контактом»; экраны победы (30% за 15 мин, остаток за 24 ч, код выдачи).
 Тексты на узбекском вычитать носителю языка.

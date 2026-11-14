@@ -35,6 +35,14 @@ export const envSchema = z.object({
     .default('true')
     .transform((v) => v === 'true'),
   SCHEDULER_INTERVAL_MS: z.coerce.number().int().min(1000).max(60_000).default(5000),
+  /**
+   * Демо-стенд (решение заказчика 14.11.2026): разрешает PAYMENTS_MODE=fake в production и скрипт тестовых лотов.
+   * Только явное «true»; на боевом запуске с партнёром — убрать.
+   */
+  DEMO_STAND: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
 })
 
 export type Env = z.infer<typeof envSchema>
@@ -46,8 +54,8 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     throw new Error(`Invalid environment configuration — ${issues}`)
   }
   const env = parsed.data
-  if (env.NODE_ENV === 'production' && env.PAYMENTS_MODE === 'fake') {
-    throw new Error('PAYMENTS_MODE=fake запрещён в production')
+  if (env.NODE_ENV === 'production' && env.PAYMENTS_MODE === 'fake' && !env.DEMO_STAND) {
+    throw new Error('PAYMENTS_MODE=fake запрещён в production (кроме демо-стенда, DEMO_STAND=true)')
   }
   return env
 }

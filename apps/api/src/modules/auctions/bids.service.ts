@@ -123,6 +123,36 @@ export class BidsService {
     await this.prisma.autoBid.updateMany({ where: { lotId, userId }, data: { active: false } })
   }
 
+  /**
+   * Ход торгов для комнаты: последние предложения (новые сверху) и минимальная следующая цена.
+   * Участники — только публичным именем; «mine» — для подсветки своих предложений.
+   */
+  async history(userId: string, lotId: string, limit = 50) {
+    const lot = await this.prisma.lot.findFirst({
+      where: { id: lotId, status: { notIn: ['DRAFT', 'CANCELLED'] } },
+      select: { startPrice: true, step: true, currentPrice: true, lastSeq: true },
+    })
+    if (!lot) throw new BidRejectedError('LOT_NOT_FOUND')
+    const bids = await this.prisma.bid.findMany({
+      where: { lotId },
+      orderBy: { seq: 'desc' },
+      take: limit,
+      select: { seq: true, amount: true, createdAt: true, userId: true, user: { select: { publicName: true } } },
+    })
+    return {
+      currentPrice: lot.currentPrice?.toString() ?? null,
+      minNextBid: this.minOf(lot).toString(),
+      lastSeq: lot.lastSeq,
+      bids: bids.map((b) => ({
+        seq: b.seq,
+        amount: b.amount.toString(),
+        bidder: b.user.publicName,
+        mine: b.userId === userId,
+        createdAt: b.createdAt.toISOString(),
+      })),
+    }
+  }
+
   async getAutoBid(userId: string, lotId: string): Promise<{ maxAmount: bigint; active: boolean } | null> {
     return this.prisma.autoBid.findUnique({
       where: { lotId_userId: { lotId, userId } },
@@ -214,7 +244,7 @@ export class BidsService {
     }
   }
 
-  private minOf(lot: LotState): bigint {
+  private minOf(lot: Pick<LotState, 'startPrice' | 'step' | 'currentPrice'>): bigint {
     return minNextBid(lot.startPrice, lot.step, lot.currentPrice)
   }
 

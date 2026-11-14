@@ -2,7 +2,7 @@ import { Link, Outlet, createRootRoute, useRouterState } from '@tanstack/react-r
 import { Gavel, User } from 'lucide-react'
 import { useI18n } from '@/app/i18n'
 import { isInTelegram } from '@/app/telegram'
-import { DEMO } from '@/entities/lot/api'
+import { DEMO, TEST_STAND } from '@/entities/lot/api'
 import { cn } from '@/shared/lib/cn'
 
 function Root() {
@@ -20,7 +20,11 @@ function Root() {
 
   return (
     <div className='mx-auto flex min-h-svh max-w-lg flex-col'>
-      {DEMO && <div className='bg-surface px-4 py-1.5 text-center text-[11.5px] text-muted'>{t('app.demo')}</div>}
+      {(DEMO || TEST_STAND) && (
+        <div className='bg-surface px-4 py-1.5 text-center text-[11.5px] text-muted'>
+          {t(DEMO ? 'app.demo' : 'app.testStand')}
+        </div>
+      )}
       <main className='flex-1 pb-24'>
         <Outlet />
       </main>

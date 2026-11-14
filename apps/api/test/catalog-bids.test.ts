@@ -48,6 +48,24 @@ describe('Каталог и предложение цены по HTTP', () => {
     expect((await app.inject({ method: 'GET', url: '/api/v1/lots/not-a-uuid' })).statusCode).toBe(400)
   })
 
+  it('каталог: идущие лоты первыми, затем запланированные по времени начала', async () => {
+    const soon = new Date(Date.now() + 86_400_000)
+    const later = new Date(Date.now() + 2 * 86_400_000)
+    const far = await createLot(db, {
+      status: 'SCHEDULED',
+      opensAt: later,
+      closesAt: new Date(later.getTime() + 3_600_000),
+    })
+    const near = await createLot(db, {
+      status: 'SCHEDULED',
+      opensAt: soon,
+      closesAt: new Date(soon.getTime() + 3_600_000),
+    })
+    const live = await createLot(db)
+    const ids = (await app.inject({ method: 'GET', url: '/api/v1/lots' })).json().map((l: { id: string }) => l.id)
+    expect(ids).toEqual([live.id, near.id, far.id])
+  })
+
   it('расписание отдаёт серверное время и окно пятничной сессии', async () => {
     const body = (await app.inject({ method: 'GET', url: '/api/v1/schedule' })).json()
     expect(body.timezone).toBe('Asia/Tashkent')
@@ -81,6 +99,37 @@ describe('Каталог и предложение цены по HTTP', () => {
     const low = await app.inject({ method: 'POST', url, headers: b.auth, payload: payload('2050000') })
     expect(low.statusCode).toBe(409)
     expect(low.json()).toEqual({ code: 'BID_TOO_LOW', message: expect.any(String), minBid: '2100000' })
+  })
+
+  it('ход торгов: новые сверху, «мои» помечены, без id/telegramId участников; без входа 401, чужой лот 404', async () => {
+    const lot = await createLot(db)
+    const url = `/api/v1/lots/${lot.id}/bids`
+    expect((await app.inject({ method: 'GET', url })).statusCode).toBe(401)
+
+    const a = await loginAs(app, 900_020, 'Азиз')
+    const b = await loginAs(app, 900_021, 'Малика')
+    const empty = await app.inject({ method: 'GET', url, headers: a.auth })
+    expect(empty.statusCode).toBe(200)
+    expect(empty.json()).toEqual({ currentPrice: null, minNextBid: '2000000', lastSeq: 0, bids: [] })
+
+    await admit(lot.id, a.userId)
+    await admit(lot.id, b.userId)
+    const bid = (auth: Record<string, string>, amount: string) =>
+      app.inject({ method: 'POST', url, headers: auth, payload: { amount, idempotencyKey: randomUUID() } })
+    expect((await bid(a.auth, '2000000')).statusCode).toBe(200)
+    expect((await bid(b.auth, '2100000')).statusCode).toBe(200)
+
+    const feed = (await app.inject({ method: 'GET', url, headers: a.auth })).json()
+    expect(feed).toMatchObject({ currentPrice: '2100000', minNextBid: '2200000', lastSeq: 2 })
+    expect(feed.bids.map((x: { seq: number; mine: boolean }) => [x.seq, x.mine])).toEqual([
+      [2, false],
+      [1, true],
+    ])
+    expect(Object.keys(feed.bids[0]).sort()).toEqual(['amount', 'bidder', 'createdAt', 'mine', 'seq'])
+    expect(feed.bids[0]).toMatchObject({ amount: '2100000', bidder: 'Участник 0021' })
+
+    const other = await app.inject({ method: 'GET', url: `/api/v1/lots/${randomUUID()}/bids`, headers: a.auth })
+    expect(other.statusCode).toBe(404)
   })
 
   it('валидация тела: дробные, отрицательные, не-uuid ключ — 400', async () => {

@@ -1,13 +1,15 @@
-import { useSyncExternalStore } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bell, BellRing } from 'lucide-react'
 import { useI18n, type TKey } from '@/app/i18n'
 import { haptic } from '@/app/telegram'
-import { DEMO } from '@/entities/lot/api'
+import { DEMO, TEST_STAND } from '@/entities/lot/api'
+import { api } from '@/shared/api/client'
 import { cn } from '@/shared/lib/cn'
 
 /**
  * «Напомнить о начале» (за 15 мин / 1 ч / накануне). Демо: хранится на устройстве.
- * На проде: PUT /api/v1/lots/:id/reminder, сообщение отправит бот.
+ * В Telegram: PUT/GET/DELETE /api/v1/lots/:id/reminder; сообщение отправит бот (модуль уведомлений — следующий шаг).
  */
 const OPTIONS = [15, 60, 1440] as const
 type Minutes = (typeof OPTIONS)[number]
@@ -36,7 +38,7 @@ function save(lotId: string, m: Minutes | null) {
   listeners.forEach((l) => l())
 }
 
-function useReminder(lotId: string): Minutes | null {
+function useLocalReminder(lotId: string): Minutes | null {
   return useSyncExternalStore(
     (cb) => {
       listeners.add(cb)
@@ -46,9 +48,29 @@ function useReminder(lotId: string): Minutes | null {
   )
 }
 
+function useReminder(lotId: string): { current: Minutes | null; set: (m: Minutes | null) => Promise<void> } {
+  const local = useLocalReminder(lotId)
+  const qc = useQueryClient()
+  const q = useQuery({
+    queryKey: ['reminder', lotId],
+    queryFn: () => api<{ minutesBefore: Minutes } | null>(`/lots/${lotId}/reminder`),
+    enabled: !DEMO,
+  })
+  const set = useCallback(
+    async (m: Minutes | null) => {
+      if (DEMO) return save(lotId, m)
+      if (m === null) await api(`/lots/${lotId}/reminder`, { method: 'DELETE' })
+      else await api(`/lots/${lotId}/reminder`, { method: 'PUT', body: { minutesBefore: m } })
+      await qc.invalidateQueries({ queryKey: ['reminder', lotId] })
+    },
+    [lotId, qc]
+  )
+  return { current: DEMO ? local : (q.data?.minutesBefore ?? null), set }
+}
+
 export function RemindCard({ lotId, opensAt, now }: { lotId: string; opensAt: number; now: number }) {
   const { t } = useI18n()
-  const current = useReminder(lotId)
+  const { current, set } = useReminder(lotId)
   const label = (m: Minutes) => t(`remind.${m}` as TKey)
   const available = OPTIONS.filter((m) => opensAt - m * 60_000 > now)
   if (!available.length && current === null) return null
@@ -62,7 +84,7 @@ export function RemindCard({ lotId, opensAt, now }: { lotId: string; opensAt: nu
         </span>
         <button
           type='button'
-          onClick={() => save(lotId, null)}
+          onClick={() => void set(null).catch(() => haptic('error'))}
           className='min-h-11 px-2 text-[13px] text-muted underline underline-offset-4'
         >
           {t('remind.off')}
@@ -81,17 +103,19 @@ export function RemindCard({ lotId, opensAt, now }: { lotId: string; opensAt: nu
           <button
             key={m}
             type='button'
-            onClick={() => {
-              save(lotId, m)
-              haptic('success')
-            }}
+            onClick={() =>
+              void set(m).then(
+                () => haptic('success'),
+                () => haptic('error')
+              )
+            }
             className='h-11 rounded-xl bg-surface text-[13px] font-medium'
           >
             {label(m)}
           </button>
         ))}
       </div>
-      {DEMO && <p className='text-[12px] text-muted'>{t('remind.demo')}</p>}
+      {(DEMO || TEST_STAND) && <p className='text-[12px] text-muted'>{t('remind.demo')}</p>}
     </section>
   )
 }

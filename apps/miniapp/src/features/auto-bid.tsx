@@ -3,13 +3,23 @@ import { Zap } from 'lucide-react'
 import { formatSum } from '@auksion/shared'
 import { useI18n } from '@/app/i18n'
 import { haptic } from '@/app/telegram'
-import { getAutoBid, setAutoBid } from '@/entities/lot/demo-store'
+import { useAutoBid } from '@/entities/lot/api'
 import { Price } from '@/shared/ui/price'
 
-/** Автопредложение до максимума (proxy bidding). Демо: работает против «других участников». */
+/** Автопредложение до максимума (proxy bidding). В Telegram — на сервере, в демо — против «других участников». */
 export function AutoBidCard({ lotId, minBid, step }: { lotId: string; minBid: bigint; step: bigint }) {
   const { t, locale } = useI18n()
-  const active = getAutoBid(lotId)
+  const { max: active, set } = useAutoBid(lotId)
+  const [busy, setBusy] = useState(false)
+  const run = (next: bigint | null) => {
+    setBusy(true)
+    set(next)
+      .then(
+        () => haptic('success'),
+        () => haptic('error')
+      )
+      .finally(() => setBusy(false))
+  }
   const suggested = minBid + step * 5n
   const [value, setValue] = useState(formatSum(suggested, locale, false))
   const digits = value.replace(/\D/g, '')
@@ -32,7 +42,8 @@ export function AutoBidCard({ lotId, minBid, step }: { lotId: string; minBid: bi
         </span>
         <button
           type='button'
-          onClick={() => setAutoBid(lotId, null)}
+          disabled={busy}
+          onClick={() => run(null)}
           className='min-h-11 shrink-0 px-2 text-[13px] text-muted underline underline-offset-4'
         >
           {t('auto.off')}
@@ -60,11 +71,8 @@ export function AutoBidCard({ lotId, minBid, step }: { lotId: string; minBid: bi
         />
         <button
           type='button'
-          disabled={!valid}
-          onClick={() => {
-            setAutoBid(lotId, max)
-            haptic('success')
-          }}
+          disabled={!valid || busy}
+          onClick={() => run(max)}
           className='h-11 shrink-0 rounded-xl bg-fg px-4 text-[14px] font-semibold text-bg disabled:bg-surface disabled:text-muted'
         >
           {t('auto.enable')}

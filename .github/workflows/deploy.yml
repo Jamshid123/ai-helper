@@ -30,12 +30,13 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Build Mini App image (demo stand)
+      - name: Build Mini App image (API в Telegram, демо в браузере)
         run: |
           echo "TAG=${GITHUB_SHA::12}" >> "$GITHUB_ENV"
           docker build -f infra/Dockerfile.spa \
             --build-arg APP=miniapp \
-            --build-arg VITE_DEMO_DATA=true \
+            --build-arg VITE_DEMO_DATA=false \
+            --build-arg VITE_DEMO_STAND=true \
             --build-arg "FRAME_ANCESTORS=https://web.telegram.org https://*.telegram.org" \
             -t "auksion-miniapp:${GITHUB_SHA::12}" .
 
@@ -62,7 +63,8 @@ jobs:
         run: |
           ssh srv "set -e; cd /opt/auksion
             [ -f .deploy.env ] && cp .deploy.env .deploy.env.prev || true
-            echo TAG=$TAG > .deploy.env
+            # Демо-стенд (решение заказчика 14.11.2026): имитация оплаты допуска. Убрать при подключении партнёра.
+            printf 'TAG=%s\nDEMO_STAND=true\nPAYMENTS_MODE=fake\n' $TAG > .deploy.env
             # Секрет сессий генерируется на сервере один раз и никуда не передаётся.
             grep -q '^JWT_SECRET=' .env || { umask 077; echo \"JWT_SECRET=\$(openssl rand -hex 32)\" >> .env; }
             C='docker compose --env-file .env --env-file .deploy.env'
@@ -74,7 +76,7 @@ jobs:
       - name: Health check (rollback on failure)
         run: |
           for i in $(seq 1 20); do
-            if curl -fsS "$APP_URL/healthz" >/dev/null && ssh srv 'curl -fsS http://127.0.0.1:3400/api/v1/health' >/dev/null; then echo "healthy (miniapp + api)"; exit 0; fi
+            if curl -fsS "$APP_URL/healthz" >/dev/null && curl -fsS "$APP_URL/api/v1/health" >/dev/null; then echo "healthy (miniapp + api через /api)"; exit 0; fi
             sleep 3
           done
           echo "::error::Health check failed — rolling back"

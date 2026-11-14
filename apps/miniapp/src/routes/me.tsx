@@ -3,17 +3,18 @@ import { ChevronRight, Gavel, Store } from 'lucide-react'
 import { useI18n } from '@/app/i18n'
 import { getWebApp } from '@/app/telegram'
 import { isRegistered, maskPhone, publicNameOf, resetAccount, useAccount } from '@/entities/account/demo-account'
-import { DEMO } from '@/entities/lot/api'
-import { admittedLotIds, demoLot, useDemoVersion } from '@/entities/lot/demo-store'
+import { DEMO, useAdmissions, useLots } from '@/entities/lot/api'
+import { type Lot } from '@/entities/lot/types'
 import { cn } from '@/shared/lib/cn'
 
 function MePage() {
   const { t, locale, setLocale } = useI18n()
-  useDemoVersion()
   const account = useAccount()
   const registered = isRegistered(account)
   const name = registered ? publicNameOf(account) : getWebApp()?.initDataUnsafe.user?.first_name
-  const lots = admittedLotIds().map(demoLot).filter(Boolean)
+  const admissions = useAdmissions()
+  const { data: all = [] } = useLots()
+  const lots = admissions.ids.map((id) => all.find((l) => l.id === id)).filter((l): l is Lot => Boolean(l))
 
   return (
     <div className='flex flex-col gap-5 px-4 pt-4'>

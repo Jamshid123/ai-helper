@@ -4,9 +4,10 @@ import { ChevronLeft, Users } from 'lucide-react'
 import { formatSum } from '@auksion/shared'
 import { useI18n } from '@/app/i18n'
 import { haptic, isInTelegram, useBackButton, useMainButton } from '@/app/telegram'
-import { useLot } from '@/entities/lot/api'
+import { type RoomView, useAdmissions, useLot, useRoom } from '@/entities/lot/api'
 import { currentPrice, roomMinBid } from '@/entities/lot/engine'
-import { demoOnline, demoPlaceBid, getRoom, isAdmitted, startBots, useDemoVersion } from '@/entities/lot/demo-store'
+import { type Lot } from '@/entities/lot/types'
+import { errorText } from '@/shared/api/error-text'
 import { cn } from '@/shared/lib/cn'
 import { formatCountdown, useNow } from '@/shared/lib/use-now'
 import { AutoBidCard } from '@/features/auto-bid'
@@ -19,23 +20,28 @@ const STEP_OPTIONS = [0n, 1n, 2n, 5n] as const
 
 function RoomPage() {
   const { lotId } = Route.useParams()
+  const navigate = useNavigate()
+  const { data: lot } = useLot(lotId)
+  const view = useRoom(lot)
+  const back = useCallback(() => navigate({ to: '/lot/$lotId', params: { lotId } }), [navigate, lotId])
+  useBackButton(back)
+  if (!lot || !view) return null
+  return <RoomScreen lot={lot} view={view} />
+}
+
+function RoomScreen({ lot, view }: { lot: Lot; view: RoomView }) {
+  const lotId = lot.id
   const { t, locale } = useI18n()
   const navigate = useNavigate()
   const now = useNow()
-  useDemoVersion()
-  const { data: lot } = useLot(lotId)
-  const back = useCallback(() => navigate({ to: '/lot/$lotId', params: { lotId } }), [navigate, lotId])
-  useBackButton(back)
-  useEffect(() => startBots(lotId), [lotId])
-
-  const room = getRoom(lotId)
+  const { room, online } = view
   const min = roomMinBid(room)
   const price = currentPrice(room)
   const last = room.bids.at(-1)
   const iLead = Boolean(last?.isMe)
   const iBid = room.bids.some((b) => b.isMe)
   const closed = now >= room.closesAt
-  const admitted = isAdmitted(lotId)
+  const admitted = useAdmissions().has(lotId)
   const [extra, setExtra] = useState(0n)
   // Если пока выбирали, цену перебили — выбор пересчитывается от новой минимальной.
   const amount = min + extra * room.step
@@ -43,6 +49,8 @@ function RoomPage() {
 
   // Сумма выше минимальной — второе касание «Подтвердить» (защита от случайного обязательства).
   const [confirming, setConfirming] = useState(false)
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   useEffect(() => {
     if (!confirming) return
     const id = setTimeout(() => setConfirming(false), 4000)
@@ -54,10 +62,26 @@ function RoomPage() {
       haptic('tap')
       return
     }
-    const r = demoPlaceBid(lotId, amount)
-    haptic(r.ok ? 'success' : 'error')
-    setExtra(0n)
-    setConfirming(false)
+    if (pending) return
+    setPending(true)
+    setError(null)
+    view
+      .offer(amount)
+      .then(
+        (r) => {
+          haptic(r.ok ? 'success' : 'error')
+          if (!r.ok) setError(errorText(t, r.code))
+        },
+        (e: unknown) => {
+          haptic('error')
+          setError(errorText(t, e))
+        }
+      )
+      .finally(() => {
+        setPending(false)
+        setExtra(0n)
+        setConfirming(false)
+      })
   }
   const offerLabel = confirming ? t('room.confirm') : t('room.bid')
 
@@ -75,9 +99,8 @@ function RoomPage() {
     text: !admitted ? t('room.getAdmission') : `${offerLabel} ${formatSum(amount, locale)}`,
     onClick: !admitted ? getAdmission : offer,
     visible: !closed && (!admitted || canOffer),
+    loading: pending,
   })
-
-  if (!lot) return null
 
   const banner = closed
     ? { text: t('room.closed'), cls: 'bg-surface text-muted' }
@@ -106,7 +129,8 @@ function RoomPage() {
       <header className='flex items-start justify-between gap-3'>
         <h1 className='text-[17px] leading-snug font-semibold'>{lot.title}</h1>
         <span className='inline-flex shrink-0 items-center gap-1 text-[12.5px] text-muted'>
-          <Users className='size-3.5' aria-hidden='true' /> {demoOnline(lot)} {t('room.online')}
+          <Users className='size-3.5' aria-hidden='true' />{' '}
+          {online !== null ? `${online} ${t('room.online')}` : `${t('lot.admitted')}: ${lot.admittedCount}`}
         </span>
       </header>
 
@@ -135,6 +159,12 @@ function RoomPage() {
       </section>
 
       {banner && <div className={cn('rounded-xl px-4 py-3 text-[14px] font-medium', banner.cls)}>{banner.text}</div>}
+
+      {error && (
+        <div role='alert' className='rounded-xl bg-hot/10 px-4 py-3 text-[14px] font-medium text-hot-text'>
+          {error}
+        </div>
+      )}
 
       {admitted && !closed && <AutoBidCard lotId={lotId} minBid={min} step={room.step} />}
 
@@ -212,7 +242,7 @@ function RoomPage() {
               </>
             )}
             {!native && (
-              <Button onClick={admitted ? offer : getAdmission} className='w-full'>
+              <Button onClick={admitted ? offer : getAdmission} disabled={pending} className='w-full'>
                 {admitted ? (
                   <>
                     {offerLabel} <Price value={amount} />

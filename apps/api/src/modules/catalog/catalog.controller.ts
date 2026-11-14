@@ -18,7 +18,8 @@ export class CatalogController {
   async list() {
     const lots = await this.prisma.lot.findMany({
       where: { status: { in: ['LIVE', 'SCHEDULED'] } },
-      orderBy: [{ status: 'asc' }, { opensAt: 'asc' }],
+      // идущие — первыми (в enum LIVE объявлен после SCHEDULED), затем по времени начала
+      orderBy: [{ status: 'desc' }, { opensAt: 'asc' }],
       take: 200,
     })
     return lots.map(toLotDto)

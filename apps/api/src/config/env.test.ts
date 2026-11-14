@@ -34,4 +34,13 @@ describe('loadEnv', () => {
     expect(() => loadEnv({ ...base, PAYMENTS_MODE: 'fake' })).toThrow(/production/)
     expect(loadEnv({ ...base, NODE_ENV: 'test', PAYMENTS_MODE: 'fake' }).PAYMENTS_MODE).toBe('fake')
   })
+
+  it('демо-стенд: fake-оплата в production только при явном DEMO_STAND=true', () => {
+    expect(loadEnv(base).DEMO_STAND).toBe(false)
+    expect(() => loadEnv({ ...base, PAYMENTS_MODE: 'fake', DEMO_STAND: 'false' })).toThrow(/production/)
+    expect(() => loadEnv({ ...base, PAYMENTS_MODE: 'fake', DEMO_STAND: 'yes' })).toThrow()
+    const env = loadEnv({ ...base, PAYMENTS_MODE: 'fake', DEMO_STAND: 'true' })
+    expect(env.PAYMENTS_MODE).toBe('fake')
+    expect(env.DEMO_STAND).toBe(true)
+  })
 })
