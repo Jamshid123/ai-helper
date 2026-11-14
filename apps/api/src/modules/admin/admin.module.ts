@@ -6,6 +6,7 @@ import { AdminLotsController } from './admin-lots.controller'
 import { AdminLotsService } from './admin-lots.service'
 import { AdminParticipantsController } from './admin-participants.controller'
 import { AdminProductsController } from './admin-products.controller'
+import { AdminStaffController } from './admin-staff.controller'
 
 /** API админки (все эндпоинты — @StaffOnly: cookie-сессия сотрудника, CSRF, роли). */
 @Module({
@@ -16,6 +17,7 @@ import { AdminProductsController } from './admin-products.controller'
     AdminLotsController,
     AdminParticipantsController,
     AdminAuditController,
+    AdminStaffController,
   ],
   providers: [AdminLotsService],
 })

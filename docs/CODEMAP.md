@@ -32,7 +32,8 @@
 | `apps/api/src/modules/admin/` | API админки: категории, товары, лоты (`admin-lots.service.ts` — правила лота, отмена с возвратом), участники, журнал аудита |
 | `apps/api/src/modules/payments/refunds.service.ts` | Снятие допуска с возвратом 100% (выход, отмена допуска/лота) |
 | `apps/api/src/common/crypto-box.ts`, `cookies.ts` | AES-256-GCM для секретов в БД; разбор/сборка cookie |
-| `.github/workflows/admin-create.yml` | Вручную: создать администратора (пароль из секрета `ADMIN_INITIAL_PASSWORD`) |
+| `.github/workflows/admin-create.yml` | Вручную: создать администратора по телефону (пароль из секрета `ADMIN_INITIAL_PASSWORD`) |
+| `.github/workflows/staff-set-phone.yml` | Вручную: перевести учётку со старого email-логина на телефон |
 | `apps/api/src/scripts/` | `demo-lots.ts` (тестовые лоты демо-стенда), `seed-demo.ts` (CLI) |
 | `apps/miniapp/src/shared/api/` | `client.ts` (вход по initData, сессия, ApiError), `error-text.ts` (код ошибки → текст ru/uz) |
 | `apps/miniapp/src/entities/lot/api.ts` | Хуки данных: API в Telegram / демо в браузере (`useLots`, `useLot`, `useAdmissions`, `useAdmit`, `useRoom`, `useAutoBid`) |

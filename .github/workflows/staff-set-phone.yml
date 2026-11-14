@@ -1,0 +1,44 @@
+name: Staff set phone
+
+# Только вручную: перевести учётку сотрудника со старого email-логина на вход по телефону.
+# Номер задаётся здесь, а не в коде (персональные данные). Секреты: SERVER_HOST, DEPLOY_SSH_KEY.
+
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: Старый email-логин сотрудника
+        required: true
+      phone:
+        description: Новый логин — телефон (+998XXXXXXXXX)
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  set-phone:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: SSH setup
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          [ -n "$HOST" ] && [ -n "$KEY" ] || { echo "::error::Нужны секреты SERVER_HOST и DEPLOY_SSH_KEY"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          ssh-keyscan -T 10 -t ed25519 "$HOST" > ~/.ssh/known_hosts 2>/dev/null
+          printf 'Host srv\n  HostName %s\n  User deploy\n  IdentityFile ~/.ssh/deploy\n  StrictHostKeyChecking yes\n' "$HOST" > ~/.ssh/config
+
+      - name: Set phone
+        env:
+          EMAIL: ${{ inputs.email }}
+          PHONE: ${{ inputs.phone }}
+        run: |
+          ssh srv "cd /opt/auksion && docker compose --env-file .env --env-file .deploy.env run --rm -T --no-deps api node dist/scripts/staff-set-phone.js --email $(printf %q "$EMAIL") --phone $(printf %q "$PHONE")"

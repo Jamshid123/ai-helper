@@ -71,7 +71,7 @@ export function NavUser() {
                 <div className='grid gap-1 text-sm'>
                   <span className='font-semibold'>{user.name}</span>
                   <span className='text-xs text-muted-foreground'>
-                    {user.email}
+                    {user.phone ?? user.email}
                   </span>
                   <span className='text-xs text-muted-foreground'>{roles}</span>
                 </div>

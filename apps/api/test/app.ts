@@ -35,12 +35,12 @@ export async function loginAs(app: NestFastifyApplication, tgId: number, firstNa
 export async function loginStaff(
   app: NestFastifyApplication,
   roles: StaffRole[] = ['ADMIN'],
-  email = `staff-${Math.random().toString(36).slice(2, 8)}@auksion.uz`
+  phone = `+99890${String(Math.floor(Math.random() * 1e7)).padStart(7, '0')}`
 ) {
   const auth = app.get(StaffAuthService)
   const password = 'test password 123456'
-  await auth.createStaff({ email, name: 'Сотрудник', password, roles })
-  const res = await app.inject({ method: 'POST', url: '/api/v1/admin/auth/login', payload: { email, password } })
+  await auth.createStaff({ phone, firstName: 'Сотрудник', lastName: '', password, roles })
+  const res = await app.inject({ method: 'POST', url: '/api/v1/admin/auth/login', payload: { login: phone, password } })
   const cookies = ([] as string[]).concat(res.headers['set-cookie'] as string | string[])
   const get = (n: string) =>
     cookies

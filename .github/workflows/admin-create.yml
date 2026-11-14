@@ -2,18 +2,22 @@ name: Admin create
 
 # Только вручную: создать администратора админки на сервере.
 # Пароль — из секрета ADMIN_INITIAL_PASSWORD (передаётся через stdin, в логи и аргументы не попадает).
-# Код TOTP подключается при первом входе в админку. После входа секрет лучше удалить.
+# Вход — по телефону и паролю. После входа секрет лучше удалить; остальных сотрудников добавляют в админке.
 # Секреты: SERVER_HOST, DEPLOY_SSH_KEY, ADMIN_INITIAL_PASSWORD.
 
 on:
   workflow_dispatch:
     inputs:
-      email:
-        description: Email администратора
+      phone:
+        description: Телефон администратора (+998XXXXXXXXX) — логин
         required: true
-      name:
-        description: Имя (как будет видно в журнале)
+      first_name:
+        description: Имя
         required: true
+      last_name:
+        description: Фамилия
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -41,9 +45,10 @@ jobs:
       - name: Create admin
         env:
           PASSWORD: ${{ secrets.ADMIN_INITIAL_PASSWORD }}
-          EMAIL: ${{ inputs.email }}
-          NAME: ${{ inputs.name }}
+          PHONE: ${{ inputs.phone }}
+          FIRST: ${{ inputs.first_name }}
+          LAST: ${{ inputs.last_name }}
         run: |
           [ -n "$PASSWORD" ] || { echo "::error::Добавьте секрет ADMIN_INITIAL_PASSWORD (не короче 12 символов)"; exit 1; }
-          # email и имя — через printf %q, чтобы не было подстановок в удалённой оболочке
-          printf '%s' "$PASSWORD" | ssh srv "cd /opt/auksion && docker compose --env-file .env --env-file .deploy.env run --rm -T --no-deps api node dist/scripts/create-admin.js --email $(printf %q "$EMAIL") --name $(printf %q "$NAME")"
+          # значения — через printf %q, чтобы не было подстановок в удалённой оболочке
+          printf '%s' "$PASSWORD" | ssh srv "cd /opt/auksion && docker compose --env-file .env --env-file .deploy.env run --rm -T --no-deps api node dist/scripts/create-admin.js --phone $(printf %q "$PHONE") --first $(printf %q "$FIRST") --last $(printf %q "$LAST")"

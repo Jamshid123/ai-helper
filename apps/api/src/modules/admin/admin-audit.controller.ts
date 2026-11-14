@@ -24,9 +24,9 @@ export class AdminAuditController {
     const staffIds = [...new Set(rows.filter((r) => r.actorType === 'staff' && r.actorId).map((r) => r.actorId!))]
     const staff = await this.prisma.staff.findMany({
       where: { id: { in: staffIds } },
-      select: { id: true, name: true },
+      select: { id: true, firstName: true, lastName: true },
     })
-    const names = new Map(staff.map((s) => [s.id, s.name]))
+    const names = new Map(staff.map((s) => [s.id, `${s.firstName} ${s.lastName}`.trim()]))
     return rows.map((r) => ({
       id: r.id.toString(),
       createdAt: r.createdAt.toISOString(),

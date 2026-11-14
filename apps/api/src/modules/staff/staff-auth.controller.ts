@@ -7,7 +7,8 @@ import { StaffOnly } from './staff.decorator'
 import { CSRF_COOKIE, SESSION_COOKIE, type StaffRequest } from './staff-auth.guard'
 import { SESSION_TTL_S, StaffAuthService } from './staff-auth.service'
 
-const loginSchema = z.object({ email: z.string().email().max(200), password: z.string().min(1).max(200) })
+/** login — телефон (или email старой учётки). */
+const loginSchema = z.object({ login: z.string().trim().min(5).max(200), password: z.string().min(1).max(200) })
 
 @Controller('admin')
 export class StaffAuthController {
@@ -18,8 +19,8 @@ export class StaffAuthController {
   @HttpCode(200)
   async login(@Body() body: unknown, @Req() req: StaffRequest, @Res({ passthrough: true }) reply: FastifyReply) {
     const p = loginSchema.safeParse(body)
-    if (!p.success) throw new BadRequestException({ code: 'BAD_REQUEST', message: 'Укажите email и пароль' })
-    const r = await this.auth.login(p.data.email, p.data.password, req.ip ?? null)
+    if (!p.success) throw new BadRequestException({ code: 'BAD_REQUEST', message: 'Укажите телефон и пароль' })
+    const r = await this.auth.login(p.data.login, p.data.password, req.ip ?? null)
     reply.header('Set-Cookie', [
       serializeCookie(SESSION_COOKIE, r.token, { path: '/api', maxAge: SESSION_TTL_S, httpOnly: true }),
       serializeCookie(CSRF_COOKIE, r.csrfToken, { path: '/', maxAge: SESSION_TTL_S, httpOnly: false }),

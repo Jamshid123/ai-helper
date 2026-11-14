@@ -24,10 +24,8 @@ import { login } from '../../api'
 import { meQueryKey } from '../../queries'
 
 const formSchema = z.object({
-  email: z.email({
-    error: (iss) =>
-      iss.input === '' ? 'Введите email.' : 'Неверный формат email.',
-  }),
+  // телефон (+998…); старые учётки без телефона входят по email — сервер различает сам
+  login: z.string().trim().min(1, 'Введите телефон.'),
   password: z.string().min(1, 'Введите пароль.'),
 })
 
@@ -39,7 +37,7 @@ interface UserAuthFormProps extends React.HTMLAttributes<HTMLFormElement> {
 
 function errorText(error: unknown): string {
   if (error instanceof ApiError) {
-    if (error.status === 401) return 'Неверный email или пароль.'
+    if (error.status === 401) return 'Неверный телефон или пароль.'
     if (error.status === 423)
       return 'Учётная запись временно заблокирована. Обратитесь к администратору.'
     if (error.status === 429)
@@ -58,11 +56,11 @@ export function UserAuthForm({
   const setUser = useAuthStore((s) => s.setUser)
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { login: '', password: '' },
   })
 
   const mutation = useMutation({
-    mutationFn: (v: FormValues) => login(v.email, v.password),
+    mutationFn: (v: FormValues) => login(v.login, v.password),
     meta: { silent: true },
     onSuccess: (user) => {
       form.resetField('password')
@@ -87,15 +85,16 @@ export function UserAuthForm({
         )}
         <FormField
           control={form.control}
-          name='email'
+          name='login'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>Телефон</FormLabel>
               <FormControl>
                 <Input
-                  type='email'
+                  type='tel'
+                  inputMode='tel'
                   autoComplete='username'
-                  placeholder='name@company.uz'
+                  placeholder='+998 90 123 45 67'
                   {...field}
                 />
               </FormControl>

@@ -5,6 +5,7 @@ const user = {
   id: 'u1',
   name: 'Тест',
   email: 't@example.com',
+  phone: null,
   roles: ['EXPERT'],
 }
 

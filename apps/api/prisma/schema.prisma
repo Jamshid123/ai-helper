@@ -305,9 +305,12 @@ enum StaffRole {
 /// Сотрудник админки: вход по email и паролю (argon2id); второй фактор отключён решением заказчика 14.11.2026.
 model Staff {
   id           String         @id @default(uuid()) @db.Uuid
-  /// В нижнем регистре.
-  email        String         @unique
-  name         String
+  /// Логин: телефон в формате +998XXXXXXXXX (решение заказчика 14.11.2026).
+  phone        String?        @unique
+  /// Устаревший логин первых учёток (до входа по телефону); у новых сотрудников пусто.
+  email        String?        @unique
+  firstName    String
+  lastName     String         @default("")
   passwordHash String
   roles        StaffRole[]
   failedLogins Int            @default(0)

@@ -65,6 +65,7 @@ describe('SearchProvider and CommandMenu', () => {
         id: 'u1',
         name: 'Эксперт',
         email: 'e@x.uz',
+        phone: null,
         roles: ['EXPERT'],
       })
   })

@@ -32,7 +32,7 @@ pnpm --filter @auksion/admin build
 | Guard раздела (→ 403) | `src/lib/require-section.ts`, используется в `src/routes/_authenticated/<раздел>/index.tsx` |
 | Проверка сессии (→ /sign-in) | `src/routes/_authenticated/route.tsx` |
 | HTTP-клиент: cookie-сессия, CSRF | `src/lib/api.ts` |
-| Вход: email + пароль | `src/features/auth/` |
+| Вход: телефон + пароль | `src/features/auth/` |
 | Защита от open redirect | `src/lib/safe-redirect.ts` |
 | Пятничная сессия по Ташкенту | `src/lib/session-time.ts` |
 
@@ -40,11 +40,12 @@ pnpm --filter @auksion/admin build
 
 | Раздел | Где | API |
 |---|---|---|
-| Вход по email и паролю | `src/features/auth/` | `POST /admin/auth/login` → `StaffUser` + cookie · `GET /admin/me` · `POST /admin/auth/logout` |
+| Вход по телефону и паролю | `src/features/auth/` | `POST /admin/auth/login {login, password}` → `StaffUser` + cookie · `GET /admin/me` · `POST /admin/auth/logout` |
 | Категории (ru/uz, вкл/выкл, порядок) | `src/features/manage/categories-page.tsx` | `GET/POST /admin/categories`, `PATCH /admin/categories/:id` |
 | Товары (карточка, акт, IMEI шифруется) | `products-page.tsx` | `GET/POST /admin/products`, `PATCH /admin/products/:id` |
 | Лоты (из товара, публикация, правка до открытия, отмена с возвратом) | `lots-page.tsx`, `lot-dialog.tsx` | `GET/POST /admin/lots`, `PATCH /admin/lots/:id`, `POST /admin/lots/:id/publish`, `POST /admin/lots/:id/cancel {reason}` |
 | Участники (поиск, ограничение/снятие, отмена допуска) | `participants-page.tsx` | `GET /admin/participants?q=`, `GET /admin/participants/:id`, `POST …/restrictions {days, reason}`, `POST …/restrictions/:rid/lift {reason}`, `POST …/admissions/:lotId/cancel {reason}` |
 | Журнал аудита | `audit-page.tsx` | `GET /admin/audit` |
+| Сотрудники (только ADMIN) | `staff-page.tsx` | `GET/POST /admin/staff`, `PATCH /admin/staff/:id`, `POST /admin/staff/:id/password` |
 
 Сессия — httpOnly-cookie; мутации отправляют `X-CSRF-Token` из cookie `csrf_token`. Ошибки — `{code, message}`; бизнес-отказы (400/409/422) показываются текстом сервера.

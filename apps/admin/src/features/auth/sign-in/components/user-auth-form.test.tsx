@@ -34,7 +34,7 @@ describe('UserAuthForm', () => {
   it('не отправляет пустую форму', async () => {
     const { getByRole, getByText } = await renderForm()
     await userEvent.click(getByRole('button', { name: 'Войти' }))
-    await expect.element(getByText('Введите email.')).toBeInTheDocument()
+    await expect.element(getByText('Введите телефон.')).toBeInTheDocument()
     expect(login).not.toHaveBeenCalled()
   })
 
@@ -42,26 +42,26 @@ describe('UserAuthForm', () => {
     login.mockResolvedValue({
       id: 'u1',
       name: 'Оператор',
-      email: 'op@company.uz',
+      phone: '+998901234567',
       roles: ['OPERATOR'],
     })
     const { getByLabelText, getByRole } = await renderForm('/lots')
-    await userEvent.fill(getByLabelText('Email'), 'op@company.uz')
+    await userEvent.fill(getByLabelText('Телефон'), '+998 90 123 45 67')
     await userEvent.fill(getByLabelText('Пароль'), 'correct horse')
     await userEvent.click(getByRole('button', { name: 'Войти' }))
     await vi.waitFor(() => expect(navigate).toHaveBeenCalled())
-    expect(login).toHaveBeenCalledWith('op@company.uz', 'correct horse')
+    expect(login).toHaveBeenCalledWith('+998 90 123 45 67', 'correct horse')
     expect(navigate).toHaveBeenCalledWith({ to: '/lots', replace: true })
   })
 
   it('на 401 показывает понятную ошибку и не уходит со страницы', async () => {
     login.mockRejectedValue(new ApiError(401, 'INVALID_CREDENTIALS', 'x'))
     const { getByLabelText, getByRole, getByText } = await renderForm()
-    await userEvent.fill(getByLabelText('Email'), 'op@company.uz')
+    await userEvent.fill(getByLabelText('Телефон'), '+998 90 123 45 67')
     await userEvent.fill(getByLabelText('Пароль'), 'wrong')
     await userEvent.click(getByRole('button', { name: 'Войти' }))
     await expect
-      .element(getByText('Неверный email или пароль.'))
+      .element(getByText('Неверный телефон или пароль.'))
       .toBeInTheDocument()
     expect(navigate).not.toHaveBeenCalled()
   })

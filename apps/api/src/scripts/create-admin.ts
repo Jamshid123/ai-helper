@@ -1,6 +1,6 @@
 /**
  * Создать сотрудника с ролью ADMIN:
- *   printf '%s' "$PASSWORD" | node dist/scripts/create-admin.js --email admin@example.com --name "Имя"
+ *   printf '%s' "$PASSWORD" | node dist/scripts/create-admin.js --phone +998901234567 --first Имя --last Фамилия
  * Пароль — только из stdin (не из аргументов: они видны в списке процессов и логах).
  * Код TOTP подключается при первом входе в админку.
  */
@@ -26,13 +26,17 @@ async function readStdin(): Promise<string> {
 }
 
 async function main() {
-  const email = arg('email')
-  const name = arg('name')
+  const phone = arg('phone')
+  const firstName = arg('first')
+  const lastIdx = process.argv.indexOf('--last')
+  const lastName = lastIdx > 0 ? (process.argv[lastIdx + 1] ?? '') : ''
   const password = await readStdin()
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error'] })
   try {
-    const staff = await app.get(StaffAuthService).createStaff({ email, name, password, roles: ['ADMIN'] })
-    process.stdout.write(`Создан администратор ${staff.email}.\n`)
+    const staff = await app
+      .get(StaffAuthService)
+      .createStaff({ phone, firstName, lastName, password, roles: ['ADMIN'] })
+    process.stdout.write(`Создан администратор ${staff.name} (${staff.phone}).\n`)
   } finally {
     await app.close()
   }
@@ -40,6 +44,8 @@ async function main() {
 
 main().catch((e: unknown) => {
   const msg = e instanceof Error ? e.message : String(e)
-  process.stderr.write(`${msg.includes('Unique constraint') ? 'Сотрудник с таким email уже есть' : msg}\n`)
+  process.stderr.write(
+    `${msg.includes('Unique constraint') || msg.includes('PHONE_TAKEN') ? 'Сотрудник с таким телефоном уже есть' : msg}\n`
+  )
   process.exit(1)
 })

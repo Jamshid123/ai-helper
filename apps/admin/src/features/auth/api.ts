@@ -3,7 +3,10 @@ import { api } from '@/lib/api'
 export type StaffUser = {
   id: string
   name: string
-  email: string
+  firstName?: string
+  lastName?: string
+  phone: string | null
+  email?: string | null
   roles: string[]
 }
 
@@ -22,16 +25,16 @@ function demoUser(): StaffUser {
   return {
     id: 'demo',
     name: 'Демо Сотрудник',
-    email: 'demo@auksion.local',
+    phone: '+998900000000',
     roles,
   }
 }
 
 let demoSignedIn = false
 
-/** Вход по email и паролю (без второго фактора — решение заказчика 14.11.2026). Сервер ставит httpOnly-cookie сессии. */
+/** Вход по телефону и паролю (решения заказчика 14.11.2026). Сервер ставит httpOnly-cookie сессии. */
 export async function login(
-  email: string,
+  login: string,
   password: string
 ): Promise<StaffUser> {
   if (DEMO) {
@@ -40,7 +43,7 @@ export async function login(
   }
   return api<StaffUser>('/admin/auth/login', {
     method: 'POST',
-    body: { email, password },
+    body: { login, password },
   })
 }
 

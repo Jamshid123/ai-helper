@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { SECTION_LIST } from '@/config/sections'
+import { SESSION_TZ, currentOrNextSession } from '@auksion/shared'
 import { useAuthStore } from '@/stores/auth-store'
 import { canAccess } from '@/lib/rbac'
-import { SESSION_TZ, currentOrNextSession } from '@auksion/shared'
 import {
   Card,
   CardContent,

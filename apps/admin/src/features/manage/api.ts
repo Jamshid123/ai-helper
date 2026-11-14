@@ -293,3 +293,50 @@ export const useAudit = () =>
     queryKey: ['audit'],
     queryFn: () => api<AuditEntry[]>('/admin/audit'),
   })
+
+/* Сотрудники */
+export type Staff = {
+  id: string
+  name: string
+  firstName: string
+  lastName: string
+  phone: string | null
+  email: string | null
+  roles: string[]
+  disabled: boolean
+}
+export const useStaff = () =>
+  useQuery({ queryKey: ['staff'], queryFn: () => api<Staff[]>('/admin/staff') })
+export type StaffInput = {
+  firstName: string
+  lastName: string
+  phone: string
+  roles: string[]
+}
+export const useCreateStaff = () =>
+  useAction(
+    (body: StaffInput & { password: string }) =>
+      api<Staff>('/admin/staff', { method: 'POST', body }),
+    [['staff']],
+    'Сотрудник добавлен'
+  )
+export const useUpdateStaff = () =>
+  useAction(
+    ({
+      id,
+      ...body
+    }: Partial<StaffInput> & { id: string; disabled?: boolean }) =>
+      api<Staff>(`/admin/staff/${id}`, { method: 'PATCH', body }),
+    [['staff']],
+    'Сохранено'
+  )
+export const useSetStaffPassword = () =>
+  useAction(
+    ({ id, password }: { id: string; password: string }) =>
+      api<void>(`/admin/staff/${id}/password`, {
+        method: 'POST',
+        body: { password },
+      }),
+    [['staff']],
+    'Пароль изменён — старые входы закрыты'
+  )

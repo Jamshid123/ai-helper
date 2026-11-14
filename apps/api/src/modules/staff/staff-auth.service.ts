@@ -1,8 +1,9 @@
 import { createHash, randomBytes } from 'node:crypto'
-import { HttpException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common'
+import { ConflictException, HttpException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common'
 import { hash, verify } from '@node-rs/argon2'
 import type { Staff, StaffRole } from '@prisma/client'
 import { Clock } from '../../common/clock'
+import { normalizeUzPhone } from '../../common/phone'
 import { PrismaService } from '../../prisma/prisma.service'
 import { AuditService } from './audit.service'
 
@@ -11,11 +12,30 @@ const MAX_FAILS = 5
 const LOCK_MS = 15 * 60_000
 const MIN_PASSWORD = 12
 
-export type StaffUser = { id: string; name: string; email: string; roles: StaffRole[] }
+export type StaffUser = {
+  id: string
+  name: string
+  firstName: string
+  lastName: string
+  phone: string | null
+  email: string | null
+  roles: StaffRole[]
+  disabled: boolean
+}
+export type StaffInput = { firstName: string; lastName: string; phone: string; password: string; roles: StaffRole[] }
 export type StaffPrincipal = { id: string; roles: StaffRole[]; sessionId: string; csrfToken: string }
 
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
-const toUser = (s: Staff): StaffUser => ({ id: s.id, name: s.name, email: s.email, roles: s.roles })
+const toUser = (s: Staff): StaffUser => ({
+  id: s.id,
+  name: `${s.firstName} ${s.lastName}`.trim(),
+  firstName: s.firstName,
+  lastName: s.lastName,
+  phone: s.phone,
+  email: s.email,
+  roles: s.roles,
+  disabled: s.disabledAt !== null,
+})
 
 @Injectable()
 export class StaffAuthService {
@@ -27,36 +47,157 @@ export class StaffAuthService {
     private readonly clock: Clock
   ) {}
 
-  /** Создание сотрудника (CLI create-admin, позже — раздел «Сотрудники»). */
-  async createStaff(input: { email: string; name: string; password: string; roles: StaffRole[] }): Promise<StaffUser> {
-    if (input.password.length < MIN_PASSWORD) throw new Error(`Пароль — не короче ${MIN_PASSWORD} символов`)
+  /** Создание сотрудника (раздел «Сотрудники», CLI create-admin). Логин — телефон. */
+  async createStaff(input: StaffInput, actorId: string | null = null, ip: string | null = null): Promise<StaffUser> {
+    const phone = this.phoneOrThrow(input.phone)
+    this.assertPassword(input.password)
     if (!input.roles.length) throw new Error('Нужна хотя бы одна роль')
-    const staff = await this.prisma.staff.create({
-      data: {
-        email: input.email.trim().toLowerCase(),
-        name: input.name.trim(),
-        passwordHash: await hash(input.password),
-        roles: input.roles,
-      },
-    })
-    await this.audit.log({ actorType: 'system', action: 'staff.created', entityType: 'staff', entityId: staff.id })
-    return toUser(staff)
+    try {
+      const staff = await this.prisma.staff.create({
+        data: {
+          phone,
+          firstName: input.firstName.trim(),
+          lastName: input.lastName.trim(),
+          passwordHash: await hash(input.password),
+          roles: input.roles,
+        },
+      })
+      await this.audit.log({
+        actorType: actorId ? 'staff' : 'system',
+        actorId,
+        action: 'staff.created',
+        entityType: 'staff',
+        entityId: staff.id,
+        meta: { roles: input.roles },
+        ip,
+      })
+      return toUser(staff)
+    } catch (e) {
+      if ((e as { code?: string }).code === 'P2002') {
+        throw new ConflictException({ code: 'PHONE_TAKEN', message: 'Сотрудник с таким телефоном уже есть' })
+      }
+      throw e
+    }
+  }
+
+  async list(): Promise<StaffUser[]> {
+    return (await this.prisma.staff.findMany({ orderBy: [{ disabledAt: 'asc' }, { createdAt: 'asc' }] })).map(toUser)
   }
 
   /**
-   * Вход по email и паролю (решение заказчика 14.11.2026: без второго фактора) → сессия.
-   * Ответ одинаковый для неизвестного email и неверного пароля.
+   * Изменить сотрудника. Себе нельзя снять роль ADMIN и отключить себя — иначе можно остаться без доступа.
+   * Отключение и смена ролей закрывают его сессии.
    */
-  async login(email: string, password: string, ip: string | null) {
+  async update(
+    id: string,
+    patch: Partial<Pick<StaffInput, 'firstName' | 'lastName' | 'phone' | 'roles'>> & { disabled?: boolean },
+    actorId: string,
+    ip: string | null
+  ): Promise<StaffUser> {
+    const before = await this.prisma.staff.findUnique({ where: { id } })
+    if (!before) throw new HttpException({ code: 'NOT_FOUND', message: 'Сотрудник не найден' }, HttpStatus.NOT_FOUND)
+    if (id === actorId && (patch.disabled === true || (patch.roles && !patch.roles.includes('ADMIN')))) {
+      throw new ConflictException({
+        code: 'SELF_LOCKOUT',
+        message: 'Нельзя отключить себя или снять с себя роль администратора',
+      })
+    }
+    if (patch.roles && !patch.roles.length) {
+      throw new HttpException({ code: 'BAD_REQUEST', message: 'Нужна хотя бы одна роль' }, HttpStatus.BAD_REQUEST)
+    }
+    const phone = patch.phone !== undefined ? this.phoneOrThrow(patch.phone) : undefined
+    const revoke = patch.disabled === true || (patch.roles !== undefined && patch.roles.join() !== before.roles.join())
+    try {
+      const staff = await this.prisma.$transaction(async (tx) => {
+        const s = await tx.staff.update({
+          where: { id },
+          data: {
+            ...(patch.firstName !== undefined && { firstName: patch.firstName.trim() }),
+            ...(patch.lastName !== undefined && { lastName: patch.lastName.trim() }),
+            ...(phone && { phone }),
+            ...(patch.roles && { roles: patch.roles }),
+            ...(patch.disabled !== undefined && { disabledAt: patch.disabled ? this.clock.now() : null }),
+          },
+        })
+        if (revoke)
+          await tx.staffSession.updateMany({
+            where: { staffId: id, revokedAt: null },
+            data: { revokedAt: this.clock.now() },
+          })
+        await this.audit.log(
+          {
+            actorType: 'staff',
+            actorId,
+            action: 'staff.updated',
+            entityType: 'staff',
+            entityId: id,
+            meta: { fields: Object.keys(patch) },
+            ip,
+          },
+          tx
+        )
+        return s
+      })
+      return toUser(staff)
+    } catch (e) {
+      if ((e as { code?: string }).code === 'P2002') {
+        throw new ConflictException({ code: 'PHONE_TAKEN', message: 'Сотрудник с таким телефоном уже есть' })
+      }
+      throw e
+    }
+  }
+
+  /** Новый пароль сотруднику: старые сессии закрываются, блокировка снимается. */
+  async setPassword(id: string, password: string, actorId: string, ip: string | null): Promise<void> {
+    this.assertPassword(password)
+    const passwordHash = await hash(password)
+    await this.prisma.$transaction(async (tx) => {
+      await tx.staff.update({ where: { id }, data: { passwordHash, failedLogins: 0, lockedUntil: null } })
+      await tx.staffSession.updateMany({
+        where: { staffId: id, revokedAt: null },
+        data: { revokedAt: this.clock.now() },
+      })
+      await this.audit.log(
+        { actorType: 'staff', actorId, action: 'staff.password_set', entityType: 'staff', entityId: id, ip },
+        tx
+      )
+    })
+  }
+
+  /** Перевод учётки со старого email-логина на телефон (CLI staff-set-phone). */
+  async setPhoneByEmail(email: string, phone: string): Promise<StaffUser> {
     const staff = await this.prisma.staff.findUnique({ where: { email: email.trim().toLowerCase() } })
+    if (!staff) throw new Error('Сотрудник с таким email не найден')
+    const updated = await this.prisma.staff.update({
+      where: { id: staff.id },
+      data: { phone: this.phoneOrThrow(phone) },
+    })
+    await this.audit.log({
+      actorType: 'system',
+      action: 'staff.updated',
+      entityType: 'staff',
+      entityId: staff.id,
+      meta: { fields: ['phone'] },
+    })
+    return toUser(updated)
+  }
+
+  /**
+   * Вход по телефону и паролю (решения заказчика 14.11.2026: телефон вместо email, без второго фактора) → сессия.
+   * Старые учётки, которым ещё не задан телефон, входят по email. Ответ одинаковый для неизвестного логина и неверного пароля.
+   */
+  async login(login: string, password: string, ip: string | null) {
+    const phone = normalizeUzPhone(login)
+    const where = login.includes('@') ? { email: login.trim().toLowerCase() } : phone ? { phone } : null
+    const staff = where ? await this.prisma.staff.findUnique({ where }) : null
     if (!staff || staff.disabledAt) {
       await verify(await this.dummy(), password).catch(() => false)
-      throw this.invalid('INVALID_CREDENTIALS', 'Неверный email или пароль')
+      throw this.invalid('INVALID_CREDENTIALS', 'Неверный телефон или пароль')
     }
     this.assertNotLocked(staff)
     if (!(await verify(staff.passwordHash, password))) {
       await this.fail(staff)
-      throw this.invalid('INVALID_CREDENTIALS', 'Неверный email или пароль')
+      throw this.invalid('INVALID_CREDENTIALS', 'Неверный телефон или пароль')
     }
 
     const token = randomBytes(32).toString('base64url')
@@ -130,6 +271,25 @@ export class StaffAuthService {
     })
     if (lock) {
       await this.audit.log({ actorType: 'system', action: 'staff.locked', entityType: 'staff', entityId: staff.id })
+    }
+  }
+
+  private phoneOrThrow(input: string): string {
+    const phone = normalizeUzPhone(input)
+    if (!phone)
+      throw new HttpException(
+        { code: 'BAD_PHONE', message: 'Телефон в формате +998 XX XXX XX XX' },
+        HttpStatus.BAD_REQUEST
+      )
+    return phone
+  }
+
+  private assertPassword(password: string) {
+    if (password.length < MIN_PASSWORD) {
+      throw new HttpException(
+        { code: 'WEAK_PASSWORD', message: `Пароль — не короче ${MIN_PASSWORD} символов` },
+        HttpStatus.BAD_REQUEST
+      )
     }
   }
 
