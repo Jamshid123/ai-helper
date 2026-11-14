@@ -105,7 +105,7 @@ function LotCard({ lot }: { lot: Lot }) {
         <div className='flex min-w-0 flex-col gap-1 py-1'>
           <span className='line-clamp-2 text-[15px] leading-snug font-medium'>{lot.title}</span>
           <span className='text-[12.5px] text-muted'>
-            {t(lot.condition === 'new' ? 'lot.condition.new' : 'lot.condition.used')} · {t('lot.admitted')}{' '}
+            {t(lot.condition === 'new' ? 'lot.condition.new' : 'lot.condition.used')} · {t('lot.admitted')}:{' '}
             {lot.admittedCount}
           </span>
           <div className='mt-auto flex items-baseline justify-between gap-2'>
