@@ -4,6 +4,10 @@ import { ApiError } from './api'
 /** Человекочитаемое сообщение об ошибке запроса. Детали ошибки сервер не раскрывает. */
 export function serverErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
+    // бизнес-отказы сервера (400/409/422) приходят с понятным текстом — показываем его
+    const known = error.code !== 'UNKNOWN' && Boolean(error.message)
+    if ([400, 409, 422, 423].includes(error.status) && known)
+      return error.message
     if (error.status === 403) return 'Недостаточно прав для этого действия.'
     if (error.status === 404) return 'Объект не найден.'
     if (error.status === 409)

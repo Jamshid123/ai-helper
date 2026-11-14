@@ -19,6 +19,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
 import { login } from '../../api'
+import { rememberEnrollment } from '../../enrollment'
 
 const formSchema = z.object({
   email: z.email({
@@ -59,8 +60,9 @@ export function UserAuthForm({
   const mutation = useMutation({
     mutationFn: (v: FormValues) => login(v.email, v.password),
     meta: { silent: true },
-    onSuccess: ({ challengeId }) => {
+    onSuccess: ({ challengeId, enroll }) => {
       form.resetField('password')
+      rememberEnrollment(challengeId, enroll)
       navigate({
         to: '/otp',
         search: { challenge: challengeId, redirect: redirectTo },

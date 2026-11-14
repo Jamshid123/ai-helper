@@ -36,7 +36,7 @@
 | `apps/api/src/scripts/` | `demo-lots.ts` (тестовые лоты демо-стенда), `seed-demo.ts` (CLI) |
 | `apps/miniapp/src/shared/api/` | `client.ts` (вход по initData, сессия, ApiError), `error-text.ts` (код ошибки → текст ru/uz) |
 | `apps/miniapp/src/entities/lot/api.ts` | Хуки данных: API в Telegram / демо в браузере (`useLots`, `useLot`, `useAdmissions`, `useAdmit`, `useRoom`, `useAutoBid`) |
-| `apps/admin` | Админка (shadcn-admin). Карта файлов — в `apps/admin/README.md` |
+| `apps/admin` | Админка (shadcn-admin): вход + разделы «Категории», «Товары», «Лоты», «Участники», «Журнал» (`src/features/manage/`). Карта — `apps/admin/README.md` |
 | `apps/miniapp` | Telegram Mini App покупателя (демо-стенд на тестовых данных; регистрация `routes/register.tsx`, заявка продавца `routes/seller.tsx`, демо-аккаунт `entities/account/`). Карта — `apps/miniapp/README.md` |
 | `apps/api` | NestJS 11 + Fastify + Prisma 6: `src/config/env.ts` (zod, без фолбэков секретов), `src/bootstrap.ts` (префикс `/api/v1`, CORS, заголовки), `src/modules/health`, `prisma/schema.prisma` + `prisma/migrations/`; тесты `test/` на настоящих PostgreSQL/Redis (`test/factories.ts`) |
 | `infra/Dockerfile.api` | Образ API (node:22-bookworm-slim, non-root, healthcheck) |

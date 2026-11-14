@@ -18,7 +18,7 @@ describe('canAccess', () => {
   })
 
   it('поддержка видит ограничения участия, но не сигналы риска', () => {
-    expect(canAccess(['SUPPORT'], 'restrictions')).toBe(true)
+    expect(canAccess(['SUPPORT'], 'participants')).toBe(true)
     expect(canAccess(['SUPPORT'], 'risk')).toBe(false)
   })
 

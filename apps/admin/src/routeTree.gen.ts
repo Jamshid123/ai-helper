@@ -19,11 +19,13 @@ import { Route as errors500RouteImport } from './routes/(errors)/500'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedAuditIndexRouteImport } from './routes/_authenticated/audit/index'
+import { Route as AuthenticatedCategoriesIndexRouteImport } from './routes/_authenticated/categories/index'
 import { Route as AuthenticatedFinanceIndexRouteImport } from './routes/_authenticated/finance/index'
 import { Route as AuthenticatedFulfillmentIndexRouteImport } from './routes/_authenticated/fulfillment/index'
 import { Route as AuthenticatedInspectionIndexRouteImport } from './routes/_authenticated/inspection/index'
 import { Route as AuthenticatedLotsIndexRouteImport } from './routes/_authenticated/lots/index'
-import { Route as AuthenticatedRestrictionsIndexRouteImport } from './routes/_authenticated/restrictions/index'
+import { Route as AuthenticatedParticipantsIndexRouteImport } from './routes/_authenticated/participants/index'
+import { Route as AuthenticatedProductsIndexRouteImport } from './routes/_authenticated/products/index'
 import { Route as AuthenticatedRiskIndexRouteImport } from './routes/_authenticated/risk/index'
 import { Route as AuthenticatedScheduleIndexRouteImport } from './routes/_authenticated/schedule/index'
 import { Route as AuthenticatedSellersIndexRouteImport } from './routes/_authenticated/sellers/index'
@@ -78,6 +80,12 @@ const AuthenticatedAuditIndexRoute = AuthenticatedAuditIndexRouteImport.update({
   path: '/audit/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCategoriesIndexRoute =
+  AuthenticatedCategoriesIndexRouteImport.update({
+    id: '/categories/',
+    path: '/categories/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedFinanceIndexRoute =
   AuthenticatedFinanceIndexRouteImport.update({
     id: '/finance/',
@@ -101,10 +109,16 @@ const AuthenticatedLotsIndexRoute = AuthenticatedLotsIndexRouteImport.update({
   path: '/lots/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedRestrictionsIndexRoute =
-  AuthenticatedRestrictionsIndexRouteImport.update({
-    id: '/restrictions/',
-    path: '/restrictions/',
+const AuthenticatedParticipantsIndexRoute =
+  AuthenticatedParticipantsIndexRouteImport.update({
+    id: '/participants/',
+    path: '/participants/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedProductsIndexRoute =
+  AuthenticatedProductsIndexRouteImport.update({
+    id: '/products/',
+    path: '/products/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedRiskIndexRoute = AuthenticatedRiskIndexRouteImport.update({
@@ -140,11 +154,13 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/audit/': typeof AuthenticatedAuditIndexRoute
+  '/categories/': typeof AuthenticatedCategoriesIndexRoute
   '/finance/': typeof AuthenticatedFinanceIndexRoute
   '/fulfillment/': typeof AuthenticatedFulfillmentIndexRoute
   '/inspection/': typeof AuthenticatedInspectionIndexRoute
   '/lots/': typeof AuthenticatedLotsIndexRoute
-  '/restrictions/': typeof AuthenticatedRestrictionsIndexRoute
+  '/participants/': typeof AuthenticatedParticipantsIndexRoute
+  '/products/': typeof AuthenticatedProductsIndexRoute
   '/risk/': typeof AuthenticatedRiskIndexRoute
   '/schedule/': typeof AuthenticatedScheduleIndexRoute
   '/sellers/': typeof AuthenticatedSellersIndexRoute
@@ -160,11 +176,13 @@ export interface FileRoutesByTo {
   '/503': typeof errors503Route
   '/': typeof AuthenticatedIndexRoute
   '/audit': typeof AuthenticatedAuditIndexRoute
+  '/categories': typeof AuthenticatedCategoriesIndexRoute
   '/finance': typeof AuthenticatedFinanceIndexRoute
   '/fulfillment': typeof AuthenticatedFulfillmentIndexRoute
   '/inspection': typeof AuthenticatedInspectionIndexRoute
   '/lots': typeof AuthenticatedLotsIndexRoute
-  '/restrictions': typeof AuthenticatedRestrictionsIndexRoute
+  '/participants': typeof AuthenticatedParticipantsIndexRoute
+  '/products': typeof AuthenticatedProductsIndexRoute
   '/risk': typeof AuthenticatedRiskIndexRoute
   '/schedule': typeof AuthenticatedScheduleIndexRoute
   '/sellers': typeof AuthenticatedSellersIndexRoute
@@ -182,11 +200,13 @@ export interface FileRoutesById {
   '/(errors)/503': typeof errors503Route
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/audit/': typeof AuthenticatedAuditIndexRoute
+  '/_authenticated/categories/': typeof AuthenticatedCategoriesIndexRoute
   '/_authenticated/finance/': typeof AuthenticatedFinanceIndexRoute
   '/_authenticated/fulfillment/': typeof AuthenticatedFulfillmentIndexRoute
   '/_authenticated/inspection/': typeof AuthenticatedInspectionIndexRoute
   '/_authenticated/lots/': typeof AuthenticatedLotsIndexRoute
-  '/_authenticated/restrictions/': typeof AuthenticatedRestrictionsIndexRoute
+  '/_authenticated/participants/': typeof AuthenticatedParticipantsIndexRoute
+  '/_authenticated/products/': typeof AuthenticatedProductsIndexRoute
   '/_authenticated/risk/': typeof AuthenticatedRiskIndexRoute
   '/_authenticated/schedule/': typeof AuthenticatedScheduleIndexRoute
   '/_authenticated/sellers/': typeof AuthenticatedSellersIndexRoute
@@ -204,11 +224,13 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/audit/'
+    | '/categories/'
     | '/finance/'
     | '/fulfillment/'
     | '/inspection/'
     | '/lots/'
-    | '/restrictions/'
+    | '/participants/'
+    | '/products/'
     | '/risk/'
     | '/schedule/'
     | '/sellers/'
@@ -224,11 +246,13 @@ export interface FileRouteTypes {
     | '/503'
     | '/'
     | '/audit'
+    | '/categories'
     | '/finance'
     | '/fulfillment'
     | '/inspection'
     | '/lots'
-    | '/restrictions'
+    | '/participants'
+    | '/products'
     | '/risk'
     | '/schedule'
     | '/sellers'
@@ -245,11 +269,13 @@ export interface FileRouteTypes {
     | '/(errors)/503'
     | '/_authenticated/'
     | '/_authenticated/audit/'
+    | '/_authenticated/categories/'
     | '/_authenticated/finance/'
     | '/_authenticated/fulfillment/'
     | '/_authenticated/inspection/'
     | '/_authenticated/lots/'
-    | '/_authenticated/restrictions/'
+    | '/_authenticated/participants/'
+    | '/_authenticated/products/'
     | '/_authenticated/risk/'
     | '/_authenticated/schedule/'
     | '/_authenticated/sellers/'
@@ -339,6 +365,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAuditIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/categories/': {
+      id: '/_authenticated/categories/'
+      path: '/categories'
+      fullPath: '/categories/'
+      preLoaderRoute: typeof AuthenticatedCategoriesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/finance/': {
       id: '/_authenticated/finance/'
       path: '/finance'
@@ -367,11 +400,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLotsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/restrictions/': {
-      id: '/_authenticated/restrictions/'
-      path: '/restrictions'
-      fullPath: '/restrictions/'
-      preLoaderRoute: typeof AuthenticatedRestrictionsIndexRouteImport
+    '/_authenticated/participants/': {
+      id: '/_authenticated/participants/'
+      path: '/participants'
+      fullPath: '/participants/'
+      preLoaderRoute: typeof AuthenticatedParticipantsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/products/': {
+      id: '/_authenticated/products/'
+      path: '/products'
+      fullPath: '/products/'
+      preLoaderRoute: typeof AuthenticatedProductsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/risk/': {
@@ -408,11 +448,13 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAuditIndexRoute: typeof AuthenticatedAuditIndexRoute
+  AuthenticatedCategoriesIndexRoute: typeof AuthenticatedCategoriesIndexRoute
   AuthenticatedFinanceIndexRoute: typeof AuthenticatedFinanceIndexRoute
   AuthenticatedFulfillmentIndexRoute: typeof AuthenticatedFulfillmentIndexRoute
   AuthenticatedInspectionIndexRoute: typeof AuthenticatedInspectionIndexRoute
   AuthenticatedLotsIndexRoute: typeof AuthenticatedLotsIndexRoute
-  AuthenticatedRestrictionsIndexRoute: typeof AuthenticatedRestrictionsIndexRoute
+  AuthenticatedParticipantsIndexRoute: typeof AuthenticatedParticipantsIndexRoute
+  AuthenticatedProductsIndexRoute: typeof AuthenticatedProductsIndexRoute
   AuthenticatedRiskIndexRoute: typeof AuthenticatedRiskIndexRoute
   AuthenticatedScheduleIndexRoute: typeof AuthenticatedScheduleIndexRoute
   AuthenticatedSellersIndexRoute: typeof AuthenticatedSellersIndexRoute
@@ -422,11 +464,13 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAuditIndexRoute: AuthenticatedAuditIndexRoute,
+  AuthenticatedCategoriesIndexRoute: AuthenticatedCategoriesIndexRoute,
   AuthenticatedFinanceIndexRoute: AuthenticatedFinanceIndexRoute,
   AuthenticatedFulfillmentIndexRoute: AuthenticatedFulfillmentIndexRoute,
   AuthenticatedInspectionIndexRoute: AuthenticatedInspectionIndexRoute,
   AuthenticatedLotsIndexRoute: AuthenticatedLotsIndexRoute,
-  AuthenticatedRestrictionsIndexRoute: AuthenticatedRestrictionsIndexRoute,
+  AuthenticatedParticipantsIndexRoute: AuthenticatedParticipantsIndexRoute,
+  AuthenticatedProductsIndexRoute: AuthenticatedProductsIndexRoute,
   AuthenticatedRiskIndexRoute: AuthenticatedRiskIndexRoute,
   AuthenticatedScheduleIndexRoute: AuthenticatedScheduleIndexRoute,
   AuthenticatedSellersIndexRoute: AuthenticatedSellersIndexRoute,

@@ -25,6 +25,7 @@ import {
   InputOTPSlot,
 } from '@/components/ui/input-otp'
 import { verifyMfa } from '../../api'
+import { forgetEnrollment } from '../../enrollment'
 import { meQueryKey } from '../../queries'
 
 const formSchema = z.object({
@@ -69,6 +70,7 @@ export function OtpForm({
     mutationFn: (code: string) => verifyMfa(challengeId, code),
     meta: { silent: true },
     onSuccess: (user) => {
+      forgetEnrollment()
       setUser(user)
       queryClient.setQueryData(meQueryKey, user)
       navigate({ to: safeRedirect(redirectTo), replace: true })

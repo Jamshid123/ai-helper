@@ -1,4 +1,5 @@
 import { api } from '@/lib/api'
+import { type Enrollment } from './enrollment'
 
 export type StaffUser = {
   id: string
@@ -7,7 +8,8 @@ export type StaffUser = {
   roles: string[]
 }
 
-export type LoginResult = { challengeId: string }
+/** enroll — ключ для приложения-аутентификатора, только пока код не подключён (первый вход). */
+export type LoginResult = { challengeId: string; enroll: Enrollment | null }
 
 /**
  * Демо-режим без backend: работает ТОЛЬКО в `vite dev` и только при
@@ -36,7 +38,7 @@ export async function login(
   email: string,
   password: string
 ): Promise<LoginResult> {
-  if (DEMO) return { challengeId: 'demo' }
+  if (DEMO) return { challengeId: 'demo', enroll: null }
   return api<LoginResult>('/admin/auth/login', {
     method: 'POST',
     body: { email, password },
