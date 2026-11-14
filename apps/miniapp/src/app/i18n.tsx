@@ -16,6 +16,7 @@ export const dict = {
     'remind.off': 'Отменить',
     'remind.demo': 'В демо сообщение не придёт — бот подключим вместе с уведомлениями',
     'auto.title': 'Автопредложение',
+    'photos.close': 'Закрыть',
     'auto.setup': 'Настроить',
     'auto.hide': 'Скрыть',
     'auto.text':
@@ -199,6 +200,7 @@ export const dict = {
     'remind.off': 'Bekor qilish',
     'remind.demo': 'Demoda xabar kelmaydi — botni bildirishnomalar bilan ulaymiz',
     'auto.title': 'Avtotaklif',
+    'photos.close': 'Yopish',
     'auto.setup': 'Sozlash',
     'auto.hide': 'Yashirish',
     'auto.text':

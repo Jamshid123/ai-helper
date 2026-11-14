@@ -1,4 +1,5 @@
 import type { Category, Lot } from '@prisma/client'
+import { photoUrl } from '../media/media.service'
 import { effectiveEnd } from '@auksion/shared'
 
 /**
@@ -30,6 +31,8 @@ export type LotDto = {
   minParticipants: number | null
   status: 'scheduled' | 'live' | 'closed'
   inspection: { summary: string; battery: number | null; imeiChecked: boolean; kit: string[]; defects: string[] }
+  /** Фото товара (адреса), видны всем, в т.ч. до допуска (решение 14.11.2026). */
+  photos: string[]
   hue: number
 }
 
@@ -69,7 +72,16 @@ function inspectionOf(raw: unknown): LotDto['inspection'] {
   }
 }
 
-export type LotWithCategory = Lot & { category: Pick<Category, 'slug'> }
+export type LotWithCategory = Lot & {
+  category: Pick<Category, 'slug'>
+  product?: { photos: { file: string }[] } | null
+}
+
+/** Что подтянуть для карточки лота: код категории и фото товара по порядку. */
+export const LOT_DTO_INCLUDE = {
+  category: { select: { slug: true } },
+  product: { select: { photos: { orderBy: { position: 'asc' }, select: { file: true } } } },
+} as const
 
 export function toLotDto(lot: LotWithCategory): LotDto {
   return {
@@ -92,6 +104,7 @@ export function toLotDto(lot: LotWithCategory): LotDto {
     minParticipants: lot.minParticipants,
     status: STATUS[lot.status] ?? 'closed',
     inspection: inspectionOf(lot.inspection),
+    photos: (lot.product?.photos ?? []).map((ph) => photoUrl(ph.file)),
     hue: hueOf(lot.id),
   }
 }

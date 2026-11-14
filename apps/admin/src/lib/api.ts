@@ -61,3 +61,37 @@ export async function api<T>(
   }
   return data as T
 }
+
+/** Загрузка файла (тело — сам файл, без multipart): тот же CSRF и cookie-сессия. */
+export async function apiUpload<T>(path: string, file: Blob): Promise<T> {
+  const headers = new Headers({
+    Accept: 'application/json',
+    'Content-Type': file.type,
+  })
+  const csrf = readCookie('csrf_token')
+  if (csrf) headers.set('X-CSRF-Token', csrf)
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers,
+    credentials: 'include',
+    body: file,
+  })
+  const data: unknown = await res.json().catch(() => null)
+  if (!res.ok) {
+    const err = (data ?? {}) as { code?: unknown; message?: unknown }
+    throw new ApiError(
+      res.status,
+      typeof err.code === 'string'
+        ? err.code
+        : res.status === 413
+          ? 'TOO_LARGE'
+          : 'UNKNOWN',
+      typeof err.message === 'string'
+        ? err.message
+        : res.status === 413
+          ? 'Файл слишком большой'
+          : 'Ошибка загрузки'
+    )
+  }
+  return data as T
+}

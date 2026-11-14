@@ -30,6 +30,8 @@ export const envSchema = z.object({
   /** Секрет подписи сессий покупателей (HS256), не короче 32 символов. */
   JWT_SECRET: z.string().min(32),
   /** Ключ шифрования секретов в БД (TOTP сотрудников, позже IMEI): 32 байта hex. Генерируется на сервере при выкладке. */
+  /** Папка для фото товаров (в контейнере — том Docker). */
+  MEDIA_DIR: z.string().min(1).default('/data/media'),
   DATA_ENCRYPTION_KEY: z.string().regex(/^[0-9a-f]{64}$/, 'DATA_ENCRYPTION_KEY — 64 hex-символа'),
   /** Догоняющий sweep расписания (открытие/закрытие лотов). В тестах выключается. */
   SCHEDULER_ENABLED: z

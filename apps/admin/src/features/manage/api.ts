@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { api } from '@/lib/api'
+import { api, apiUpload } from '@/lib/api'
 
 /* Типы — как отдаёт API (`apps/api/src/modules/admin`). Деньги — строки целых сумов. */
 export type Category = {
@@ -33,6 +33,8 @@ export type Product = {
   inventoryNo: string | null
   costPrice: string | null
   status: ProductStatus
+  /** Фото по порядку (первое — главное), видны покупателям и до допуска. */
+  photos: { id: string; url: string }[]
   createdAt: string
 }
 export type LotStatus =
@@ -176,6 +178,33 @@ export const useSaveProduct = () =>
         : api<Product>('/admin/products', { method: 'POST', body }),
     [['products'], ['categories']],
     'Товар сохранён'
+  )
+
+/* Фото товара */
+export const MAX_PHOTOS = 10
+export const useAddPhoto = () =>
+  useAction(
+    ({ productId, file }: { productId: string; file: Blob }) =>
+      apiUpload<Product>(`/admin/products/${productId}/photos`, file),
+    [['products']]
+  )
+export const useRemovePhoto = () =>
+  useAction(
+    ({ productId, photoId }: { productId: string; photoId: string }) =>
+      api<Product>(`/admin/products/${productId}/photos/${photoId}`, {
+        method: 'DELETE',
+      }),
+    [['products']],
+    'Фото удалено'
+  )
+export const useOrderPhotos = () =>
+  useAction(
+    ({ productId, ids }: { productId: string; ids: string[] }) =>
+      api<Product>(`/admin/products/${productId}/photos/order`, {
+        method: 'PUT',
+        body: { ids },
+      }),
+    [['products']]
   )
 
 /* Лоты */

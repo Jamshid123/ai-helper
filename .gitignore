@@ -20,3 +20,4 @@ dist-cjs/
 
 # Локальные дампы Redis
 dump.rdb
+.media/

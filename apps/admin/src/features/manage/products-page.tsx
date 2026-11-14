@@ -32,6 +32,7 @@ import { PageShell } from '@/components/layout/page-shell'
 import { type Product, useCategories, useProducts, useSaveProduct } from './api'
 import { conditionText, digits, sum } from './format'
 import { LotDialog } from './lot-dialog'
+import { ProductPhotos } from './product-photos'
 import { EmptyRow, Field, ProductStatusBadge } from './ui'
 import { useCanEdit } from './use-can-edit'
 
@@ -64,11 +65,12 @@ function toDraft(p: Product): Draft {
     title: p.title,
     condition: p.condition,
     description: p.description,
-    summary: p.inspection.summary,
-    battery: p.inspection.battery === null ? '' : String(p.inspection.battery),
-    imeiChecked: p.inspection.imeiChecked,
-    kit: p.inspection.kit.join('\n'),
-    defects: p.inspection.defects.join('\n'),
+    // акт может быть неполным (в БД по умолчанию '{}') — недостающие поля пустые
+    summary: p.inspection.summary ?? '',
+    battery: p.inspection.battery == null ? '' : String(p.inspection.battery),
+    imeiChecked: p.inspection.imeiChecked ?? false,
+    kit: (p.inspection.kit ?? []).join('\n'),
+    defects: (p.inspection.defects ?? []).join('\n'),
     imei: '',
     inventoryNo: p.inventoryNo ?? '',
     costPrice: p.costPrice ?? '',
@@ -85,6 +87,8 @@ export function ProductsPage() {
   const canMakeLot = useCanEdit('lots')
   const [draft, setDraft] = useState<Draft | null>(null)
   const [lotFor, setLotFor] = useState<Product | null>(null)
+  // фото берём из свежего списка: после загрузки он обновляется сам
+  const current = draft?.id ? data.find((p) => p.id === draft.id) : undefined
 
   const blank = (): Draft => ({
     categoryId:
@@ -216,6 +220,13 @@ export function ProductsPage() {
           </DialogHeader>
           {draft && (
             <div className='grid gap-3'>
+              {current ? (
+                <ProductPhotos product={current} editable={editable} />
+              ) : (
+                <p className='text-sm text-muted-foreground'>
+                  Фото можно добавить после сохранения товара.
+                </p>
+              )}
               <Field label='Название'>
                 <Input
                   placeholder='iPhone 14 Pro, 256 ГБ'

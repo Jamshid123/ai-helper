@@ -14,7 +14,7 @@ import { LeaveCard } from '@/features/leave'
 import { RemindCard } from '@/features/remind'
 import { Button } from '@/shared/ui/button'
 import { LiveBadge } from '@/shared/ui/live-badge'
-import { LotPhoto } from '@/shared/ui/lot-photo'
+import { PhotoCarousel } from '@/shared/ui/photo-carousel'
 import { Price } from '@/shared/ui/price'
 
 function Row({ label, children, stacked }: { label: string; children: React.ReactNode; stacked?: boolean }) {
@@ -169,9 +169,9 @@ function LotPage() {
 
   return (
     <div className={cn('flex flex-col gap-4 px-4 pt-4', !native && (!admitted || live) && 'pb-24')}>
-      <LotPhoto hue={lot.hue} className='aspect-[4/3]'>
+      <PhotoCarousel photos={lot.photos ?? []} hue={lot.hue} title={lot.title} className='aspect-[4/3]'>
         {live && <LiveBadge />}
-      </LotPhoto>
+      </PhotoCarousel>
 
       <div className='grid gap-1.5'>
         <h1 className='text-xl leading-tight font-semibold text-balance'>{lot.title}</h1>

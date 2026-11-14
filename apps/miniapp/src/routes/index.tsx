@@ -59,7 +59,7 @@ function LotCard({ lot }: { lot: Lot }) {
         params={{ lotId: lot.id }}
         className='grid grid-cols-[104px_1fr] gap-3 rounded-2xl p-1 transition-colors active:bg-surface'
       >
-        <LotPhoto hue={lot.hue} className='aspect-square'>
+        <LotPhoto hue={lot.hue} src={lot.photos?.[0]} className='aspect-square'>
           {live && <LiveBadge />}
         </LotPhoto>
         <div className='flex min-w-0 flex-col gap-1 py-1'>

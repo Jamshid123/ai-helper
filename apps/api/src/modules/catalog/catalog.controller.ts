@@ -3,7 +3,7 @@ import { currentOrNextSession } from '@auksion/shared'
 import { Clock } from '../../common/clock'
 import { Public } from '../../common/public.decorator'
 import { PrismaService } from '../../prisma/prisma.service'
-import { PUBLIC_LOT_WHERE, toLotDto } from './lot.dto'
+import { LOT_DTO_INCLUDE, PUBLIC_LOT_WHERE, toLotDto } from './lot.dto'
 
 @Public()
 @Controller()
@@ -18,7 +18,7 @@ export class CatalogController {
   async list() {
     const lots = await this.prisma.lot.findMany({
       where: { status: { in: ['LIVE', 'SCHEDULED'] }, category: { enabled: true } },
-      include: { category: { select: { slug: true } } },
+      include: LOT_DTO_INCLUDE,
       // идущие — первыми (в enum LIVE объявлен после SCHEDULED), затем по времени начала
       orderBy: [{ status: 'desc' }, { opensAt: 'asc' }],
       take: 200,
@@ -30,7 +30,7 @@ export class CatalogController {
   async one(@Param('id', new ParseUUIDPipe()) id: string) {
     const lot = await this.prisma.lot.findFirst({
       where: { id, ...PUBLIC_LOT_WHERE },
-      include: { category: { select: { slug: true } } },
+      include: LOT_DTO_INCLUDE,
     })
     if (!lot) throw new NotFoundException({ code: 'LOT_NOT_FOUND', message: 'Лот не найден' })
     return toLotDto(lot)

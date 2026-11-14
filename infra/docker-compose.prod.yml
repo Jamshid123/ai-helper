@@ -58,6 +58,9 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
+    # фото товаров (решение 14.11.2026: диск сервера); при восстановлении сервера — переносить вместе с pgdata
+    volumes:
+      - media:/data/media
     ports: ['127.0.0.1:3400:3000']
     # default — для публикации порта на 127.0.0.1 (во внутренних сетях Docker порты не публикует)
     networks: [db, internal, default]
@@ -95,3 +98,4 @@ networks:
 
 volumes:
   pgdata:
+  media:

@@ -1,15 +1,24 @@
 import { cn } from '@/shared/lib/cn'
 
-/** Заглушка фото: в демо снимков нет. Силуэт телефона на мягком фоне оттенка лота. */
+/** Главное фото товара или заглушка (силуэт телефона на мягком фоне оттенка лота), если фото нет. */
 export function LotPhoto({
   hue,
+  src,
   className,
   children,
 }: {
   hue: number
+  src?: string
   className?: string
   children?: React.ReactNode
 }) {
+  if (src)
+    return (
+      <div className={cn('relative overflow-hidden rounded-2xl bg-surface', className)}>
+        <img src={src} alt='' loading='lazy' className='absolute inset-0 h-full w-full object-cover' />
+        {children}
+      </div>
+    )
   return (
     <div className={cn('relative grid place-items-center overflow-hidden rounded-2xl', className)}>
       <div
