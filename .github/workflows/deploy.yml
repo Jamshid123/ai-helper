@@ -67,6 +67,8 @@ jobs:
             printf 'TAG=%s\nDEMO_STAND=true\nPAYMENTS_MODE=fake\n' $TAG > .deploy.env
             # Секрет сессий генерируется на сервере один раз и никуда не передаётся.
             grep -q '^JWT_SECRET=' .env || { umask 077; echo \"JWT_SECRET=\$(openssl rand -hex 32)\" >> .env; }
+            # Ключ шифрования секретов в БД (TOTP сотрудников). Потеря ключа = заново подключить коды сотрудникам.
+            grep -q '^DATA_ENCRYPTION_KEY=' .env || { umask 077; echo \"DATA_ENCRYPTION_KEY=\$(openssl rand -hex 32)\" >> .env; }
             C='docker compose --env-file .env --env-file .deploy.env'
             \$C up -d --wait postgres redis
             \$C run --rm --no-deps api ./node_modules/.bin/prisma migrate deploy

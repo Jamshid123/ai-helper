@@ -13,6 +13,7 @@ import { FulfillmentModule } from './modules/fulfillment/fulfillment.module'
 import { HealthModule } from './modules/health/health.module'
 import { PrismaModule } from './prisma/prisma.module'
 import { LiveModule } from './modules/live/live.module'
+import { StaffModule } from './modules/staff/staff.module'
 
 /** Поля, которые никогда не попадают в логи (скилл security). */
 export const LOG_REDACT = [
@@ -51,6 +52,7 @@ export const LOG_REDACT = [
     AuctionsModule,
     FulfillmentModule,
     LiveModule,
+    StaffModule,
   ],
 })
 export class AppModule {}

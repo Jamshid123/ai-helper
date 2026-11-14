@@ -2,11 +2,12 @@ import { type CanActivate, type ExecutionContext, Injectable, UnauthorizedExcept
 import { Reflector } from '@nestjs/core'
 import type { FastifyRequest } from 'fastify'
 import { IS_PUBLIC } from '../../common/public.decorator'
+import { STAFF_ROLES } from '../staff/staff.decorator'
 import { SessionService } from './session.service'
 
 export type AuthedRequest = FastifyRequest & { userId: string }
 
-/** Глобальный guard: без валидной сессии — 401, кроме эндпоинтов с @Public(). */
+/** Глобальный guard покупателя: без валидной сессии — 401, кроме @Public() и эндпоинтов админки (@StaffOnly()). */
 @Injectable()
 export class BuyerAuthGuard implements CanActivate {
   constructor(
@@ -15,8 +16,10 @@ export class BuyerAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
-    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC, [ctx.getHandler(), ctx.getClass()])
-    if (isPublic) return true
+    const targets = [ctx.getHandler(), ctx.getClass()]
+    if (this.reflector.getAllAndOverride<boolean>(IS_PUBLIC, targets)) return true
+    // эндпоинты админки проверяет StaffAuthGuard (cookie-сессия сотрудника), а не токен покупателя
+    if (this.reflector.getAllAndOverride<unknown>(STAFF_ROLES, targets) !== undefined) return true
     const req = ctx.switchToHttp().getRequest<AuthedRequest>()
     const header = req.headers.authorization ?? ''
     const token = header.startsWith('Bearer ') ? header.slice(7) : ''

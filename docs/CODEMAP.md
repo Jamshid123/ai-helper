@@ -28,6 +28,9 @@
 | `infra/nginx/spa.conf` | nginx внутри образов SPA: статика + прокси `/api/` → контейнер `api` |
 | `.github/workflows/demo-seed.yml` | Вручную: тестовые лоты на демо-стенде (`dist/scripts/seed-demo.js`) |
 | `apps/api/src/modules/live/` | Поток событий лота (SSE): `live-events.service.ts` (outbox → подписчики), `live.controller.ts` |
+| `apps/api/src/modules/staff/` | Сотрудники: вход (`staff-auth.*`), guard `@StaffOnly(...roles)` (cookie + CSRF + роли), TOTP (`totp.ts`), журнал аудита (`audit.service.ts`) |
+| `apps/api/src/common/crypto-box.ts`, `cookies.ts` | AES-256-GCM для секретов в БД; разбор/сборка cookie |
+| `.github/workflows/admin-create.yml` | Вручную: создать администратора (пароль из секрета `ADMIN_INITIAL_PASSWORD`) |
 | `apps/api/src/scripts/` | `demo-lots.ts` (тестовые лоты демо-стенда), `seed-demo.ts` (CLI) |
 | `apps/miniapp/src/shared/api/` | `client.ts` (вход по initData, сессия, ApiError), `error-text.ts` (код ошибки → текст ru/uz) |
 | `apps/miniapp/src/entities/lot/api.ts` | Хуки данных: API в Telegram / демо в браузере (`useLots`, `useLot`, `useAdmissions`, `useAdmit`, `useRoom`, `useAutoBid`) |

@@ -289,3 +289,51 @@ model Setting {
   value     Json
   updatedAt DateTime @updatedAt @db.Timestamptz
 }
+
+/// Роли сотрудников (ТЗ «Админка»). На старте выдаётся только ADMIN (решение 13.11.2026).
+enum StaffRole {
+  ADMIN
+  OPERATOR
+  EXPERT
+  RISK
+  FINANCE
+  FULFILLMENT
+  SUPPORT
+}
+
+/// Сотрудник админки: пароль (argon2id) + TOTP обязательны.
+model Staff {
+  id             String         @id @default(uuid()) @db.Uuid
+  /// В нижнем регистре.
+  email          String         @unique
+  name           String
+  passwordHash   String
+  /// TOTP-секрет, зашифрованный DATA_ENCRYPTION_KEY (AES-256-GCM).
+  totpSecretEnc  String
+  /// null — код ещё не подключён: при первом входе сотрудник сканирует ключ и подтверждает первым кодом.
+  totpEnrolledAt DateTime?      @db.Timestamptz
+  /// Последний принятый шаг TOTP — один код нельзя использовать дважды.
+  lastTotpStep   Int?
+  roles          StaffRole[]
+  failedLogins   Int            @default(0)
+  lockedUntil    DateTime?      @db.Timestamptz
+  disabledAt     DateTime?      @db.Timestamptz
+  createdAt      DateTime       @default(now()) @db.Timestamptz
+  updatedAt      DateTime       @updatedAt @db.Timestamptz
+  sessions       StaffSession[]
+}
+
+/// Сессия админки (≤ 8 ч). В cookie — случайный токен, в БД — только его SHA-256.
+model StaffSession {
+  id        String    @id @default(uuid()) @db.Uuid
+  tokenHash String    @unique
+  staffId   String    @db.Uuid
+  staff     Staff     @relation(fields: [staffId], references: [id])
+  csrfToken String
+  ip        String?
+  expiresAt DateTime  @db.Timestamptz
+  revokedAt DateTime? @db.Timestamptz
+  createdAt DateTime  @default(now()) @db.Timestamptz
+
+  @@index([staffId])
+}

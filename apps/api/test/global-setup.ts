@@ -20,6 +20,7 @@ export default function setup() {
     PAYMENTS_MODE: 'fake',
     TELEGRAM_BOT_TOKEN: '123456:TEST-TOKEN-not-real-xxxxxx',
     JWT_SECRET: 'test-secret-'.padEnd(40, 'x'),
+    DATA_ENCRYPTION_KEY: '0f'.repeat(32),
     SCHEDULER_ENABLED: 'false',
   })
   const run = (cmd: string, input?: string) =>

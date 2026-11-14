@@ -7,6 +7,7 @@ const base = {
   CORS_ORIGINS: 'https://auksion.expertly.uz',
   TELEGRAM_BOT_TOKEN: '123456:TEST-TOKEN-not-real-xxxxxx',
   JWT_SECRET: 'x'.repeat(32),
+  DATA_ENCRYPTION_KEY: 'ab'.repeat(32),
 }
 
 describe('loadEnv', () => {
@@ -19,6 +20,11 @@ describe('loadEnv', () => {
     expect(env.PAYMENTS_MODE).toBe('disabled')
     expect(env.NODE_ENV).toBe('production')
     expect(env.CORS_ORIGINS).toEqual(['https://auksion.expertly.uz'])
+  })
+
+  it('ключ шифрования обязателен и строго 32 байта hex', () => {
+    expect(() => loadEnv({ ...base, DATA_ENCRYPTION_KEY: undefined })).toThrow(/DATA_ENCRYPTION_KEY/)
+    expect(() => loadEnv({ ...base, DATA_ENCRYPTION_KEY: 'ab'.repeat(16) })).toThrow(/DATA_ENCRYPTION_KEY/)
   })
 
   it('короткий JWT_SECRET и кривой токен бота не принимаются', () => {

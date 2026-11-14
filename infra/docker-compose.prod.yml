@@ -51,6 +51,7 @@ services:
       DEMO_STAND: ${DEMO_STAND:-false}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is required}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?DATA_ENCRYPTION_KEY is required}
       # read-only контейнер: Prisma не пишет кэш/телеметрию
       CHECKPOINT_DISABLE: '1'
       PRISMA_HIDE_UPDATE_MESSAGE: '1'

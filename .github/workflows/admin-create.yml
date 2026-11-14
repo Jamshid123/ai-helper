@@ -1,0 +1,49 @@
+name: Admin create
+
+# Только вручную: создать администратора админки на сервере.
+# Пароль — из секрета ADMIN_INITIAL_PASSWORD (передаётся через stdin, в логи и аргументы не попадает).
+# Код TOTP подключается при первом входе в админку. После входа секрет лучше удалить.
+# Секреты: SERVER_HOST, DEPLOY_SSH_KEY, ADMIN_INITIAL_PASSWORD.
+
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: Email администратора
+        required: true
+      name:
+        description: Имя (как будет видно в журнале)
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  create:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: SSH setup
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          [ -n "$HOST" ] && [ -n "$KEY" ] || { echo "::error::Нужны секреты SERVER_HOST и DEPLOY_SSH_KEY"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          ssh-keyscan -T 10 -t ed25519 "$HOST" > ~/.ssh/known_hosts 2>/dev/null
+          printf 'Host srv\n  HostName %s\n  User deploy\n  IdentityFile ~/.ssh/deploy\n  StrictHostKeyChecking yes\n' "$HOST" > ~/.ssh/config
+
+      - name: Create admin
+        env:
+          PASSWORD: ${{ secrets.ADMIN_INITIAL_PASSWORD }}
+          EMAIL: ${{ inputs.email }}
+          NAME: ${{ inputs.name }}
+        run: |
+          [ -n "$PASSWORD" ] || { echo "::error::Добавьте секрет ADMIN_INITIAL_PASSWORD (не короче 12 символов)"; exit 1; }
+          # email и имя — через printf %q, чтобы не было подстановок в удалённой оболочке
+          printf '%s' "$PASSWORD" | ssh srv "cd /opt/auksion && docker compose --env-file .env --env-file .deploy.env run --rm -T --no-deps api node dist/scripts/create-admin.js --email $(printf %q "$EMAIL") --name $(printf %q "$NAME")"
