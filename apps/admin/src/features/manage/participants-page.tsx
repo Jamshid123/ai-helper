@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { SECTIONS_BY_ID } from '@/config/sections'
+import { formatPhoneInput } from '@/lib/phone'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -81,7 +82,9 @@ export function ParticipantsPage() {
                     в торгах: {u.publicName}
                   </span>
                 </TableCell>
-                <TableCell className='tabular-nums'>{u.phone ?? '—'}</TableCell>
+                <TableCell className='tabular-nums'>
+                  {u.phone ? formatPhoneInput(u.phone) : '—'}
+                </TableCell>
                 <TableCell className='text-sm'>
                   {u.username ? `@${u.username}` : '—'}
                   <span className='block font-mono text-xs text-muted-foreground'>
@@ -141,8 +144,8 @@ function ParticipantSheet({
                 {[u.firstName, u.lastName].filter(Boolean).join(' ')}
               </SheetTitle>
               <SheetDescription>
-                {u.phone ?? 'телефон не подтверждён'} ·{' '}
-                {u.username ? `@${u.username}` : `ID ${u.telegramId}`}
+                {u.phone ? formatPhoneInput(u.phone) : 'телефон не подтверждён'}{' '}
+                · {u.username ? `@${u.username}` : `ID ${u.telegramId}`}
               </SheetDescription>
             </SheetHeader>
             <div className='grid gap-6 px-4 pb-6'>

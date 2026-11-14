@@ -2,6 +2,7 @@ import { useId, useState } from 'react'
 import { SECTIONS_BY_ID } from '@/config/sections'
 import { Plus, RefreshCw } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
+import { formatPhoneInput, isCompleteUzPhone } from '@/lib/phone'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -134,7 +135,7 @@ export function StaffPage() {
   const valid =
     draft !== null &&
     draft.firstName.trim() !== '' &&
-    draft.phone.replace(/\D/g, '').length >= 9 &&
+    isCompleteUzPhone(draft.phone) &&
     (draft.isOwner || draft.roleId !== '') &&
     (Boolean(draft.id) || draft.password.length >= MIN_PASSWORD)
 
@@ -162,7 +163,7 @@ export function StaffPage() {
   const blank = (): Draft => ({
     firstName: '',
     lastName: '',
-    phone: '+998 ',
+    phone: '',
     roleId: roles.find((r) => r.name === 'Оператор')?.id ?? roles[0]?.id ?? '',
     password: generatePassword(),
     disabled: false,
@@ -207,7 +208,7 @@ export function StaffPage() {
                   )}
                 </TableCell>
                 <TableCell className='tabular-nums'>
-                  {s.phone ?? (
+                  {(s.phone && formatPhoneInput(s.phone)) ?? (
                     <span className='text-muted-foreground'>
                       не задан ({s.email})
                     </span>
@@ -247,7 +248,7 @@ export function StaffPage() {
                         isOwner: s.isOwner,
                         firstName: s.firstName,
                         lastName: s.lastName,
-                        phone: s.phone ?? '+998 ',
+                        phone: formatPhoneInput(s.phone ?? ''),
                         roleId: s.role?.id ?? '',
                         password: '',
                         disabled: s.disabled,
@@ -298,9 +299,13 @@ export function StaffPage() {
                 <Input
                   type='tel'
                   inputMode='tel'
+                  placeholder='+998 90 123 45 67'
                   value={draft.phone}
                   onChange={(e) =>
-                    setDraft({ ...draft, phone: e.target.value })
+                    setDraft({
+                      ...draft,
+                      phone: formatPhoneInput(e.target.value, draft.phone),
+                    })
                   }
                 />
               </Field>

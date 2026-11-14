@@ -6,6 +6,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { Loader2, LogIn } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
 import { ApiError } from '@/lib/api'
+import { formatPhoneInput } from '@/lib/phone'
 import { safeRedirect } from '@/lib/safe-redirect'
 import { cn } from '@/lib/utils'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -96,6 +97,11 @@ export function UserAuthForm({
                   autoComplete='username'
                   placeholder='+998 90 123 45 67'
                   {...field}
+                  onChange={(e) =>
+                    field.onChange(
+                      formatPhoneInput(e.target.value, field.value)
+                    )
+                  }
                 />
               </FormControl>
               <FormMessage />

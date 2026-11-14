@@ -1,5 +1,6 @@
 import { ChevronsUpDown, LogOut } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
+import { formatPhoneInput } from '@/lib/phone'
 import useDialogState from '@/hooks/use-dialog-state'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -67,7 +68,7 @@ export function NavUser() {
                 <div className='grid gap-1 text-sm'>
                   <span className='font-semibold'>{user.name}</span>
                   <span className='text-xs text-muted-foreground'>
-                    {user.phone ?? user.email}
+                    {user.phone ? formatPhoneInput(user.phone) : user.email}
                   </span>
                   <span className='text-xs text-muted-foreground'>{roles}</span>
                 </div>
