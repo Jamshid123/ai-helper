@@ -30,6 +30,7 @@
 | `apps/api/src/modules/live/` | Поток событий лота (SSE): `live-events.service.ts` (outbox → подписчики), `live.controller.ts` |
 | `apps/api/src/modules/staff/` | Сотрудники: вход по телефону (`staff-auth.*`), guard `@StaffOnly('<модуль>' | 'owner')` (cookie + CSRF + права роли), модули и уровни (`permissions.ts`), журнал аудита (`audit.service.ts`) |
 | `apps/api/src/modules/admin/` | API админки: категории, товары, лоты (`admin-lots.service.ts` — правила лота, отмена с возвратом), участники, журнал аудита |
+| `apps/api/src/scripts/seed-catalog.ts`, `demo-catalog*.ts`, `apps/api/demo-media/` | Наполнение демо-стенда: категории, товары с фото, торги (workflow «Demo catalog»); фото и их авторы — `demo-media/CREDITS.md` |
 | `apps/api/src/modules/media/` | Фото товаров на диске (`MEDIA_DIR`, том Docker `media`): `media.service.ts` (сохранение, тип по байтам), `GET /api/v1/media/:file` (публично, кэш на год). Загрузка — `POST /admin/products/:id/photos` (тело — файл) |
 | `apps/admin/src/features/manage/product-photos.tsx` | Блок фото в карточке товара; сжатие в браузере — `src/lib/image.ts` |
 | `apps/miniapp/src/shared/ui/photo-carousel.tsx` | Карусель фото лота (свайп, на весь экран) |
