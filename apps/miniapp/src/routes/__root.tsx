@@ -3,12 +3,15 @@ import { Gavel, User } from 'lucide-react'
 import { useI18n } from '@/app/i18n'
 import { isInTelegram } from '@/app/telegram'
 import { DEMO, TEST_STAND } from '@/entities/lot/api'
+import { Onboarding } from '@/features/onboarding'
+import { useOnboardingOpen } from '@/features/onboarding-store'
 import { cn } from '@/shared/lib/cn'
 
 function Root() {
   const { t } = useI18n()
   const path = useRouterState({ select: (s) => s.location.pathname })
   const inRoom = path.endsWith('/room')
+  const onboarding = useOnboardingOpen()
 
   if (!DEMO && !isInTelegram()) {
     return (
@@ -17,6 +20,8 @@ function Root() {
       </main>
     )
   }
+
+  if (onboarding) return <Onboarding />
 
   return (
     <div className='mx-auto flex min-h-svh max-w-lg flex-col'>

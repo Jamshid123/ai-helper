@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { X } from 'lucide-react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useI18n } from '@/app/i18n'
 import { DEMO, isFull, useAdmissions, useCategories, useLots } from '@/entities/lot/api'
@@ -43,53 +42,6 @@ function SessionStrip({ lots }: { lots: Lot[] }) {
         {formatCountdown(target.getTime() - now, t('time.d'))}
       </span>
     </div>
-  )
-}
-
-const HOWTO_KEY = 'auksion.howto.hidden'
-
-function HowTo() {
-  const { t } = useI18n()
-  const [hidden, setHidden] = useState(() => {
-    try {
-      return localStorage.getItem(HOWTO_KEY) === '1'
-    } catch {
-      return false
-    }
-  })
-  if (hidden) return null
-  const hide = () => {
-    setHidden(true)
-    try {
-      localStorage.setItem(HOWTO_KEY, '1')
-    } catch {
-      // не критично
-    }
-  }
-  return (
-    <section className='relative rounded-2xl border border-line px-4 py-3' aria-label={t('howto.title')}>
-      <div className='mb-2 flex items-center justify-between'>
-        <h2 className='text-[15px] font-semibold'>{t('howto.title')}</h2>
-        <button
-          type='button'
-          onClick={hide}
-          aria-label={t('howto.hide')}
-          className='-mr-2 grid size-11 place-items-center text-muted'
-        >
-          <X className='size-4' />
-        </button>
-      </div>
-      <ol className='grid gap-2'>
-        {(['howto.1', 'howto.2', 'howto.3'] as const).map((k, i) => (
-          <li key={k} className='grid grid-cols-[24px_1fr] gap-2 text-[13.5px] leading-snug'>
-            <span className='grid size-6 place-items-center rounded-full bg-primary text-[12px] font-bold text-on-primary'>
-              {i + 1}
-            </span>
-            <span className='pt-0.5'>{t(k)}</span>
-          </li>
-        ))}
-      </ol>
-    </section>
   )
 }
 
@@ -165,7 +117,6 @@ function Catalog() {
   return (
     <div className='flex flex-col gap-4 px-4 pt-4'>
       <SessionStrip lots={lots} />
-      <HowTo />
 
       <div className='flex gap-2 overflow-x-auto' role='tablist' aria-label={t('catalog.categories')}>
         {categories.map((c) => (

@@ -1,9 +1,10 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { ChevronRight, Gavel, Store } from 'lucide-react'
+import { ChevronRight, CircleHelp, Gavel, Store } from 'lucide-react'
 import { useI18n } from '@/app/i18n'
 import { getWebApp } from '@/app/telegram'
 import { isRegistered, maskPhone, publicNameOf, resetAccount, useAccount } from '@/entities/account/demo-account'
 import { DEMO, useAdmissions, useLots } from '@/entities/lot/api'
+import { openOnboarding } from '@/features/onboarding-store'
 import { type Lot } from '@/entities/lot/types'
 import { cn } from '@/shared/lib/cn'
 
@@ -94,6 +95,16 @@ function MePage() {
           </ul>
         )}
       </section>
+
+      <button
+        type='button'
+        onClick={openOnboarding}
+        className='flex min-h-12 items-center gap-3 rounded-2xl border border-line px-4 text-start text-[15px]'
+      >
+        <CircleHelp className='size-5 text-brand-ink' aria-hidden='true' />
+        <span className='flex-1'>{t('howto.title')}</span>
+        <ChevronRight className='size-4 text-muted' aria-hidden='true' />
+      </button>
 
       {DEMO && (account.phone || account.seller.status !== 'none') && (
         <button
