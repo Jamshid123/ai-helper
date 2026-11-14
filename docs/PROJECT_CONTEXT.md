@@ -179,5 +179,6 @@ CHANGELOG.md
 - Reverse proxy — **nginx на хосте** (80/443), сертификаты Let's Encrypt в `/etc/letsencrypt/live`. Уже обслуживает: m-pulim.uz (+api, payment), n8n / tg-helper / karnaychi-api / pyrus-master / ai-helper `.expertly.uz`. Мы добавляем свои vhost-файлы, чужие не трогаем.
 - PostgreSQL — Docker-контейнер `ai-helper-postgres` (postgres:16, `127.0.0.1:5432`, создан 12.05.2026 вручную, не compose). Внутри — БД другого проекта `ai_helper_agent` (45 МБ), единственный пользователь `ai_helper_user` (superuser). Отдельного Postgres на хосте нет.
 - MySQL 8.0 на хосте — базы проекта m-pulim (`pulim_app`, `pulim_db`); пользователь `pulim@%` допускает вход с любого адреса, а порт 3306 открыт в интернет.
-- Занятые порты: 22, 80, 443, 3000, 3030, 3100, 3111, 3306, 33060, 5432, 5678, 8088, 8787–8790, 18080. Для AuksionGO резервируем `127.0.0.1:3400–3409`.
+- Занятые порты: 22, 80, 443, 3000, 3030, 3100, 3111, 3306, 33060, 5432, 5678, 8088, 8787–8790, 18080. Для AuksionGO резервируем `127.0.0.1:3400–3409`: 3400 — api, 3401 — miniapp, 3402 — admin.
+- Наши vhost-ы: `auksion.expertly.uz` → 3401 (Mini App + `/api` через nginx контейнера), `auksion-admin.expertly.uz` → 3402 (админка + `/api`). Оба ставит `infra/server/bootstrap.sh` (workflow «Server bootstrap», root), сертификаты — certbot.
 - Найденные риски (касаются всего сервера, без согласия не меняем): MySQL 3306/33060 и n8n 5678 открыты в интернет; firewall `ufw` выключен; вход root по паролю разрешён; fail2ban не установлен.

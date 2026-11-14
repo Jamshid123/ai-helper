@@ -45,7 +45,7 @@ jobs:
           mkdir -p ~/.ssh && ssh-keyscan -T 10 -t ed25519 "$HOST" > ~/.ssh/known_hosts 2>/dev/null
           SSH="sshpass -e ssh -o StrictHostKeyChecking=yes root@$HOST"
           $SSH 'rm -rf /tmp/auksion-bootstrap && mkdir -m 700 /tmp/auksion-bootstrap'
-          sshpass -e scp -o StrictHostKeyChecking=yes infra/server/bootstrap.sh infra/server/nginx-auksion.conf "root@$HOST:/tmp/auksion-bootstrap/"
+          sshpass -e scp -o StrictHostKeyChecking=yes infra/server/bootstrap.sh infra/server/nginx-auksion.conf infra/server/nginx-auksion-admin.conf "root@$HOST:/tmp/auksion-bootstrap/"
           # Секреты передаём через stdin, а не в командной строке (не видны в ps на сервере).
           printf 'export DEPLOY_PUBKEY=%q TELEGRAM_BOT_TOKEN=%q\n' "$DEPLOY_PUBKEY" "$TELEGRAM_BOT_TOKEN" \
             | $SSH 'set -e; read -r line; eval "$line"; bash /tmp/auksion-bootstrap/bootstrap.sh; rm -rf /tmp/auksion-bootstrap'

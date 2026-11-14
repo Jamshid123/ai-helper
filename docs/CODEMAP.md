@@ -23,8 +23,8 @@
 | `.github/workflows/server-inspect.yml` | Ручной осмотр сервера (только чтение) |
 | `.github/workflows/server-bootstrap.yml` + `infra/server/bootstrap.sh` | Разовая настройка сервера: пользователь deploy, `/opt/auksion/.env`, nginx vhost + HTTPS |
 | `.github/workflows/deploy.yml` | Выкладка: push в `main` (или вручную) → CI → образ → сервер → health check → откат при сбое → кнопка меню бота |
-| `infra/docker-compose.prod.yml` | Сервисы на сервере: свой `postgres` (без внешнего порта), `miniapp` на `127.0.0.1:3401` |
-| `infra/server/nginx-auksion.conf` | vhost `auksion.expertly.uz` для nginx хоста |
+| `infra/docker-compose.prod.yml` | Сервисы на сервере: `postgres`, `redis` (без внешних портов), `api` 3400, `miniapp` 3401, `admin` 3402 (все на 127.0.0.1) |
+| `infra/server/nginx-auksion.conf`, `nginx-auksion-admin.conf` | vhost-ы `auksion.expertly.uz` (→ 3401) и `auksion-admin.expertly.uz` (→ 3402) для nginx хоста |
 | `infra/nginx/spa.conf` | nginx внутри образов SPA: статика + прокси `/api/` → контейнер `api` |
 | `.github/workflows/demo-seed.yml` | Вручную: тестовые лоты на демо-стенде (`dist/scripts/seed-demo.js`) |
 | `apps/api/src/modules/live/` | Поток событий лота (SSE): `live-events.service.ts` (outbox → подписчики), `live.controller.ts` |

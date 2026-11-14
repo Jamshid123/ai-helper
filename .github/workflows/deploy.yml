@@ -40,6 +40,10 @@ jobs:
             --build-arg "FRAME_ANCESTORS=https://web.telegram.org https://*.telegram.org" \
             -t "auksion-miniapp:${GITHUB_SHA::12}" .
 
+      - name: Build admin image
+        # FRAME_ANCESTORS по умолчанию 'none' — админку нельзя встроить во фрейм
+        run: docker build -f infra/Dockerfile.spa --build-arg APP=admin -t "auksion-admin:${GITHUB_SHA::12}" .
+
       - name: Build API image
         run: docker build -f infra/Dockerfile.api -t "auksion-api:${GITHUB_SHA::12}" .
 
@@ -56,7 +60,7 @@ jobs:
 
       - name: Ship image and compose file
         run: |
-          docker save "auksion-miniapp:$TAG" "auksion-api:$TAG" | gzip | ssh srv 'gunzip | docker load'
+          docker save "auksion-miniapp:$TAG" "auksion-admin:$TAG" "auksion-api:$TAG" | gzip | ssh srv 'gunzip | docker load'
           scp infra/docker-compose.prod.yml srv:/opt/auksion/docker-compose.yml
 
       - name: Start new version
@@ -78,7 +82,8 @@ jobs:
       - name: Health check (rollback on failure)
         run: |
           for i in $(seq 1 20); do
-            if curl -fsS "$APP_URL/healthz" >/dev/null && curl -fsS "$APP_URL/api/v1/health" >/dev/null; then echo "healthy (miniapp + api через /api)"; exit 0; fi
+            if curl -fsS "$APP_URL/healthz" >/dev/null && curl -fsS "$APP_URL/api/v1/health" >/dev/null \
+                && ssh srv 'curl -fsS http://127.0.0.1:3402/healthz' >/dev/null; then echo "healthy (miniapp, api, admin)"; exit 0; fi
             sleep 3
           done
           echo "::error::Health check failed — rolling back"
@@ -87,7 +92,7 @@ jobs:
 
       - name: Prune old images (keep 3 latest)
         run: |
-          ssh srv "for img in auksion-miniapp auksion-api; do docker images \$img --format '{{.Tag}}' | tail -n +4 | xargs -r -I{} docker rmi \$img:{} || true; done"
+          ssh srv "for img in auksion-miniapp auksion-admin auksion-api; do docker images \$img --format '{{.Tag}}' | tail -n +4 | xargs -r -I{} docker rmi \$img:{} || true; done"
 
       - name: Telegram menu button → Mini App
         env:
