@@ -30,6 +30,8 @@ export const TEST_STAND = !DEMO && import.meta.env.VITE_DEMO_STAND === 'true'
 
 const ROOM_POLL_MS = 3_000
 
+/** Число участников — видно всем, в т.ч. до оплаты (решение заказчика 14.11.2026). */
+export const participantsOf = (lot: Lot) => lot.admittedCount ?? 0
 /** Мест нет: набран максимум участников (решение 14.11.2026). */
 export const isFull = (lot: Lot) =>
   lot.full ?? (lot.maxParticipants != null && (lot.admittedCount ?? 0) >= lot.maxParticipants)
@@ -84,8 +86,6 @@ export function useCategories(): Category[] {
 type Admissions = {
   ids: string[]
   has: (lotId: string) => boolean
-  /** Число участников лота — только после допуска, иначе null (решение 14.11.2026). */
-  count: (lotId: string) => number | null
   ready: boolean
 }
 
@@ -93,16 +93,11 @@ export function useAdmissions(): Admissions {
   useDemoVersion()
   const q = useQuery({
     queryKey: ['admissions'],
-    queryFn: () => api<{ lotId: string; admittedCount: number }[]>('/me/admissions'),
+    queryFn: () => api<{ lotId: string }[]>('/me/admissions'),
     enabled: !DEMO,
   })
   const ids = DEMO ? admittedLotIds() : (q.data ?? []).map((a) => a.lotId)
-  const count = (lotId: string): number | null => {
-    if (!ids.includes(lotId)) return null
-    if (DEMO) return demoLot(lotId)?.admittedCount ?? null
-    return q.data?.find((a) => a.lotId === lotId)?.admittedCount ?? null
-  }
-  return { ids, has: (lotId) => ids.includes(lotId), count, ready: DEMO || q.isSuccess }
+  return { ids, has: (lotId) => ids.includes(lotId), ready: DEMO || q.isSuccess }
 }
 
 type AdmissionStart =

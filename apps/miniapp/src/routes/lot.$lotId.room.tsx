@@ -4,7 +4,7 @@ import { ChevronLeft, Users } from 'lucide-react'
 import { formatSum } from '@auksion/shared'
 import { useI18n } from '@/app/i18n'
 import { SUPPORT_URL, haptic, isInTelegram, openTelegramLink, useBackButton, useMainButton } from '@/app/telegram'
-import { type RoomView, useAdmissions, useLot, useRoom } from '@/entities/lot/api'
+import { type RoomView, participantsOf, useAdmissions, useLot, useRoom } from '@/entities/lot/api'
 import { currentPrice, roomMaxBid, roomMinBid } from '@/entities/lot/engine'
 import { type Lot } from '@/entities/lot/types'
 import { errorText } from '@/shared/api/error-text'
@@ -134,9 +134,7 @@ function RoomScreen({ lot, view }: { lot: Lot; view: RoomView }) {
         <h1 className='text-[17px] leading-snug font-semibold'>{lot.title}</h1>
         <span className='inline-flex shrink-0 items-center gap-1 text-[12.5px] text-muted'>
           <Users className='size-3.5' aria-hidden='true' />{' '}
-          {online !== null
-            ? `${online} ${t('room.online')}`
-            : `${t('lot.admitted')}: ${admissions.count(lot.id) ?? '—'}`}
+          {online !== null ? `${online} ${t('room.online')}` : `${t('lot.admitted')}: ${participantsOf(lot)}`}
         </span>
       </header>
 

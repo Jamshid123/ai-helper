@@ -4,7 +4,7 @@ import { BadgeCheck } from 'lucide-react'
 import { formatSum } from '@auksion/shared'
 import { useI18n } from '@/app/i18n'
 import { haptic, useBackButton, useMainButton } from '@/app/telegram'
-import { endsAtOf, isFull, useAdmissions, useAdmit, useLot } from '@/entities/lot/api'
+import { endsAtOf, isFull, participantsOf, useAdmissions, useAdmit, useLot } from '@/entities/lot/api'
 import { isRegistered, useAccount } from '@/entities/account/demo-account'
 import { errorText } from '@/shared/api/error-text'
 import { type Lot } from '@/entities/lot/types'
@@ -146,7 +146,6 @@ function LotPage() {
 
   const admissions = useAdmissions()
   const admitted = lot ? admissions.has(lot.id) : false
-  const count = lot ? admissions.count(lot.id) : null
   const live = lot?.status === 'live'
   const full = Boolean(lot && !admitted && isFull(lot))
   const primary = useCallback(() => {
@@ -221,19 +220,10 @@ function LotPage() {
         <Row label={t('lot.step')}>
           <Price value={lot.step} />
         </Row>
-        {count !== null ? (
-          <Row label={t('lot.admitted')}>
-            {count}
-            {lot.maxParticipants ? ` ${t('lot.of')} ${lot.maxParticipants}` : ''}
-          </Row>
-        ) : (
-          <Row label={t('lot.admitted')}>
-            <span className='text-muted'>
-              {lot.maxParticipants ? `${t('lot.seats')}: ${lot.maxParticipants} · ` : ''}
-              {t('lot.countAfterAdmission')}
-            </span>
-          </Row>
-        )}
+        <Row label={t('lot.admitted')}>
+          {participantsOf(lot)}
+          {lot.maxParticipants ? ` ${t('lot.of')} ${lot.maxParticipants}` : ''}
+        </Row>
         <Row label={t('lot.fee')}>
           <Price value={lot.fee} />
         </Row>

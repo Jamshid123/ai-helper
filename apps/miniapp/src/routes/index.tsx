@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useI18n } from '@/app/i18n'
-import { DEMO, isFull, useAdmissions, useCategories, useLots } from '@/entities/lot/api'
+import { DEMO, isFull, participantsOf, useAdmissions, useCategories, useLots } from '@/entities/lot/api'
 import { type Condition, type Lot } from '@/entities/lot/types'
 import { cn } from '@/shared/lib/cn'
 import { formatSessionDate } from '@/shared/lib/format-date'
@@ -50,7 +50,7 @@ function LotCard({ lot }: { lot: Lot }) {
   const live = lot.status === 'live'
   const admissions = useAdmissions()
   const admitted = admissions.has(lot.id)
-  const count = admissions.count(lot.id)
+  const count = participantsOf(lot)
   const full = !admitted && isFull(lot)
   return (
     <div className='grid gap-2 border-b border-line pb-4 last:border-b-0'>
@@ -66,11 +66,7 @@ function LotCard({ lot }: { lot: Lot }) {
           <span className='line-clamp-2 text-[15px] leading-snug font-medium'>{lot.title}</span>
           <span className='text-[12.5px] text-muted'>
             {t(lot.condition === 'new' ? 'lot.condition.new' : 'lot.condition.used')}
-            {count !== null
-              ? ` · ${t('lot.admitted')}: ${count}${lot.maxParticipants ? ` ${t('lot.of')} ${lot.maxParticipants}` : ''}`
-              : lot.maxParticipants
-                ? ` · ${t('lot.seats')}: ${lot.maxParticipants}`
-                : ''}
+            {` · ${t('lot.admitted')}: ${count}${lot.maxParticipants ? ` ${t('lot.of')} ${lot.maxParticipants}` : ''}`}
           </span>
           <div className='mt-auto flex items-baseline justify-between gap-2'>
             <span className='grid'>
