@@ -53,6 +53,13 @@ export function admit(lotId: string): void {
   emit()
 }
 
+/** Демо: выход из лота до начала (на сервере — возврат 100%). */
+export function leave(lotId: string): void {
+  admissions.delete(lotId)
+  autoBids.delete(lotId)
+  emit()
+}
+
 export function admittedLotIds(): string[] {
   return [...admissions]
 }

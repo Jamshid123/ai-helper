@@ -10,6 +10,7 @@ import { errorText } from '@/shared/api/error-text'
 import { type Lot } from '@/entities/lot/types'
 import { cn } from '@/shared/lib/cn'
 import { formatCountdown, useNow } from '@/shared/lib/use-now'
+import { LeaveCard } from '@/features/leave'
 import { RemindCard } from '@/features/remind'
 import { Button } from '@/shared/ui/button'
 import { LiveBadge } from '@/shared/ui/live-badge'
@@ -198,6 +199,7 @@ function LotPage() {
           ✓ {t('lot.admittedBadge')}
         </div>
       )}
+      {admitted && !live && opens > now && <LeaveCard lotId={lot.id} />}
 
       <section className='divide-y divide-line'>
         <Row label={t('lot.start')}>

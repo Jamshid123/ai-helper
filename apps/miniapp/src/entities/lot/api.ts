@@ -4,6 +4,7 @@ import { isInTelegram } from '@/app/telegram'
 import { API_BASE, ApiError, api } from '@/shared/api/client'
 import {
   admit as demoAdmit,
+  leave as demoLeave,
   admittedLotIds,
   demoLot,
   demoLots,
@@ -56,6 +57,22 @@ export function useLot(id: string): { data: Lot | undefined; isLoading: boolean 
   return { data: q.data, isLoading: q.isLoading }
 }
 
+/* ── Категории ───────────────────────────────────────────── */
+
+export type Category = { slug: string; name: { ru: string; uz: string } }
+const DEMO_CATEGORIES: Category[] = [{ slug: 'phones', name: { ru: 'Телефоны', uz: 'Telefonlar' } }]
+
+/** Включённые категории каталога (названия ru/uz задаются в админке). */
+export function useCategories(): Category[] {
+  const q = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => api<Category[]>('/categories', { auth: false }),
+    enabled: !DEMO,
+    staleTime: 60_000,
+  })
+  return DEMO ? DEMO_CATEGORIES : (q.data ?? [])
+}
+
 /* ── Допуски ─────────────────────────────────────────────── */
 
 export function useAdmissions(): { ids: string[]; has: (lotId: string) => boolean; ready: boolean } {
@@ -88,6 +105,24 @@ export function useAdmit(): (lotId: string) => Promise<void> {
         qc.invalidateQueries({ queryKey: ['admissions'] }),
         qc.invalidateQueries({ queryKey: ['lot', lotId] }),
         qc.invalidateQueries({ queryKey: ['lots'] }),
+      ])
+    },
+    [qc]
+  )
+}
+
+/** Выйти из лота до начала торгов — сервер возвращает взнос полностью (решение 14.11.2026). */
+export function useLeave(): (lotId: string) => Promise<void> {
+  const qc = useQueryClient()
+  return useCallback(
+    async (lotId: string) => {
+      if (DEMO) return demoLeave(lotId)
+      await api(`/lots/${lotId}/admission`, { method: 'DELETE' })
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['admissions'] }),
+        qc.invalidateQueries({ queryKey: ['lot', lotId] }),
+        qc.invalidateQueries({ queryKey: ['lots'] }),
+        qc.invalidateQueries({ queryKey: ['autobid', lotId] }),
       ])
     },
     [qc]

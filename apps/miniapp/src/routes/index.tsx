@@ -3,7 +3,7 @@ import { X } from 'lucide-react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { currentOrNextSession } from '@auksion/shared'
 import { useI18n } from '@/app/i18n'
-import { DEMO, useAdmissions, useLots } from '@/entities/lot/api'
+import { DEMO, useAdmissions, useCategories, useLots } from '@/entities/lot/api'
 import { type Condition, type Lot } from '@/entities/lot/types'
 import { cn } from '@/shared/lib/cn'
 import { formatSessionDate } from '@/shared/lib/format-date'
@@ -135,10 +135,15 @@ function LotCard({ lot }: { lot: Lot }) {
 }
 
 function Catalog() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const { data: lots = [] } = useLots()
+  const categories = useCategories()
+  const [picked, setPicked] = useState<string | null>(null)
+  const category = picked && categories.some((c) => c.slug === picked) ? picked : (categories[0]?.slug ?? null)
   const [filter, setFilter] = useState<Filter>('all')
-  const visible = lots.filter((l) => filter === 'all' || l.condition === filter)
+  const visible = lots.filter(
+    (l) => (category === null || l.category === category) && (filter === 'all' || l.condition === filter)
+  )
   // Полоса сверху следует за лотами: если торги по лоту уже идут (демо, тестовый запуск), показываем «идут до…».
   const liveLot = lots.find((l) => l.status === 'live')
   const liveUntil = liveLot ? new Date(liveLot.closesAt) : null
@@ -148,13 +153,27 @@ function Catalog() {
       <SessionStrip liveUntil={liveUntil} />
       <HowTo />
 
-      <div className='flex gap-2 overflow-x-auto' role='tablist' aria-label='Категории'>
-        <span className='rounded-full bg-fg px-3.5 py-1.5 text-[13px] font-medium text-bg'>
-          {t('catalog.category.phones')}
-        </span>
-        <span className='rounded-full bg-surface px-3.5 py-1.5 text-[13px] text-muted'>
-          {t('catalog.category.travel')} · {t('catalog.soon')}
-        </span>
+      <div className='flex gap-2 overflow-x-auto' role='tablist' aria-label={t('catalog.categories')}>
+        {categories.map((c) => (
+          <button
+            key={c.slug}
+            type='button'
+            role='tab'
+            aria-selected={c.slug === category}
+            onClick={() => setPicked(c.slug)}
+            className={cn(
+              'min-h-9 shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-medium',
+              c.slug === category ? 'bg-fg text-bg' : 'bg-surface text-fg'
+            )}
+          >
+            {c.name[locale]}
+          </button>
+        ))}
+        {DEMO && (
+          <span className='shrink-0 rounded-full bg-surface px-3.5 py-1.5 text-[13px] text-muted'>
+            {t('catalog.category.travel')} · {t('catalog.soon')}
+          </span>
+        )}
       </div>
 
       <div className='flex gap-4 border-b border-line text-[14px]'>
@@ -177,6 +196,9 @@ function Catalog() {
         {visible.map((lot) => (
           <LotCard key={lot.id} lot={lot} />
         ))}
+        {lots.length > 0 && visible.length === 0 && (
+          <p className='py-8 text-center text-[14px] text-muted'>{t('catalog.empty')}</p>
+        )}
       </div>
     </div>
   )

@@ -5,7 +5,8 @@ export type LotStatus = 'scheduled' | 'live' | 'closed'
 export type Lot = {
   id: string
   title: string
-  category: 'phones'
+  /** Код категории (phones, …) — см. GET /categories. */
+  category: string
   condition: Condition
   seller: 'platform'
   startPrice: string
