@@ -1,7 +1,9 @@
 import { useSyncExternalStore } from 'react'
 
 /** Состояние онбординга: показывается один раз на устройстве (localStorage), повторно — из профиля. */
-const DONE_KEY = 'auksion.onboarding.done'
+/** Версия онбординга: увеличить — и онбординг снова увидят все (v2 — сброс 14.11.2026 по просьбе заказчика). */
+const VERSION = 2
+const DONE_KEY = `auksion.onboarding.v${VERSION}`
 
 function readDone(): boolean {
   try {
