@@ -40,6 +40,7 @@ type WebApp = {
     impactOccurred(style: 'light' | 'medium' | 'heavy'): void
     notificationOccurred(type: 'error' | 'success' | 'warning'): void
   }
+  openTelegramLink?(url: string): void
   onEvent(event: 'themeChanged', cb: () => void): void
   offEvent(event: 'themeChanged', cb: () => void): void
 }
@@ -48,6 +49,16 @@ declare global {
   interface Window {
     Telegram?: { WebApp?: WebApp }
   }
+}
+
+/** Поддержка (решение заказчика 14.11.2026): обращения ведёт оператор в Telegram. */
+export const SUPPORT_URL = 'https://t.me/Shamsiddin_Shamsiddinov'
+
+/** Открыть ссылку t.me: внутри Telegram — нативно (Mini App не закрывается), в браузере — новая вкладка. */
+export function openTelegramLink(url: string): void {
+  const wa = getWebApp()
+  if (wa?.openTelegramLink) wa.openTelegramLink(url)
+  else window.open(url, '_blank', 'noopener')
 }
 
 export const BRAND = { primary: '#F97216', onPrimary: '#FFFFFF' } as const

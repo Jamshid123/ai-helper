@@ -3,7 +3,7 @@ import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ChevronLeft, Users } from 'lucide-react'
 import { formatSum } from '@auksion/shared'
 import { useI18n } from '@/app/i18n'
-import { haptic, isInTelegram, useBackButton, useMainButton } from '@/app/telegram'
+import { SUPPORT_URL, haptic, isInTelegram, openTelegramLink, useBackButton, useMainButton } from '@/app/telegram'
 import { type RoomView, useAdmissions, useLot, useRoom } from '@/entities/lot/api'
 import { currentPrice, roomMaxBid, roomMinBid } from '@/entities/lot/engine'
 import { type Lot } from '@/entities/lot/types'
@@ -206,6 +206,21 @@ function RoomScreen({ lot, view }: { lot: Lot; view: RoomView }) {
           </ol>
         )}
       </section>
+
+      {/* Ненавязчивая ссылка на поддержку (решение 14.11.2026, п. 17) */}
+      <p className='text-center text-[12.5px] text-muted'>
+        {t('room.supportQ')}{' '}
+        <a
+          href={SUPPORT_URL}
+          onClick={(e) => {
+            e.preventDefault()
+            openTelegramLink(SUPPORT_URL)
+          }}
+          className='font-medium text-brand-ink underline-offset-2 hover:underline'
+        >
+          {t('room.supportLink')}
+        </a>
+      </p>
 
       {/* Панель действия — внизу, под большим пальцем. В Telegram кнопка нативная (MainButton). */}
       {showPanel && (
