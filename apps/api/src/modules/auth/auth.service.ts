@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto'
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common'
 import { Clock } from '../../common/clock'
 import { ENV } from '../../config/config.module'
@@ -43,6 +44,36 @@ export class AuthService {
     })
     const session = await this.sessions.issue(user.id)
     return { token: session.token, expiresAt: session.expiresAt.toISOString(), user: toBuyerDto(user) }
+  }
+
+  /** Вход на сайте по подтверждённому телефону: новый покупатель создаётся без имени (его спросит экран профиля). */
+  async loginWithPhone(phone: string) {
+    const now = this.clock.now()
+    const user = await this.prisma.user.upsert({
+      where: { phone },
+      create: {
+        phone,
+        phoneVerifiedAt: now,
+        firstName: '',
+        publicName: `Участник ${String(randomInt(0, 10_000)).padStart(4, '0')}`,
+      },
+      update: { phoneVerifiedAt: now },
+    })
+    return { user: toBuyerDto(user), needsProfile: !user.firstName }
+  }
+
+  /** Имя для профиля и публичное «Имя Ф.» для ленты торгов. */
+  async updateProfile(userId: string, firstName: string, lastName: string | null) {
+    const last = lastName?.trim() || null
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        firstName: firstName.trim(),
+        lastName: last,
+        ...(last && { publicName: `${firstName.trim()} ${last[0].toUpperCase()}.` }),
+      },
+    })
+    return toBuyerDto(user)
   }
 
   async me(userId: string) {

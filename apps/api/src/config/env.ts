@@ -25,6 +25,8 @@ export const envSchema = z.object({
   CORS_ORIGINS: csv.refine((list) => !list.includes('*'), 'CORS_ORIGINS не может содержать *'),
   /** disabled — оплата выключена (безопасно по умолчанию); fake — только демо/тесты; live — реальный партнёр. */
   PAYMENTS_MODE: z.enum(['disabled', 'fake', 'live']).default('disabled'),
+  /** SMS для входа и уведомлений: disabled — вход недоступен; fake — код в ответе (только демо/тесты). */
+  SMS_MODE: z.enum(['disabled', 'fake']).default('disabled'),
   /** Токен бота: проверка подписи initData и отправка уведомлений. */
   TELEGRAM_BOT_TOKEN: z.string().regex(/^\d+:[A-Za-z0-9_-]{20,}$/, 'неверный формат токена бота'),
   /** Секрет подписи сессий покупателей (HS256), не короче 32 символов. */
@@ -58,6 +60,9 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     throw new Error(`Invalid environment configuration — ${issues}`)
   }
   const env = parsed.data
+  if (env.NODE_ENV === 'production' && env.SMS_MODE === 'fake' && !env.DEMO_STAND) {
+    throw new Error('SMS_MODE=fake запрещён в production (кроме демо-стенда, DEMO_STAND=true)')
+  }
   if (env.NODE_ENV === 'production' && env.PAYMENTS_MODE === 'fake' && !env.DEMO_STAND) {
     throw new Error('PAYMENTS_MODE=fake запрещён в production (кроме демо-стенда, DEMO_STAND=true)')
   }

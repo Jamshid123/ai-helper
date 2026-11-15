@@ -14,11 +14,12 @@ datasource db {
 
 model User {
   id              String    @id @default(uuid()) @db.Uuid
-  telegramId      BigInt    @unique
+  /// Telegram больше не обязателен: покупатели входят на сайт по телефону и SMS-коду (решение 15.11.2026).
+  telegramId      BigInt?   @unique
   firstName       String
   lastName        String?
   username        String?
-  /// Подтверждённый телефон (из message.contact бота). ПДн: не логировать, отдавать только владельцу/уполномоченным.
+  /// Подтверждённый телефон (SMS-код), +998XXXXXXXXX. ПДн: не логировать, отдавать только владельцу/уполномоченным.
   phone           String?   @unique
   phoneVerifiedAt DateTime? @db.Timestamptz
   /// Публичное имя для ленты торгов: «Имя Ф.» или «Участник 0417».
@@ -35,6 +36,37 @@ model User {
   orders       Order[]
   obligations  Obligation[]
   restrictions Restriction[]
+  sessions     BuyerSession[]
+}
+
+/// Сессия покупателя на сайте: httpOnly-cookie, в БД — только SHA-256 токена; отзывается при выходе.
+model BuyerSession {
+  id         String    @id @default(uuid()) @db.Uuid
+  tokenHash  String    @unique
+  userId     String    @db.Uuid
+  user       User      @relation(fields: [userId], references: [id])
+  csrfToken  String
+  ip         String?
+  expiresAt  DateTime  @db.Timestamptz
+  revokedAt  DateTime? @db.Timestamptz
+  createdAt  DateTime  @default(now()) @db.Timestamptz
+
+  @@index([userId])
+}
+
+/// Одноразовый SMS-код входа: хранится только HMAC кода; 5 минут, до 5 попыток (решение 15.11.2026).
+model OtpChallenge {
+  id         String    @id @default(uuid()) @db.Uuid
+  phone      String
+  codeHash   String
+  ip         String?
+  attempts   Int       @default(0)
+  expiresAt  DateTime  @db.Timestamptz
+  consumedAt DateTime? @db.Timestamptz
+  createdAt  DateTime  @default(now()) @db.Timestamptz
+
+  @@index([phone, createdAt])
+  @@index([ip, createdAt])
 }
 
 /// Ограничение участия (невыкуп → 50 календарных дней). Снятие — только с причиной и аудитом.

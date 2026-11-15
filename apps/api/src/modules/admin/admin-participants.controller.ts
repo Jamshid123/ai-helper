@@ -68,7 +68,7 @@ export class AdminParticipantsController {
     })
     return users.map((u) => ({
       id: u.id,
-      telegramId: u.telegramId.toString(),
+      telegramId: u.telegramId?.toString() ?? null,
       firstName: u.firstName,
       lastName: u.lastName,
       username: u.username,
@@ -97,7 +97,7 @@ export class AdminParticipantsController {
     const active = u.restrictions.find((r) => !r.liftedAt && r.startsAt <= now && r.endsAt > now) ?? null
     return {
       id: u.id,
-      telegramId: u.telegramId.toString(),
+      telegramId: u.telegramId?.toString() ?? null,
       firstName: u.firstName,
       lastName: u.lastName,
       username: u.username,

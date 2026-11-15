@@ -7,7 +7,7 @@ const next = () => ++n
 
 export async function cleanDb(db: PrismaClient) {
   await db.$executeRawUnsafe(
-    'TRUNCATE "Bid","AutoBid","LotReminder","Admission","Obligation","Order","Restriction","Lot","Product","User","OutboxEvent","AuditLog","Setting","StaffSession","Staff" CASCADE'
+    'TRUNCATE "Bid","AutoBid","LotReminder","Admission","Obligation","Order","Restriction","Lot","Product","User","OutboxEvent","AuditLog","Setting","StaffSession","Staff","OtpChallenge","BuyerSession" CASCADE'
   )
   // роли засеяны миграцией: тестовые удаляем, стартовые возвращаем к исходным правам
   await db.role.deleteMany({ where: { name: { notIn: ['Администратор', 'Оператор'] } } })

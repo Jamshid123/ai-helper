@@ -47,6 +47,8 @@ services:
       REDIS_URL: redis://redis:6379
       CORS_ORIGINS: https://auksion.expertly.uz,https://auksion-admin.expertly.uz
       PAYMENTS_MODE: ${PAYMENTS_MODE:-disabled}
+      # SMS-код входа: disabled — вход закрыт (по умолчанию); fake — только демо-стенд (код показывается на экране)
+      SMS_MODE: ${SMS_MODE:-disabled}
       # Демо-стенд: разрешает имитацию оплаты и тестовые лоты (задаёт deploy.yml). На боевом запуске — false.
       DEMO_STAND: ${DEMO_STAND:-false}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is required}

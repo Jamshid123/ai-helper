@@ -16,6 +16,7 @@ import { LiveModule } from './modules/live/live.module'
 import { StaffModule } from './modules/staff/staff.module'
 import { AdminModule } from './modules/admin/admin.module'
 import { MediaModule } from './modules/media/media.module'
+import { SmsModule } from './modules/sms/sms.module'
 
 /** Поля, которые никогда не попадают в логи (скилл security). */
 export const LOG_REDACT = [
@@ -56,6 +57,7 @@ export const LOG_REDACT = [
     LiveModule,
     StaffModule,
     MediaModule,
+    SmsModule,
     AdminModule,
   ],
 })
