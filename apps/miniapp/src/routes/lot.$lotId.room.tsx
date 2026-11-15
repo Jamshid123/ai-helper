@@ -119,167 +119,175 @@ function RoomScreen({ lot, view }: { lot: Lot; view: RoomView }) {
   const showPanel = !closed && (canOffer || !admitted)
 
   return (
-    <div className={cn('flex flex-col gap-4 px-4 pt-3', showPanel && !native && 'pb-56')}>
-      <Link
-        to='/lot/$lotId'
-        params={{ lotId }}
-        className='-ml-1 inline-flex min-h-11 w-max items-center gap-0.5 text-[14px] text-muted'
-      >
-        <ChevronLeft className='size-4' /> {t('room.back')}
-      </Link>
-
-      <header className='flex items-start justify-between gap-3'>
-        <h1 className='text-[17px] leading-snug font-semibold'>{lot.title}</h1>
-        <span className='inline-flex shrink-0 items-center gap-1 text-[12.5px] text-muted'>
-          <Users className='size-3.5' aria-hidden='true' />{' '}
-          {online !== null ? `${online} ${t('room.online')}` : `${t('lot.admitted')}: ${participantsOf(lot)}`}
-        </span>
-      </header>
-
-      {/* Главное: текущая цена, кто лидирует и сколько осталось */}
-      <section className='relative overflow-hidden rounded-2xl bg-surface px-4 pt-9 pb-4'>
-        {!closed && <LiveBadge />}
-        <div className='flex flex-wrap items-end justify-between gap-x-3 gap-y-3'>
-          <div className='grid min-w-0 gap-0.5'>
-            <span className='text-[12.5px] text-muted'>{t('lot.current')}</span>
-            <Price
-              value={price ?? room.start}
-              className='text-[clamp(22px,7.5vw,28px)] leading-none font-bold text-brand-ink'
-            />
-            <span className='mt-1 text-[13px] text-muted'>
-              {t('room.leaderIs')}:{' '}
-              <b className='font-semibold text-fg'>{last ? (last.isMe ? t('room.you') : last.bidder) : '—'}</b>
-            </span>
-          </div>
-          <div className='ml-auto grid justify-items-end gap-0.5'>
-            <span className='text-[12.5px] text-muted'>{t('lot.endsIn')}</span>
-            <span className='tabular text-[20px] font-bold whitespace-nowrap text-hot-text'>
-              {formatCountdown(room.closesAt - now, t('time.d'))}
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {banner && <div className={cn('rounded-xl px-4 py-3 text-[14px] font-medium', banner.cls)}>{banner.text}</div>}
-
-      {!closed && lot.bidTimeoutSec ? (
-        <p className='-mt-2 text-[12.5px] text-muted'>
-          {t('room.idle').replace('{n}', String(Math.round(lot.bidTimeoutSec / 60)))}
-        </p>
-      ) : null}
-
-      {error && (
-        <div role='alert' className='rounded-xl bg-hot/10 px-4 py-3 text-[14px] font-medium text-hot-text'>
-          {error}
-        </div>
+    <div
+      className={cn(
+        'flex flex-col gap-4 px-4 pt-3 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-x-8 lg:px-6 lg:pt-6 lg:pb-10',
+        showPanel && !native && 'pb-56'
       )}
+    >
+      <div className='flex flex-col gap-4'>
+        <Link
+          to='/lot/$lotId'
+          params={{ lotId }}
+          className='-ml-1 inline-flex min-h-11 w-max items-center gap-0.5 text-[14px] text-muted'
+        >
+          <ChevronLeft className='size-4' /> {t('room.back')}
+        </Link>
 
-      {admitted && !closed && <AutoBidCard lotId={lotId} minBid={min} step={room.step} />}
+        <header className='flex items-start justify-between gap-3'>
+          <h1 className='text-[17px] leading-snug font-semibold'>{lot.title}</h1>
+          <span className='inline-flex shrink-0 items-center gap-1 text-[12.5px] text-muted'>
+            <Users className='size-3.5' aria-hidden='true' />{' '}
+            {online !== null ? `${online} ${t('room.online')}` : `${t('lot.admitted')}: ${participantsOf(lot)}`}
+          </span>
+        </header>
 
-      <section className='grid gap-1'>
-        <h2 className='text-[15px] font-semibold'>{t('room.history')}</h2>
-        {room.bids.length === 0 ? (
-          <p className='text-[14px] text-muted'>{t('room.noBids')}</p>
-        ) : (
-          <ol className='divide-y divide-line'>
-            {[...room.bids].reverse().map((b, i) => (
-              <li
-                key={b.seq}
-                className={cn(
-                  '-mx-2 flex items-baseline justify-between gap-3 rounded-lg px-2 py-2.5 text-[14px]',
-                  i === 0 && 'flash-new'
-                )}
-              >
-                <span className={cn('tabular min-w-0', b.isMe ? 'font-semibold' : 'text-muted')}>
-                  #{b.seq} · {b.isMe ? t('room.you') : b.bidder}
-                  {i === 0 && (
-                    <span className='block text-[11.5px] font-medium text-brand-ink'>{t('room.leader')}</span>
-                  )}
-                </span>
-                <Price value={b.amount} className={cn(i === 0 && 'font-semibold')} />
-              </li>
-            ))}
-          </ol>
+        {/* Главное: текущая цена, кто лидирует и сколько осталось */}
+        <section className='relative overflow-hidden rounded-2xl bg-surface px-4 pt-9 pb-4'>
+          {!closed && <LiveBadge />}
+          <div className='flex flex-wrap items-end justify-between gap-x-3 gap-y-3'>
+            <div className='grid min-w-0 gap-0.5'>
+              <span className='text-[12.5px] text-muted'>{t('lot.current')}</span>
+              <Price
+                value={price ?? room.start}
+                className='text-[clamp(22px,7.5vw,28px)] leading-none font-bold text-brand-ink'
+              />
+              <span className='mt-1 text-[13px] text-muted'>
+                {t('room.leaderIs')}:{' '}
+                <b className='font-semibold text-fg'>{last ? (last.isMe ? t('room.you') : last.bidder) : '—'}</b>
+              </span>
+            </div>
+            <div className='ml-auto grid justify-items-end gap-0.5'>
+              <span className='text-[12.5px] text-muted'>{t('lot.endsIn')}</span>
+              <span className='tabular text-[20px] font-bold whitespace-nowrap text-hot-text'>
+                {formatCountdown(room.closesAt - now, t('time.d'))}
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {banner && <div className={cn('rounded-xl px-4 py-3 text-[14px] font-medium', banner.cls)}>{banner.text}</div>}
+
+        {!closed && lot.bidTimeoutSec ? (
+          <p className='-mt-2 text-[12.5px] text-muted'>
+            {t('room.idle').replace('{n}', String(Math.round(lot.bidTimeoutSec / 60)))}
+          </p>
+        ) : null}
+
+        {error && (
+          <div role='alert' className='rounded-xl bg-hot/10 px-4 py-3 text-[14px] font-medium text-hot-text'>
+            {error}
+          </div>
         )}
-      </section>
 
-      {/* Ненавязчивая ссылка на поддержку (решение 14.11.2026, п. 17) */}
-      <p className='text-center text-[12.5px] text-muted'>
-        {t('room.supportQ')}{' '}
-        <a
-          href={SUPPORT_URL}
-          target='_blank'
-          rel='noopener noreferrer'
-          className='font-medium text-brand-ink underline-offset-2 hover:underline'
-        >
-          {t('room.supportLink')}
-        </a>
-      </p>
-
-      {/* Панель действия — внизу, под большим пальцем. В Telegram кнопка нативная (MainButton). */}
-      {showPanel && (
-        <div
-          className={cn(
-            'grid gap-3 border-t border-line bg-bg px-4 pt-3',
-            native
-              ? 'sticky bottom-0 -mx-4 pb-3'
-              : 'fixed inset-x-0 bottom-0 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]'
-          )}
-        >
-          <div className='mx-auto grid w-full max-w-lg gap-3'>
-            {canOffer && (
-              <>
-                <div className='flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-[13px]'>
-                  <span className='text-muted'>{t('room.yourOffer')}</span>
-                  <span className='text-muted'>
-                    {t('room.minBid')} <Price value={min} className='font-semibold text-fg' />
-                  </span>
-                </div>
-                <div
-                  className='grid grid-cols-2 gap-2 min-[360px]:grid-cols-4'
-                  role='radiogroup'
-                  aria-label={t('room.yourOffer')}
+        <section className='grid gap-1'>
+          <h2 className='text-[15px] font-semibold'>{t('room.history')}</h2>
+          {room.bids.length === 0 ? (
+            <p className='text-[14px] text-muted'>{t('room.noBids')}</p>
+          ) : (
+            <ol className='divide-y divide-line'>
+              {[...room.bids].reverse().map((b, i) => (
+                <li
+                  key={b.seq}
+                  className={cn(
+                    '-mx-2 flex items-baseline justify-between gap-3 rounded-lg px-2 py-2.5 text-[14px]',
+                    i === 0 && 'flash-new'
+                  )}
                 >
-                  {stepOptions.map((n) => {
-                    const value = min + n * room.step
-                    const active = extra === n
-                    return (
-                      <button
-                        key={n.toString()}
-                        type='button'
-                        role='radio'
-                        aria-checked={active}
-                        onClick={() => {
-                          setExtra(n)
-                          setConfirming(false)
-                          haptic('tap')
-                        }}
-                        className={cn(
-                          'tabular h-11 rounded-xl text-[13px] font-semibold transition-colors',
-                          active ? 'bg-fg text-bg' : 'bg-surface text-fg'
-                        )}
-                      >
-                        {formatSum(value, locale, false)}
-                      </button>
-                    )
-                  })}
-                </div>
-              </>
+                  <span className={cn('tabular min-w-0', b.isMe ? 'font-semibold' : 'text-muted')}>
+                    #{b.seq} · {b.isMe ? t('room.you') : b.bidder}
+                    {i === 0 && (
+                      <span className='block text-[11.5px] font-medium text-brand-ink'>{t('room.leader')}</span>
+                    )}
+                  </span>
+                  <Price value={b.amount} className={cn(i === 0 && 'font-semibold')} />
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+      </div>
+
+      {/* Десктоп: справа — предложение цены, автопредложение и поддержка (на телефоне панель внизу) */}
+      <aside className='flex flex-col gap-4 lg:sticky lg:top-24'>
+        {/* Панель действия — внизу, под большим пальцем. В Telegram кнопка нативная (MainButton). */}
+        {showPanel && (
+          <div
+            className={cn(
+              'grid gap-3 border-t border-line bg-bg px-4 pt-3 lg:static lg:rounded-2xl lg:border lg:p-4',
+              native
+                ? 'sticky bottom-0 -mx-4 pb-3'
+                : 'fixed inset-x-0 bottom-0 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]'
             )}
-            {!native && (
-              <Button onClick={admitted ? offer : getAdmission} disabled={pending} className='w-full'>
-                {admitted ? (
-                  <>
-                    {offerLabel} <Price value={amount} />
-                  </>
-                ) : (
-                  t('room.getAdmission')
-                )}
-              </Button>
-            )}
+          >
+            <div className='mx-auto grid w-full max-w-lg gap-3 lg:max-w-none'>
+              {canOffer && (
+                <>
+                  <div className='flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-[13px]'>
+                    <span className='text-muted'>{t('room.yourOffer')}</span>
+                    <span className='text-muted'>
+                      {t('room.minBid')} <Price value={min} className='font-semibold text-fg' />
+                    </span>
+                  </div>
+                  <div
+                    className='grid grid-cols-2 gap-2 min-[360px]:grid-cols-4'
+                    role='radiogroup'
+                    aria-label={t('room.yourOffer')}
+                  >
+                    {stepOptions.map((n) => {
+                      const value = min + n * room.step
+                      const active = extra === n
+                      return (
+                        <button
+                          key={n.toString()}
+                          type='button'
+                          role='radio'
+                          aria-checked={active}
+                          onClick={() => {
+                            setExtra(n)
+                            setConfirming(false)
+                            haptic('tap')
+                          }}
+                          className={cn(
+                            'tabular h-11 rounded-xl text-[13px] font-semibold transition-colors',
+                            active ? 'bg-fg text-bg' : 'bg-surface text-fg'
+                          )}
+                        >
+                          {formatSum(value, locale, false)}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+              {!native && (
+                <Button onClick={admitted ? offer : getAdmission} disabled={pending} className='w-full'>
+                  {admitted ? (
+                    <>
+                      {offerLabel} <Price value={amount} />
+                    </>
+                  ) : (
+                    t('room.getAdmission')
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+        {admitted && !closed && <AutoBidCard lotId={lotId} minBid={min} step={room.step} />}
+        {/* Ненавязчивая ссылка на поддержку (решение 14.11.2026, п. 17) */}
+        <p className='text-center text-[12.5px] text-muted'>
+          {t('room.supportQ')}{' '}
+          <a
+            href={SUPPORT_URL}
+            target='_blank'
+            rel='noopener noreferrer'
+            className='font-medium text-brand-ink underline-offset-2 hover:underline'
+          >
+            {t('room.supportLink')}
+          </a>
+        </p>
+      </aside>
     </div>
   )
 }

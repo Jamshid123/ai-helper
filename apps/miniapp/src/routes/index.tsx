@@ -53,13 +53,13 @@ function LotCard({ lot }: { lot: Lot }) {
   const count = participantsOf(lot)
   const full = !admitted && isFull(lot)
   return (
-    <div className='grid gap-2 border-b border-line pb-4 last:border-b-0'>
+    <div className='grid gap-2 border-b border-line pb-4 last:border-b-0 md:content-start md:rounded-2xl md:border md:p-3 md:last:border-b'>
       <Link
         to='/lot/$lotId'
         params={{ lotId: lot.id }}
-        className='grid grid-cols-[104px_1fr] gap-3 rounded-2xl p-1 transition-colors active:bg-surface'
+        className='grid grid-cols-[104px_1fr] gap-3 rounded-2xl p-1 transition-colors active:bg-surface md:grid-cols-1 md:p-0 md:hover:opacity-95'
       >
-        <LotPhoto hue={lot.hue} src={lot.photos?.[0]} className='aspect-square'>
+        <LotPhoto hue={lot.hue} src={lot.photos?.[0]} className='aspect-square md:aspect-[4/3]'>
           {live && <LiveBadge />}
         </LotPhoto>
         <div className='flex min-w-0 flex-col gap-1 py-1'>
@@ -111,7 +111,7 @@ function Catalog() {
   )
 
   return (
-    <div className='flex flex-col gap-4 px-4 pt-4'>
+    <div className='flex flex-col gap-4 px-4 pt-4 md:px-6 md:pt-6'>
       <SessionStrip lots={lots} />
 
       <div className='flex gap-2 overflow-x-auto' role='tablist' aria-label={t('catalog.categories')}>
@@ -153,7 +153,7 @@ function Catalog() {
         ))}
       </div>
 
-      <div className='flex flex-col gap-4'>
+      <div className='flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-5 lg:grid-cols-3'>
         {visible.map((lot) => (
           <LotCard key={lot.id} lot={lot} />
         ))}

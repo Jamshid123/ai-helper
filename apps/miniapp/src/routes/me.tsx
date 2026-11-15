@@ -20,7 +20,7 @@ function MePage() {
   const lots = admissions.ids.map((id) => all.find((l) => l.id === id)).filter((l): l is Lot => Boolean(l))
 
   return (
-    <div className='flex flex-col gap-5 px-4 pt-4'>
+    <div className='flex flex-col gap-5 px-4 pt-4 md:mx-auto md:w-full md:max-w-xl md:pt-8'>
       <h1 className='text-xl font-semibold'>{name ?? t('me.title')}</h1>
 
       {!registered ? (

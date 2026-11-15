@@ -65,9 +65,14 @@ function AdmissionSheet({ lot, onClose, onPaid }: { lot: Lot; onClose: () => voi
   })
 
   return (
-    <div className='fixed inset-0 z-20 flex items-end bg-black/40' role='dialog' aria-modal='true' onClick={onClose}>
+    <div
+      className='fixed inset-0 z-30 flex items-end bg-black/40 md:items-center md:p-6'
+      role='dialog'
+      aria-modal='true'
+      onClick={onClose}
+    >
       <div
-        className='mx-auto w-full max-w-lg rounded-t-3xl bg-bg p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))]'
+        className='mx-auto max-h-[92svh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-bg p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] md:rounded-3xl md:pb-5'
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className='mb-1 text-lg font-semibold'>{t('admission.title')}</h2>
@@ -171,102 +176,118 @@ function LotPage() {
   const closes = endsAtOf(lot)
 
   return (
-    <div className={cn('flex flex-col gap-4 px-4 pt-4', !native && (!admitted || live) && 'pb-24')}>
-      <PhotoCarousel photos={lot.photos ?? []} hue={lot.hue} title={lot.title} className='aspect-[4/3]'>
+    <div
+      className={cn(
+        'flex flex-col gap-4 px-4 pt-4 lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-start lg:gap-8 lg:px-6 lg:pt-6 lg:pb-10',
+        !native && (!admitted || live) && 'pb-24'
+      )}
+    >
+      <PhotoCarousel
+        photos={lot.photos ?? []}
+        hue={lot.hue}
+        title={lot.title}
+        className='aspect-[4/3] lg:sticky lg:top-24'
+      >
         {live && <LiveBadge />}
       </PhotoCarousel>
 
-      <div className='grid gap-1.5'>
-        <h1 className='text-xl leading-tight font-semibold text-balance'>{lot.title}</h1>
-        <div className='flex flex-wrap gap-1.5 text-[12px]'>
-          <span className='inline-flex items-center gap-1 rounded-md bg-surface px-2 py-0.5 font-medium text-brand-ink'>
-            <BadgeCheck className='size-3.5' /> {t('lot.verified')}
-          </span>
-          <span className='rounded-md bg-surface px-2 py-0.5 text-muted'>
-            {t(lot.condition === 'new' ? 'lot.condition.new' : 'lot.condition.used')}
-          </span>
-          <span className='rounded-md bg-surface px-2 py-0.5 text-muted'>
-            {t('lot.seller')}: {t('lot.sellerPlatform')}
-          </span>
-        </div>
-      </div>
-
-      <div className='grid grid-cols-2 gap-2'>
-        <div className='rounded-2xl bg-surface px-4 py-3'>
-          <div className='text-[12px] text-muted'>{lot.currentPrice ? t('lot.current') : t('lot.start')}</div>
-          <Price
-            value={lot.currentPrice ?? lot.startPrice}
-            className='text-lg font-bold whitespace-normal text-brand-ink min-[360px]:text-xl'
-          />
-        </div>
-        <div className='rounded-2xl bg-surface px-4 py-3'>
-          <div className='text-[12px] text-muted'>{live ? t('lot.endsIn') : t('lot.opensIn')}</div>
-          <div className={`tabular text-lg font-bold min-[360px]:text-xl ${live ? 'text-hot' : ''}`}>
-            {formatCountdown((live ? closes : opens) - now, t('time.d'))}
+      <div className='flex flex-col gap-4'>
+        <div className='grid gap-1.5'>
+          <h1 className='text-xl leading-tight font-semibold text-balance'>{lot.title}</h1>
+          <div className='flex flex-wrap gap-1.5 text-[12px]'>
+            <span className='inline-flex items-center gap-1 rounded-md bg-surface px-2 py-0.5 font-medium text-brand-ink'>
+              <BadgeCheck className='size-3.5' /> {t('lot.verified')}
+            </span>
+            <span className='rounded-md bg-surface px-2 py-0.5 text-muted'>
+              {t(lot.condition === 'new' ? 'lot.condition.new' : 'lot.condition.used')}
+            </span>
+            <span className='rounded-md bg-surface px-2 py-0.5 text-muted'>
+              {t('lot.seller')}: {t('lot.sellerPlatform')}
+            </span>
           </div>
         </div>
+
+        <div className='grid grid-cols-2 gap-2'>
+          <div className='rounded-2xl bg-surface px-4 py-3'>
+            <div className='text-[12px] text-muted'>{lot.currentPrice ? t('lot.current') : t('lot.start')}</div>
+            <Price
+              value={lot.currentPrice ?? lot.startPrice}
+              className='text-lg font-bold whitespace-normal text-brand-ink min-[360px]:text-xl'
+            />
+          </div>
+          <div className='rounded-2xl bg-surface px-4 py-3'>
+            <div className='text-[12px] text-muted'>{live ? t('lot.endsIn') : t('lot.opensIn')}</div>
+            <div className={`tabular text-lg font-bold min-[360px]:text-xl ${live ? 'text-hot' : ''}`}>
+              {formatCountdown((live ? closes : opens) - now, t('time.d'))}
+            </div>
+          </div>
+        </div>
+
+        {!native && (!admitted || live) && (
+          <div className='fixed inset-x-0 bottom-0 z-10 border-t border-line bg-bg px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] lg:static lg:z-auto lg:border-0 lg:bg-transparent lg:p-0'>
+            <Button
+              onClick={primary}
+              disabled={!admitted && full}
+              className='mx-auto flex w-full max-w-lg lg:max-w-none'
+            >
+              {admitted ? t('lot.toRoom') : full ? t('lot.full') : t('lot.participate')}
+            </Button>
+          </div>
+        )}
+
+        {!live && <RemindCard lotId={lot.id} opensAt={opens} now={now} />}
+
+        {admitted && (
+          <div className='rounded-2xl border border-ok/30 px-4 py-3 text-[14px] font-medium text-ok'>
+            ✓ {t('lot.admittedBadge')}
+          </div>
+        )}
+        {admitted && !live && opens > now && <LeaveCard lotId={lot.id} />}
+
+        <section className='divide-y divide-line'>
+          <Row label={t('lot.start')}>
+            <Price value={lot.startPrice} />
+          </Row>
+          <Row label={t('lot.step')}>
+            <Price value={lot.step} />
+          </Row>
+          <Row label={t('lot.admitted')}>
+            {participantsOf(lot)}
+            {lot.maxParticipants ? ` ${t('lot.of')} ${lot.maxParticipants}` : ''}
+          </Row>
+          <Row label={t('lot.fee')}>
+            <Price value={lot.fee} />
+          </Row>
+        </section>
+
+        <section className='grid gap-2'>
+          <h2 className='text-[15px] font-semibold'>{t('lot.inspection')}</h2>
+          <p className='text-[14px] leading-relaxed'>{lot.inspection.summary}</p>
+          <div className='divide-y divide-line'>
+            {lot.inspection.battery !== null && <Row label={t('lot.battery')}>{lot.inspection.battery}%</Row>}
+            <Row label='IMEI'>{lot.inspection.imeiChecked ? '✓' : '—'}</Row>
+            <Row stacked label={t('lot.kit')}>
+              {lot.inspection.kit.join(', ')}
+            </Row>
+            <Row stacked label={t('lot.defects')}>
+              {lot.inspection.defects.length ? lot.inspection.defects.join('; ') : t('lot.noDefects')}
+            </Row>
+          </div>
+        </section>
+
+        <section className='grid gap-2'>
+          <h2 className='text-[15px] font-semibold'>{t('lot.terms')}</h2>
+          <p className='text-[13.5px] leading-relaxed text-muted'>{t('lot.terms.text')}</p>
+          <div className='divide-y divide-line'>
+            <Row stacked label={t('lot.refund')}>
+              {t('lot.refund.text')}
+            </Row>
+            <Row stacked label={t('lot.pickup')}>
+              {t('lot.pickup.text')}
+            </Row>
+          </div>
+        </section>
       </div>
-
-      {!live && <RemindCard lotId={lot.id} opensAt={opens} now={now} />}
-
-      {admitted && (
-        <div className='rounded-2xl border border-ok/30 px-4 py-3 text-[14px] font-medium text-ok'>
-          ✓ {t('lot.admittedBadge')}
-        </div>
-      )}
-      {admitted && !live && opens > now && <LeaveCard lotId={lot.id} />}
-
-      <section className='divide-y divide-line'>
-        <Row label={t('lot.start')}>
-          <Price value={lot.startPrice} />
-        </Row>
-        <Row label={t('lot.step')}>
-          <Price value={lot.step} />
-        </Row>
-        <Row label={t('lot.admitted')}>
-          {participantsOf(lot)}
-          {lot.maxParticipants ? ` ${t('lot.of')} ${lot.maxParticipants}` : ''}
-        </Row>
-        <Row label={t('lot.fee')}>
-          <Price value={lot.fee} />
-        </Row>
-      </section>
-
-      <section className='grid gap-2'>
-        <h2 className='text-[15px] font-semibold'>{t('lot.inspection')}</h2>
-        <p className='text-[14px] leading-relaxed'>{lot.inspection.summary}</p>
-        <div className='divide-y divide-line'>
-          {lot.inspection.battery !== null && <Row label={t('lot.battery')}>{lot.inspection.battery}%</Row>}
-          <Row label='IMEI'>{lot.inspection.imeiChecked ? '✓' : '—'}</Row>
-          <Row stacked label={t('lot.kit')}>
-            {lot.inspection.kit.join(', ')}
-          </Row>
-          <Row stacked label={t('lot.defects')}>
-            {lot.inspection.defects.length ? lot.inspection.defects.join('; ') : t('lot.noDefects')}
-          </Row>
-        </div>
-      </section>
-
-      <section className='grid gap-2'>
-        <h2 className='text-[15px] font-semibold'>{t('lot.terms')}</h2>
-        <p className='text-[13.5px] leading-relaxed text-muted'>{t('lot.terms.text')}</p>
-        <div className='divide-y divide-line'>
-          <Row stacked label={t('lot.refund')}>
-            {t('lot.refund.text')}
-          </Row>
-          <Row stacked label={t('lot.pickup')}>
-            {t('lot.pickup.text')}
-          </Row>
-        </div>
-      </section>
-
-      {!native && (!admitted || live) && (
-        <div className='fixed inset-x-0 bottom-0 z-10 border-t border-line bg-bg px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]'>
-          <Button onClick={primary} disabled={!admitted && full} className='mx-auto flex w-full max-w-lg'>
-            {admitted ? t('lot.toRoom') : full ? t('lot.full') : t('lot.participate')}
-          </Button>
-        </div>
-      )}
 
       {sheet && (
         <AdmissionSheet
