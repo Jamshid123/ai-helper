@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useI18n } from '@/app/i18n'
+import { isSignedIn, useMe } from '@/entities/account/session'
 import { DEMO, isFull, participantsOf, useAdmissions, useCategories, useLots } from '@/entities/lot/api'
 import { type Condition, type Lot } from '@/entities/lot/types'
 import { cn } from '@/shared/lib/cn'
 import { formatSessionDate } from '@/shared/lib/format-date'
 import { formatCountdown, useNow } from '@/shared/lib/use-now'
 import { LiveBadge } from '@/shared/ui/live-badge'
+import { Logo } from '@/shared/ui/logo'
 import { LotPhoto } from '@/shared/ui/lot-photo'
 import { Price } from '@/shared/ui/price'
 
@@ -102,6 +104,7 @@ function LotCard({ lot }: { lot: Lot }) {
 function Catalog() {
   const { t, locale } = useI18n()
   const { data: lots = [] } = useLots()
+  const signedIn = isSignedIn(useMe().me)
   const categories = useCategories()
   const [picked, setPicked] = useState<string | null>(null)
   const category = picked && categories.some((c) => c.slug === picked) ? picked : (categories[0]?.slug ?? null)
@@ -112,6 +115,15 @@ function Catalog() {
 
   return (
     <div className='flex flex-col gap-4 px-4 pt-4 md:px-6 md:pt-6'>
+      {/* Телефон: логотип вверху каталога (на десктопе он в шапке) */}
+      <header className='flex min-h-10 items-center justify-between md:hidden'>
+        <Logo />
+        {!signedIn && (
+          <Link to='/register' className='rounded-lg px-3 py-2 text-[14px] font-medium text-brand-ink'>
+            {t('login.title')}
+          </Link>
+        )}
+      </header>
       <SessionStrip lots={lots} />
 
       <div className='flex gap-2 overflow-x-auto' role='tablist' aria-label={t('catalog.categories')}>
