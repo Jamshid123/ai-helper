@@ -14,8 +14,15 @@ const KNOWN = new Set([
   'NETWORK',
   'LOT_STARTED',
   'LOT_FULL',
+  'BAD_PHONE',
+  'OTP_INVALID',
+  'OTP_EXPIRED',
+  'OTP_LOCKED',
+  'OTP_COOLDOWN',
+  'OTP_LIMIT',
+  'SMS_DISABLED',
 ])
-const SESSION = new Set(['INVALID_INIT_DATA', 'NO_INIT_DATA', 'UNAUTHORIZED'])
+const SESSION = new Set(['UNAUTHORIZED', 'CSRF'])
 
 /** Код ошибки API (или сама ошибка) → понятный текст на языке пользователя. */
 export function errorText(t: (k: TKey) => string, e: unknown): string {

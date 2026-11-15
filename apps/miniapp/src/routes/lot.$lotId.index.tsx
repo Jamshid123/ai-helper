@@ -3,9 +3,9 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { BadgeCheck } from 'lucide-react'
 import { formatSum } from '@auksion/shared'
 import { useI18n } from '@/app/i18n'
-import { haptic, useBackButton, useMainButton } from '@/app/telegram'
+import { haptic, useBackButton, useMainButton } from '@/app/platform'
 import { endsAtOf, isFull, participantsOf, useAdmissions, useAdmit, useLot } from '@/entities/lot/api'
-import { isRegistered, useAccount } from '@/entities/account/demo-account'
+import { isSignedIn, useMe } from '@/entities/account/session'
 import { errorText } from '@/shared/api/error-text'
 import { type Lot } from '@/entities/lot/types'
 import { cn } from '@/shared/lib/cn'
@@ -130,17 +130,20 @@ function LotPage() {
   const now = useNow()
   const { data: lot } = useLot(lotId)
   const search = Route.useSearch()
-  const account = useAccount()
-  const registered = isRegistered(account)
-  const [sheet, setSheet] = useState(Boolean(search.admit) && registered)
-  // Без регистрации «Участвовать» ведёт на регистрацию и возвращает к оформлению допуска.
+  const { me, loading: meLoading } = useMe()
+  const registered = isSignedIn(me)
+  const [opened, setSheet] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
+  const sheet = opened || (Boolean(search.admit) && registered && !dismissed)
+  // Без входа «Участвовать» ведёт на вход по SMS-коду и возвращает к оформлению допуска.
   const toRegister = useCallback(
     () => navigate({ to: '/register', search: { next: `/lot/${lotId}?admit=true` } }),
     [navigate, lotId]
   )
   useEffect(() => {
+    if (meLoading) return
     if (search.admit && !registered) toRegister()
-  }, [search.admit, registered, toRegister])
+  }, [search.admit, registered, meLoading, toRegister])
   const back = useCallback(() => navigate({ to: '/' }), [navigate])
   useBackButton(sheet ? null : back)
 
@@ -268,9 +271,13 @@ function LotPage() {
       {sheet && (
         <AdmissionSheet
           lot={lot}
-          onClose={() => setSheet(false)}
+          onClose={() => {
+            setSheet(false)
+            setDismissed(true)
+          }}
           onPaid={() => {
             setSheet(false)
+            setDismissed(true)
             // Короткий путь: после допуска к идущему лоту — сразу в комнату торгов.
             if (live)
               navigate({

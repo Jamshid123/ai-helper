@@ -3,7 +3,7 @@ import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ChevronLeft, Users } from 'lucide-react'
 import { formatSum } from '@auksion/shared'
 import { useI18n } from '@/app/i18n'
-import { SUPPORT_URL, haptic, isInTelegram, openTelegramLink, useBackButton, useMainButton } from '@/app/telegram'
+import { SUPPORT_URL, haptic, useBackButton, useMainButton } from '@/app/platform'
 import { type RoomView, participantsOf, useAdmissions, useLot, useRoom } from '@/entities/lot/api'
 import { currentPrice, roomMaxBid, roomMinBid } from '@/entities/lot/engine'
 import { type Lot } from '@/entities/lot/types'
@@ -120,15 +120,13 @@ function RoomScreen({ lot, view }: { lot: Lot; view: RoomView }) {
 
   return (
     <div className={cn('flex flex-col gap-4 px-4 pt-3', showPanel && !native && 'pb-56')}>
-      {!isInTelegram() && (
-        <Link
-          to='/lot/$lotId'
-          params={{ lotId }}
-          className='-ml-1 inline-flex min-h-11 w-max items-center gap-0.5 text-[14px] text-muted'
-        >
-          <ChevronLeft className='size-4' /> {t('room.back')}
-        </Link>
-      )}
+      <Link
+        to='/lot/$lotId'
+        params={{ lotId }}
+        className='-ml-1 inline-flex min-h-11 w-max items-center gap-0.5 text-[14px] text-muted'
+      >
+        <ChevronLeft className='size-4' /> {t('room.back')}
+      </Link>
 
       <header className='flex items-start justify-between gap-3'>
         <h1 className='text-[17px] leading-snug font-semibold'>{lot.title}</h1>
@@ -210,10 +208,8 @@ function RoomScreen({ lot, view }: { lot: Lot; view: RoomView }) {
         {t('room.supportQ')}{' '}
         <a
           href={SUPPORT_URL}
-          onClick={(e) => {
-            e.preventDefault()
-            openTelegramLink(SUPPORT_URL)
-          }}
+          target='_blank'
+          rel='noopener noreferrer'
           className='font-medium text-brand-ink underline-offset-2 hover:underline'
         >
           {t('room.supportLink')}

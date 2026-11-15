@@ -1,7 +1,6 @@
 import { Link, Outlet, createRootRoute, useRouterState } from '@tanstack/react-router'
 import { Gavel, User } from 'lucide-react'
 import { useI18n } from '@/app/i18n'
-import { isInTelegram } from '@/app/telegram'
 import { DEMO, TEST_STAND } from '@/entities/lot/api'
 import { Onboarding } from '@/features/onboarding'
 import { useOnboardingOpen } from '@/features/onboarding-store'
@@ -12,14 +11,6 @@ function Root() {
   const path = useRouterState({ select: (s) => s.location.pathname })
   const inRoom = path.endsWith('/room')
   const onboarding = useOnboardingOpen()
-
-  if (!DEMO && !isInTelegram()) {
-    return (
-      <main className='grid min-h-svh place-items-center p-6 text-center'>
-        <p className='text-lg font-semibold'>{t('app.openInTelegram')}</p>
-      </main>
-    )
-  }
 
   if (onboarding) return <Onboarding />
 

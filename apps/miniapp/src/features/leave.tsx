@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useI18n } from '@/app/i18n'
-import { haptic } from '@/app/telegram'
+import { haptic } from '@/app/platform'
 import { useLeave } from '@/entities/lot/api'
 import { errorText } from '@/shared/api/error-text'
 

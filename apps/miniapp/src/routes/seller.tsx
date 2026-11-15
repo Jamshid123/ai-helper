@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { Building2, Clock, FileUp, User } from 'lucide-react'
 import { useI18n } from '@/app/i18n'
-import { haptic, useBackButton, useMainButton } from '@/app/telegram'
-import { isRegistered, updateAccount, useAccount, type SellerType } from '@/entities/account/demo-account'
+import { haptic, useBackButton, useMainButton } from '@/app/platform'
+import { updateAccount, useAccount, type SellerType } from '@/entities/account/demo-account'
+import { isSignedIn, useMe } from '@/entities/account/session'
 import { cn } from '@/shared/lib/cn'
 import { Button } from '@/shared/ui/button'
 import { Check, Field, Steps } from '@/shared/ui/steps'
@@ -16,6 +17,7 @@ function SellerPage() {
   const { t } = useI18n()
   const navigate = useNavigate()
   const account = useAccount()
+  const signedIn = isSignedIn(useMe().me)
   const [step, setStep] = useState(1)
   const [type, setType] = useState<SellerType | null>(account.seller.type)
   const [name, setName] = useState(account.seller.name)
@@ -49,10 +51,10 @@ function SellerPage() {
     text: primaryText,
     onClick: onPrimary,
     enabled: Boolean(canNext),
-    visible: !inReview && isRegistered(account),
+    visible: !inReview && signedIn,
   })
 
-  if (!isRegistered(account)) {
+  if (!signedIn) {
     return (
       <div className='grid gap-4 px-4 pt-6'>
         <h1 className='text-xl font-semibold'>{t('seller.title')}</h1>

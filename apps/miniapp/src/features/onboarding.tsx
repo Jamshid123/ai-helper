@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { Gavel, ScanSearch, TrendingUp } from 'lucide-react'
 import { type TKey, useI18n } from '@/app/i18n'
-import { haptic, useBackButton, useMainButton } from '@/app/telegram'
+import { haptic, useBackButton, useMainButton } from '@/app/platform'
 import { cn } from '@/shared/lib/cn'
 import { Button } from '@/shared/ui/button'
 import { finishOnboarding as finish } from './onboarding-store'

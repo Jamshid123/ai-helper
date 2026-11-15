@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { isInTelegram } from '@/app/telegram'
 import { API_BASE, ApiError, api } from '@/shared/api/client'
 import {
   admit as demoAdmit,
@@ -20,10 +19,10 @@ import { type Room } from './engine'
 import { type Lot } from './types'
 
 /**
- * Источник данных Mini App. Внутри Telegram — API (`/api/v1`), в обычном браузере или при
- * VITE_DEMO_DATA=true — демо-стенд на тестовых данных (решение заказчика 14.11.2026).
+ * Источник данных сайта: API (`/api/v1`). VITE_DEMO_DATA=true — локальные тестовые данные без сервера
+ * (разработка и скриншоты). С 15.11.2026 — сайт вместо Telegram Mini App (решение заказчика).
  */
-export const DEMO = import.meta.env.VITE_DEMO_DATA === 'true' || !isInTelegram()
+export const DEMO = import.meta.env.VITE_DEMO_DATA === 'true'
 
 /** Тестовый запуск с API: оплата имитируется сервером (VITE_DEMO_STAND=true при сборке). */
 export const TEST_STAND = !DEMO && import.meta.env.VITE_DEMO_STAND === 'true'
@@ -93,8 +92,14 @@ export function useAdmissions(): Admissions {
   useDemoVersion()
   const q = useQuery({
     queryKey: ['admissions'],
-    queryFn: () => api<{ lotId: string }[]>('/me/admissions'),
+    // гость (401) — просто без допусков, без ошибки
+    queryFn: () =>
+      api<{ lotId: string }[]>('/me/admissions').catch((e: unknown) => {
+        if (e instanceof ApiError && e.status === 401) return []
+        throw e
+      }),
     enabled: !DEMO,
+    retry: false,
   })
   const ids = DEMO ? admittedLotIds() : (q.data ?? []).map((a) => a.lotId)
   return { ids, has: (lotId) => ids.includes(lotId), ready: DEMO || q.isSuccess }

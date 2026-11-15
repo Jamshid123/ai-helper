@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { ChevronDown, Zap } from 'lucide-react'
 import { formatSum } from '@auksion/shared'
 import { useI18n } from '@/app/i18n'
-import { haptic } from '@/app/telegram'
+import { haptic } from '@/app/platform'
 import { useAutoBid } from '@/entities/lot/api'
 import { Price } from '@/shared/ui/price'
 

@@ -3,19 +3,14 @@ import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { I18nProvider } from './app/i18n'
-import { getWebApp, initTelegram } from './app/telegram'
 import { routeTree } from './routeTree.gen'
 import './index.css'
 
-initTelegram()
-
-function applyScheme() {
-  const scheme =
-    getWebApp()?.colorScheme ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-  document.documentElement.dataset.scheme = scheme
-}
+// тема — как в системе пользователя (светлая/тёмная), меняется на лету
+const dark = window.matchMedia('(prefers-color-scheme: dark)')
+const applyScheme = () => (document.documentElement.dataset.scheme = dark.matches ? 'dark' : 'light')
 applyScheme()
-getWebApp()?.onEvent('themeChanged', applyScheme)
+dark.addEventListener('change', applyScheme)
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 10_000, retry: 1 } },

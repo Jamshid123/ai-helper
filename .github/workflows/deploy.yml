@@ -37,7 +37,6 @@ jobs:
             --build-arg APP=miniapp \
             --build-arg VITE_DEMO_DATA=false \
             --build-arg VITE_DEMO_STAND=true \
-            --build-arg "FRAME_ANCESTORS=https://web.telegram.org https://*.telegram.org" \
             -t "auksion-miniapp:${GITHUB_SHA::12}" .
 
       - name: Build admin image

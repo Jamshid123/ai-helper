@@ -1,8 +1,8 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { ChevronRight, CircleHelp, Gavel, Store } from 'lucide-react'
 import { useI18n } from '@/app/i18n'
-import { getWebApp } from '@/app/telegram'
-import { isRegistered, maskPhone, publicNameOf, resetAccount, useAccount } from '@/entities/account/demo-account'
+import { maskPhone, resetAccount, useAccount } from '@/entities/account/demo-account'
+import { isSignedIn, useAuthActions, useMe } from '@/entities/account/session'
 import { DEMO, useAdmissions, useLots } from '@/entities/lot/api'
 import { openOnboarding } from '@/features/onboarding-store'
 import { type Lot } from '@/entities/lot/types'
@@ -11,8 +11,10 @@ import { cn } from '@/shared/lib/cn'
 function MePage() {
   const { t, locale, setLocale } = useI18n()
   const account = useAccount()
-  const registered = isRegistered(account)
-  const name = registered ? publicNameOf(account) : getWebApp()?.initDataUnsafe.user?.first_name
+  const { me } = useMe()
+  const { logout } = useAuthActions()
+  const registered = isSignedIn(me)
+  const name = registered ? me.publicName : null
   const admissions = useAdmissions()
   const { data: all = [] } = useLots()
   const lots = admissions.ids.map((id) => all.find((l) => l.id === id)).filter((l): l is Lot => Boolean(l))
@@ -48,7 +50,7 @@ function MePage() {
         <section className='divide-y divide-line rounded-2xl border border-line px-4'>
           <div className='flex justify-between py-3 text-[14px]'>
             <span className='text-muted'>{t('me.phone')}</span>
-            <span>{account.phone ? maskPhone(account.phone) : '—'}</span>
+            <span>{DEMO && account.phone ? maskPhone(account.phone) : `✓ ${t('reg.phone.got')}`}</span>
           </div>
           <Link to='/seller' className='flex min-h-12 items-center justify-between py-3 text-[14px]'>
             <span className='text-muted'>{t('me.seller')}</span>
@@ -105,6 +107,16 @@ function MePage() {
         <span className='flex-1'>{t('howto.title')}</span>
         <ChevronRight className='size-4 text-muted' aria-hidden='true' />
       </button>
+
+      {registered && (
+        <button
+          type='button'
+          onClick={() => void logout()}
+          className='min-h-11 text-[14px] text-muted underline underline-offset-4'
+        >
+          {t('me.logout')}
+        </button>
+      )}
 
       {DEMO && (account.phone || account.seller.status !== 'none') && (
         <button
