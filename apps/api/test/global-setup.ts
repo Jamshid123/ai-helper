@@ -22,6 +22,8 @@ export default function setup() {
     JWT_SECRET: 'test-secret-'.padEnd(40, 'x'),
     DATA_ENCRYPTION_KEY: '0f'.repeat(32),
     SCHEDULER_ENABLED: 'false',
+    // лимиты частоты проверяет test/rate-limit.test.ts; в остальных тестах запросы идут сериями с одного адреса
+    RATE_LIMIT_ENABLED: 'false',
   })
   const run = (cmd: string, input?: string) =>
     execSync(cmd, { env: process.env, input, stdio: input ? ['pipe', 'inherit', 'inherit'] : 'inherit' })

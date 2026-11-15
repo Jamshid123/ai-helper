@@ -13,6 +13,7 @@ import {
 import { z } from 'zod'
 import type { AuthedRequest } from '../auth/buyer-auth.guard'
 import { BidsService } from './bids.service'
+import { LIMITS, RateLimit } from '../../common/rate-limit'
 
 const bodySchema = z.object({ maxAmount: z.string().regex(/^[1-9]\d{0,14}$/) })
 
@@ -21,6 +22,7 @@ const bodySchema = z.object({ maxAmount: z.string().regex(/^[1-9]\d{0,14}$/) })
 export class AutoBidController {
   constructor(private readonly bids: BidsService) {}
 
+  @RateLimit(LIMITS.autobid)
   @Put()
   @HttpCode(200)
   async set(@Param('lotId', new ParseUUIDPipe()) lotId: string, @Body() body: unknown, @Req() req: AuthedRequest) {
@@ -41,6 +43,7 @@ export class AutoBidController {
     return a ? { maxAmount: a.maxAmount.toString(), active: a.active } : null
   }
 
+  @RateLimit(LIMITS.autobid)
   @Delete()
   @HttpCode(204)
   async cancel(@Param('lotId', new ParseUUIDPipe()) lotId: string, @Req() req: AuthedRequest) {

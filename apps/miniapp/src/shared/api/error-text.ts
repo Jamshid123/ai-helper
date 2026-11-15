@@ -23,6 +23,7 @@ const KNOWN = new Set([
   'OTP_COOLDOWN',
   'OTP_LIMIT',
   'SMS_DISABLED',
+  'RATE_LIMITED',
 ])
 const SESSION = new Set(['UNAUTHORIZED', 'CSRF'])
 

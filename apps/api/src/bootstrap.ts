@@ -9,11 +9,16 @@ import { MAX_PHOTO_BYTES, MIME } from './modules/media/media.service'
 
 export const API_PREFIX = 'api/v1'
 
+/*
+ * IP клиента: перед API один nginx контейнера, он передаёт X-Forwarded-For от nginx хоста, который
+ * дописывает реальный адрес клиента в конец. Доверяем только одному звену (hop 0) и берём последний адрес;
+ * подставной X-Forwarded-For от клиента (левые адреса) игнорируется — лимиты по IP не обойти.
+ */
 /** Создаёт и настраивает приложение (используется в main.ts и тестах). */
 export async function createApp(): Promise<NestFastifyApplication> {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ trustProxy: true, bodyLimit: 1_048_576 }),
+    new FastifyAdapter({ trustProxy: (_addr: string, hop: number) => hop === 0, bodyLimit: 1_048_576 }),
     { bufferLogs: true }
   )
   const env = app.get<Env>(ENV)

@@ -21,6 +21,7 @@ import { PrismaService } from '../../prisma/prisma.service'
 import type { AuthedRequest } from '../auth/buyer-auth.guard'
 import { AdmissionsService } from './admissions.service'
 import { PaymentsService } from './payments.service'
+import { LIMITS, RateLimit } from '../../common/rate-limit'
 
 const startSchema = z.object({ acceptRules: z.literal(true) })
 
@@ -35,6 +36,7 @@ export class PaymentsController {
   ) {}
 
   /** Оформить допуск к лоту: принять правила → заказ на взнос → оплата. */
+  @RateLimit(LIMITS.admission)
   @Post('lots/:lotId/admission')
   @HttpCode(200)
   start(@Param('lotId', new ParseUUIDPipe()) lotId: string, @Body() body: unknown, @Req() req: AuthedRequest) {
@@ -45,6 +47,7 @@ export class PaymentsController {
   }
 
   /** Выйти из лота до начала торгов — возврат 100% (решение 14.11.2026). */
+  @RateLimit(LIMITS.admission)
   @Delete('lots/:lotId/admission')
   @HttpCode(200)
   leave(@Param('lotId', new ParseUUIDPipe()) lotId: string, @Req() req: AuthedRequest) {
@@ -69,6 +72,7 @@ export class PaymentsController {
   }
 
   /** Имитация успешной оплаты — ТОЛЬКО при PAYMENTS_MODE=fake (демо/тесты). Идёт через тот же путь подтверждения. */
+  @RateLimit(LIMITS.payment)
   @Post('payments/fake/:orderId/complete')
   @HttpCode(200)
   async fakeComplete(@Param('orderId', new ParseUUIDPipe()) orderId: string, @Req() req: AuthedRequest) {

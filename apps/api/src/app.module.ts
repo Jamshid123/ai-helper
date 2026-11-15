@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common'
+import { APP_INTERCEPTOR } from '@nestjs/core'
+import { RateLimitInterceptor } from './common/rate-limit'
 import { LoggerModule } from 'nestjs-pino'
 import { ClockModule } from './common/clock.module'
 import { RedisModule } from './common/redis.module'
@@ -60,5 +62,6 @@ export const LOG_REDACT = [
     SmsModule,
     AdminModule,
   ],
+  providers: [{ provide: APP_INTERCEPTOR, useClass: RateLimitInterceptor }],
 })
 export class AppModule {}

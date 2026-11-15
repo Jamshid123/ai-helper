@@ -17,6 +17,7 @@ import {
   deviceHashOf,
 } from './buyer-session.service'
 import { OtpService } from './otp.service'
+import { LIMITS, RateLimit } from '../../common/rate-limit'
 
 const loginSchema = z.object({ initData: z.string().min(1).max(4096) })
 const phoneSchema = z.object({ phone: z.string().max(40) })
@@ -45,6 +46,7 @@ export class AuthController {
 
   /** Сайт (решение 15.11.2026): шаг 1 — SMS-код на номер. */
   @Public()
+  @RateLimit(LIMITS.otpRequest)
   @Post('otp/request')
   @HttpCode(200)
   async requestCode(
@@ -64,6 +66,7 @@ export class AuthController {
 
   /** Шаг 2 — проверка кода → cookie-сессия (httpOnly) + CSRF-cookie. */
   @Public()
+  @RateLimit(LIMITS.otpVerify)
   @Post('otp/verify')
   @HttpCode(200)
   async verifyCode(@Body() body: unknown, @Req() req: AuthedRequest, @Res({ passthrough: true }) reply: FastifyReply) {

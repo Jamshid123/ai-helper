@@ -2,6 +2,7 @@ import { BadRequestException, Body, Controller, Get, HttpCode, Param, ParseUUIDP
 import { z } from 'zod'
 import type { AuthedRequest } from '../auth/buyer-auth.guard'
 import { BidsService } from './bids.service'
+import { LIMITS, RateLimit } from '../../common/rate-limit'
 
 const bodySchema = z.object({
   /** Целые сумы строкой (без float). */
@@ -20,6 +21,7 @@ export class BidsController {
   }
 
   /** Предложить цену. Повтор с тем же idempotencyKey возвращает исходный результат. */
+  @RateLimit(LIMITS.bid)
   @Post()
   @HttpCode(200)
   async place(@Param('lotId', new ParseUUIDPipe()) lotId: string, @Body() body: unknown, @Req() req: AuthedRequest) {

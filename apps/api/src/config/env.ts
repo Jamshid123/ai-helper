@@ -41,6 +41,11 @@ export const envSchema = z.object({
     .default('true')
     .transform((v) => v === 'true'),
   SCHEDULER_INTERVAL_MS: z.coerce.number().int().min(1000).max(60_000).default(5000),
+  /** Ограничение частоты запросов (решение 15.11.2026). Выключать можно только в тестах; в production — запрещено. */
+  RATE_LIMIT_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
   /**
    * Демо-стенд (решение заказчика 14.11.2026): разрешает PAYMENTS_MODE=fake в production и скрипт тестовых лотов.
    * Только явное «true»; на боевом запуске с партнёром — убрать.
@@ -65,6 +70,9 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   }
   if (env.NODE_ENV === 'production' && env.PAYMENTS_MODE === 'fake' && !env.DEMO_STAND) {
     throw new Error('PAYMENTS_MODE=fake запрещён в production (кроме демо-стенда, DEMO_STAND=true)')
+  }
+  if (env.NODE_ENV === 'production' && !env.RATE_LIMIT_ENABLED) {
+    throw new Error('RATE_LIMIT_ENABLED=false запрещён в production')
   }
   return env
 }

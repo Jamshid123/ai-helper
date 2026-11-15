@@ -13,6 +13,7 @@ import { Public } from '../../common/public.decorator'
 import { PrismaService } from '../../prisma/prisma.service'
 import { PUBLIC_LOT_WHERE } from '../catalog/lot.dto'
 import { LiveEventsService, MAX_STREAMS, type LiveEvent } from './live-events.service'
+import { LIMITS, RateLimit } from '../../common/rate-limit'
 
 const HEARTBEAT_MS = 20_000
 
@@ -29,6 +30,7 @@ export class LiveController {
     private readonly live: LiveEventsService
   ) {}
 
+  @RateLimit(LIMITS.liveConnect)
   @Get()
   async stream(
     @Param('lotId', new ParseUUIDPipe()) lotId: string,

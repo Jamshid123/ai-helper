@@ -6,6 +6,7 @@ import { Public } from '../../common/public.decorator'
 import { StaffOnly } from './staff.decorator'
 import { CSRF_COOKIE, SESSION_COOKIE, type StaffRequest } from './staff-auth.guard'
 import { SESSION_TTL_S, StaffAuthService } from './staff-auth.service'
+import { LIMITS, RateLimit } from '../../common/rate-limit'
 
 /** login — телефон (или email старой учётки). */
 const loginSchema = z.object({ login: z.string().trim().min(5).max(200), password: z.string().min(1).max(200) })
@@ -15,6 +16,7 @@ export class StaffAuthController {
   constructor(private readonly auth: StaffAuthService) {}
 
   @Public()
+  @RateLimit(LIMITS.staffLogin)
   @Post('auth/login')
   @HttpCode(200)
   async login(@Body() body: unknown, @Req() req: StaffRequest, @Res({ passthrough: true }) reply: FastifyReply) {
