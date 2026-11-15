@@ -6,6 +6,7 @@ export type AdmissionErrorCode =
   | 'LOT_STARTED'
   | 'NOT_ADMITTED'
   | 'LOT_FULL'
+  | 'DEVICE_SHARED'
 
 export class AdmissionError extends Error {
   constructor(readonly code: AdmissionErrorCode) {

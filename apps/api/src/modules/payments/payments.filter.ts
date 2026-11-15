@@ -12,6 +12,10 @@ const MAP: Record<string, { status: number; message: string }> = {
   LOT_STARTED: { status: 409, message: 'Торги уже начались — выйти с возвратом нельзя' },
   NOT_ADMITTED: { status: 404, message: 'Допуска к этому лоту нет' },
   LOT_FULL: { status: 409, message: 'Мест в этих торгах больше нет' },
+  DEVICE_SHARED: {
+    status: 409,
+    message: 'С этого устройства в этих торгах уже участвует другой аккаунт. Если это ошибка — напишите в поддержку',
+  },
 }
 
 @Catch(AdmissionError, PaymentsDisabledError)

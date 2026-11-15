@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { loadEnv } from '../src/config/env'
 import { startApp } from './app'
-import { cleanDb } from './factories'
+import { cleanDb, createLot } from './factories'
 
 const db = new PrismaClient()
 
@@ -17,7 +17,7 @@ function sessionFrom(res: { headers: Record<string, unknown> }) {
       .split('=')
       .slice(1)
       .join('=')
-  const cookie = `buyer_session=${get('buyer_session')}; buyer_csrf=${get('buyer_csrf')}`
+  const cookie = `buyer_session=${get('buyer_session')}; buyer_csrf=${get('buyer_csrf')}; buyer_device=${get('buyer_device')}`
   return { read: { cookie }, write: { cookie, 'x-csrf-token': decodeURIComponent(get('buyer_csrf')) }, cookies }
 }
 
@@ -106,6 +106,70 @@ describe('Сайт: вход по телефону и SMS-коду (решени
     }
     await db.otpChallenge.updateMany({ where: {}, data: { createdAt: new Date(Date.now() - 120_000) } })
     expect((await post('/auth/otp/request', { phone: '905556677' })).json().code).toBe('OTP_LIMIT')
+  })
+
+  /** Вход с конкретного устройства (cookie buyer_device) → заголовки сессии. */
+  async function loginOn(device: string, phone: string) {
+    const headers = { cookie: `buyer_device=${device}` }
+    const r = await post('/auth/otp/request', { phone }, headers)
+    if (r.statusCode !== 200) return { status: r.statusCode, code: r.json().code as string }
+    const v = await post('/auth/otp/verify', { phone, code: r.json().devCode }, headers)
+    return { status: v.statusCode, code: undefined, s: sessionFrom(v) }
+  }
+  const DEV_A = 'a'.repeat(32)
+  const DEV_B = 'b'.repeat(32)
+
+  it('метка устройства: httpOnly-cookie на год; с одного устройства — не больше 3 номеров за 30 дней', async () => {
+    const r = await post('/auth/otp/request', { phone: '900000001' })
+    const dev = ([] as string[]).concat(r.headers['set-cookie'] as string).find((c) => c.startsWith('buyer_device='))
+    expect(dev).toMatch(/HttpOnly/)
+    expect(dev).toMatch(/Max-Age=31536000/)
+
+    for (const n of ['901000001', '901000002', '901000003']) expect((await loginOn(DEV_A, n)).status).toBe(200)
+    // четвёртый номер — отказ до отправки SMS
+    const fourth = await loginOn(DEV_A, '901000004')
+    expect(fourth).toMatchObject({ status: 403, code: 'DEVICE_LIMIT' })
+    expect(await db.otpChallenge.count({ where: { phone: '+998901000004' } })).toBe(0)
+    // уже входивший номер — пускаем; с другого устройства — тоже
+    await db.otpChallenge.updateMany({ data: { createdAt: new Date(Date.now() - 120_000) } })
+    expect((await loginOn(DEV_A, '901000001')).status).toBe(200)
+    expect((await loginOn(DEV_B, '901000004')).status).toBe(200)
+    // через 30 дней старые входы не считаются
+    await db.buyerSession.updateMany({ data: { createdAt: new Date(Date.now() - 31 * 86_400_000) } })
+    await db.otpChallenge.updateMany({ data: { createdAt: new Date(Date.now() - 120_000) } })
+    expect((await loginOn(DEV_A, '901000005')).status).toBe(200)
+  })
+
+  it('два аккаунта с одного устройства не получают допуск в один лот; в другой лот — можно; попытка в журнале', async () => {
+    const lot = await createLot(db)
+    const other = await createLot(db)
+    const a = (await loginOn(DEV_A, '902000001')).s!
+    const b = (await loginOn(DEV_A, '902000002')).s!
+    const c = (await loginOn(DEV_B, '902000003')).s!
+    const admit = (lotId: string, h: Record<string, string>) =>
+      post(`/lots/${lotId}/admission`, { acceptRules: true }, h)
+
+    // A начал оплату — B с того же устройства уже не может (отказ до оплаты)
+    const startA = await admit(lot.id, a.write)
+    expect(startA.json()).toMatchObject({ status: 'PAYMENT_REQUIRED' })
+    const refused = await admit(lot.id, b.write)
+    expect(refused.statusCode).toBe(409)
+    expect(refused.json().code).toBe('DEVICE_SHARED')
+    expect(await db.order.count({ where: { lotId: lot.id } })).toBe(1) // у B заказ не создан
+
+    // A оплатил — B по-прежнему нельзя
+    await app.inject({
+      method: 'POST',
+      url: `/api/v1/payments/fake/${startA.json().orderId}/complete`,
+      headers: a.write,
+    })
+    expect((await admit(lot.id, b.write)).json().code).toBe('DEVICE_SHARED')
+    // другой лот — можно; покупатель с другого устройства — можно
+    expect((await admit(other.id, b.write)).json()).toMatchObject({ status: 'PAYMENT_REQUIRED' })
+    expect((await admit(lot.id, c.write)).json()).toMatchObject({ status: 'PAYMENT_REQUIRED' })
+
+    const log = await db.auditLog.findMany({ where: { action: 'admission.device_shared', entityId: lot.id } })
+    expect(log).toHaveLength(2)
   })
 
   it('без SMS-провайдера вход закрыт; имитация SMS в production — только на демо-стенде', () => {

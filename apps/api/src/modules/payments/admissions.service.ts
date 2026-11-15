@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { Clock } from '../../common/clock'
 import { PrismaService } from '../../prisma/prisma.service'
+import { DEVICE } from '../auth/buyer-session.service'
 import { AdmissionError } from './admission.errors'
 import { PAYMENT_PROVIDER, type PaymentProvider } from './payment-provider'
 import { RefundsService } from './refunds.service'
@@ -9,6 +10,9 @@ import { RefundsService } from './refunds.service'
 export const RULES_VERSION = '2026-11-13'
 
 export { AdmissionError } from './admission.errors'
+
+/** Неоплаченный заказ другого аккаунта считается участием столько времени (две оплаты одновременно). */
+const PENDING_CLASH_MS = 30 * 60_000
 
 @Injectable()
 export class AdmissionsService {
@@ -29,10 +33,51 @@ export class AdmissionsService {
   }
 
   /**
+   * Два аккаунта с одного устройства не участвуют в одном лоте (решение 15.11.2026):
+   * если с этого устройства за 30 дней входил другой покупатель, у которого в этом лоте есть допуск
+   * или только что начатая оплата, — отказ до оплаты; попытка пишется в журнал для проверки.
+   */
+  private async assertDeviceFree(userId: string, lotId: string, deviceHash: string, now: Date) {
+    const since = new Date(now.getTime() - DEVICE.WINDOW_DAYS * 86_400_000)
+    const others = await this.prisma.buyerSession.findMany({
+      where: { deviceHash, userId: { not: userId }, createdAt: { gte: since } },
+      select: { userId: true },
+      distinct: ['userId'],
+    })
+    if (others.length === 0) return
+    const ids = others.map((o) => o.userId)
+    const clash =
+      (await this.prisma.admission.findFirst({ where: { lotId, userId: { in: ids } }, select: { userId: true } })) ??
+      (await this.prisma.order.findFirst({
+        where: {
+          lotId,
+          userId: { in: ids },
+          purpose: 'ADMISSION',
+          status: 'PENDING',
+          createdAt: { gte: new Date(now.getTime() - PENDING_CLASH_MS) },
+        },
+        select: { userId: true },
+      }))
+    if (!clash) return
+    await this.prisma.auditLog.create({
+      data: {
+        actorType: 'buyer',
+        actorId: userId,
+        action: 'admission.device_shared',
+        entityType: 'lot',
+        entityId: lotId,
+        reason: 'Допуск отклонён: с этого устройства в лоте уже участвует другой аккаунт',
+        meta: { otherUserId: clash.userId },
+      },
+    })
+    throw new AdmissionError('DEVICE_SHARED')
+  }
+
+  /**
    * Начать оформление допуска: условия приняты → заказ ADMISSION на сумму взноса (считает сервер) → оплата у провайдера.
    * Уже есть допуск — возвращаем его; есть неоплаченный заказ — переиспользуем.
    */
-  async start(userId: string, lotId: string, acceptRules: boolean) {
+  async start(userId: string, lotId: string, acceptRules: boolean, deviceHash: string | null = null) {
     if (!acceptRules) throw new AdmissionError('RULES_NOT_ACCEPTED')
     const now = this.clock.now()
     const lot = await this.prisma.lot.findUnique({ where: { id: lotId } })
@@ -49,6 +94,7 @@ export class AdmissionsService {
     if (admission) return { status: 'ADMITTED' as const, orderId: admission.orderId, checkoutUrl: null }
     // мест нет — заказ не создаём (решение заказчика 14.11.2026: максимум участников)
     if (lot.maxParticipants !== null && lot.admittedCount >= lot.maxParticipants) throw new AdmissionError('LOT_FULL')
+    if (deviceHash) await this.assertDeviceFree(userId, lotId, deviceHash, now)
 
     await this.prisma.user.update({
       where: { id: userId },

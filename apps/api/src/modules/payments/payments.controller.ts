@@ -41,7 +41,7 @@ export class PaymentsController {
     const parsed = startSchema.safeParse(body)
     if (!parsed.success)
       throw new BadRequestException({ code: 'RULES_NOT_ACCEPTED', message: 'Примите правила торгов' })
-    return this.admissions.start(req.userId, lotId, true)
+    return this.admissions.start(req.userId, lotId, true, req.deviceHash ?? null)
   }
 
   /** Выйти из лота до начала торгов — возврат 100% (решение 14.11.2026). */

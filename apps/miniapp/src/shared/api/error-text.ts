@@ -14,6 +14,8 @@ const KNOWN = new Set([
   'NETWORK',
   'LOT_STARTED',
   'LOT_FULL',
+  'DEVICE_SHARED',
+  'DEVICE_LIMIT',
   'BAD_PHONE',
   'OTP_INVALID',
   'OTP_EXPIRED',

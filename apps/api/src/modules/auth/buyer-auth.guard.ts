@@ -13,7 +13,8 @@ import { STAFF_MODULE } from '../staff/staff.decorator'
 import { BUYER_SESSION_COOKIE, BuyerSessionService, sameToken } from './buyer-session.service'
 import { SessionService } from './session.service'
 
-export type AuthedRequest = FastifyRequest & { userId: string }
+/** deviceHash — метка устройства сессии сайта (у входа через Telegram её нет). */
+export type AuthedRequest = FastifyRequest & { userId: string; deviceHash?: string | null }
 
 /** Глобальный guard покупателя: без валидной сессии — 401, кроме @Public() и эндпоинтов админки (@StaffOnly()). */
 @Injectable()
@@ -40,6 +41,7 @@ export class BuyerAuthGuard implements CanActivate {
         }
       }
       req.userId = web.userId
+      req.deviceHash = web.deviceHash
       return true
     }
     // Mini App (переходный период): Bearer JWT после входа по initData

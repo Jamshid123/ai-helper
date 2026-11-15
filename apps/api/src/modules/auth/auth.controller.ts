@@ -8,9 +8,13 @@ import { AuthService } from './auth.service'
 import type { AuthedRequest } from './buyer-auth.guard'
 import {
   BUYER_CSRF_COOKIE,
+  BUYER_DEVICE_COOKIE,
   BUYER_SESSION_COOKIE,
   BUYER_SESSION_TTL_S,
   BuyerSessionService,
+  DEVICE,
+  deviceFromCookie,
+  deviceHashOf,
 } from './buyer-session.service'
 import { OtpService } from './otp.service'
 
@@ -21,6 +25,9 @@ const profileSchema = z.object({
   firstName: z.string().trim().min(1).max(40),
   lastName: z.string().trim().max(40).optional(),
 })
+
+const deviceCookie = (id: string) =>
+  serializeCookie(BUYER_DEVICE_COOKIE, id, { path: '/api', maxAge: DEVICE.COOKIE_TTL_S, httpOnly: true })
 
 function phoneOf(raw: string): string {
   const phone = normalizeUzPhone(raw)
@@ -40,10 +47,19 @@ export class AuthController {
   @Public()
   @Post('otp/request')
   @HttpCode(200)
-  requestCode(@Body() body: unknown, @Req() req: AuthedRequest) {
+  async requestCode(
+    @Body() body: unknown,
+    @Req() req: AuthedRequest,
+    @Res({ passthrough: true }) reply: FastifyReply
+  ) {
     const p = phoneSchema.safeParse(body)
     if (!p.success) throw new BadRequestException({ code: 'BAD_PHONE', message: 'Введите номер телефона' })
-    return this.otp.request(phoneOf(p.data.phone), req.ip ?? null)
+    const phone = phoneOf(p.data.phone)
+    const device = deviceFromCookie(parseCookies(req.headers.cookie)[BUYER_DEVICE_COOKIE])
+    if (device.fresh) reply.header('Set-Cookie', deviceCookie(device.id))
+    // лимит номеров на устройство — до отправки SMS
+    await this.sessions.assertDeviceAllows(deviceHashOf(device.id), phone)
+    return this.otp.request(phone, req.ip ?? null)
   }
 
   /** Шаг 2 — проверка кода → cookie-сессия (httpOnly) + CSRF-cookie. */
@@ -54,12 +70,16 @@ export class AuthController {
     const p = verifySchema.safeParse(body)
     if (!p.success) throw new BadRequestException({ code: 'OTP_INVALID', message: 'Введите 6 цифр из SMS' })
     const phone = phoneOf(p.data.phone)
+    const device = deviceFromCookie(parseCookies(req.headers.cookie)[BUYER_DEVICE_COOKIE])
+    const deviceHash = deviceHashOf(device.id)
+    await this.sessions.assertDeviceAllows(deviceHash, phone)
     await this.otp.verify(phone, p.data.code)
     const r = await this.auth.loginWithPhone(phone)
-    const s = await this.sessions.issue(r.user.id, req.ip ?? null)
+    const s = await this.sessions.issue(r.user.id, req.ip ?? null, deviceHash)
     reply.header('Set-Cookie', [
       serializeCookie(BUYER_SESSION_COOKIE, s.token, { path: '/api', maxAge: BUYER_SESSION_TTL_S, httpOnly: true }),
       serializeCookie(BUYER_CSRF_COOKIE, s.csrfToken, { path: '/', maxAge: BUYER_SESSION_TTL_S, httpOnly: false }),
+      deviceCookie(device.id),
     ])
     return r
   }

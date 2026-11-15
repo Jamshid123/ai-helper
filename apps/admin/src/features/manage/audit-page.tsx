@@ -29,6 +29,7 @@ const ACTIONS: Record<string, string> = {
   'restriction.lifted': 'Снято ограничение',
   'admission.cancelled': 'Отменён допуск (сотрудник)',
   'admission.left': 'Участник вышел из лота',
+  'admission.device_shared': 'Допуск отклонён: второй аккаунт с того же устройства',
 }
 
 export function AuditPage() {

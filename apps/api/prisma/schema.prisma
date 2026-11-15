@@ -47,11 +47,14 @@ model BuyerSession {
   user       User      @relation(fields: [userId], references: [id])
   csrfToken  String
   ip         String?
+  /// SHA-256 метки устройства (cookie buyer_device): лимит номеров и запрет двух аккаунтов в одном лоте (решение 15.11.2026).
+  deviceHash String?
   expiresAt  DateTime  @db.Timestamptz
   revokedAt  DateTime? @db.Timestamptz
   createdAt  DateTime  @default(now()) @db.Timestamptz
 
   @@index([userId])
+  @@index([deviceHash, createdAt])
 }
 
 /// Одноразовый SMS-код входа: хранится только HMAC кода; 5 минут, до 5 попыток (решение 15.11.2026).
