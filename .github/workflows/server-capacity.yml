@@ -1,0 +1,63 @@
+name: Server capacity (read-only)
+
+# Ручной запуск: Actions → "Server capacity (read-only)" → Run workflow.
+# Только читает: ресурсы сервера, загрузку, потребление контейнеров, скорость одного ядра
+# (тот же тест, что в нагрузочном замере API), настройки нашей БД. Ничего не меняет, секретов не выводит.
+# Секреты: SERVER_HOST, DEPLOY_SSH_KEY (как у Deploy).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  capacity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: SSH setup
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          [ -n "$HOST" ] && [ -n "$KEY" ] || { echo "::error::Нужны секреты SERVER_HOST и DEPLOY_SSH_KEY"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          ssh-keyscan -T 10 -t ed25519 "$HOST" > ~/.ssh/known_hosts 2>/dev/null
+          printf 'Host srv\n  HostName %s\n  User deploy\n  IdentityFile ~/.ssh/deploy\n  StrictHostKeyChecking yes\n' "$HOST" > ~/.ssh/config
+
+      - name: Inspect capacity
+        run: |
+          ssh srv 'bash -s' <<'REMOTE'
+          set +e
+          section() { echo; echo "===== $1 ====="; }
+          section "CPU / RAM / disk"
+          echo "CPU cores: $(nproc)"
+          grep -m1 'model name' /proc/cpuinfo
+          free -m | head -2
+          swapon --show 2>/dev/null
+          df -h / | tail -1
+          echo "load average: $(cut -d' ' -f1-3 /proc/loadavg)"
+          uptime -p
+
+          section "CPU over 10 s (us sy id wa st — st = украденное гипервизором)"
+          vmstat 1 10 | tail -n +2
+
+          section "Containers (all projects): CPU / RAM"
+          docker stats --no-stream --format '{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}' 2>/dev/null | sort
+
+          section "Single-core speed (same test as local benchmark)"
+          cd /opt/auksion
+          DC="docker compose --env-file .env --env-file .deploy.env"
+          $DC exec -T api node -e "const c=require('crypto');let n=0;const t=Date.now()+3000;while(Date.now()<t){c.createHash('sha256').update('x'+n).digest();n++}console.log('sha256 ops/3s:',n)"
+          $DC exec -T api sh -c 'echo "open files limit (api): $(ulimit -n)"'
+
+          section "Our database"
+          $DC exec -T postgres psql -U auksion -d auksion -Atc "select 'max_connections=' || current_setting('max_connections'), 'shared_buffers=' || current_setting('shared_buffers'), 'db size=' || pg_size_pretty(pg_database_size('auksion'))"
+          $DC exec -T postgres psql -U auksion -d auksion -Atc "select 'connections now=' || count(*) from pg_stat_activity"
+          REMOTE
