@@ -6,6 +6,7 @@ import { DEMO, TEST_STAND } from '@/entities/lot/api'
 import { Onboarding } from '@/features/onboarding'
 import { useOnboardingOpen } from '@/features/onboarding-store'
 import { cn } from '@/shared/lib/cn'
+import { Logo } from '@/shared/ui/logo'
 
 function Root() {
   const { t } = useI18n()
@@ -25,8 +26,8 @@ function Root() {
       )}
       {/* Десктоп: шапка с навигацией; на телефоне — нижняя панель */}
       <header className='sticky top-0 z-20 hidden items-center gap-6 border-b border-line bg-bg/95 px-6 py-3 backdrop-blur md:flex'>
-        <Link to='/' className='text-[18px] font-bold tracking-tight'>
-          Auksion<span className='text-brand-ink'>GO</span>
+        <Link to='/' aria-label='AuksionGO'>
+          <Logo />
         </Link>
         <nav className='flex gap-1 text-[14px]'>
           <Link
