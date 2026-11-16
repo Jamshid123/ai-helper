@@ -81,7 +81,12 @@ export class BuyoutService {
       amount: order.amount,
       description: `${part === 'prepayment' ? 'Предоплата 10%' : 'Остаток'}: ${o.lot.title}`,
     })
-    return { orderId: order.id, amount: order.amount.toString(), checkoutUrl: checkout.checkoutUrl }
+    return {
+      orderId: order.id,
+      amount: order.amount.toString(),
+      provider: checkout.provider,
+      checkoutUrl: checkout.checkoutUrl,
+    }
   }
 
   // ───────────── Сроки (вызывает sweep расписания) ─────────────

@@ -7,6 +7,7 @@ import { Onboarding } from '@/features/onboarding'
 import { useOnboardingOpen } from '@/features/onboarding-store'
 import { cn } from '@/shared/lib/cn'
 import { Logo } from '@/shared/ui/logo'
+import { WinBanner } from '@/features/win-banner'
 
 function Root() {
   const { t } = useI18n()
@@ -24,6 +25,7 @@ function Root() {
           {t(DEMO ? 'app.demo' : 'app.testStand')}
         </div>
       )}
+      {!inRoom && <WinBanner />}
       {/* Десктоп: шапка с навигацией; на телефоне — нижняя панель */}
       <header className='sticky top-0 z-20 hidden items-center gap-6 border-b border-line bg-bg/95 px-6 py-3 backdrop-blur md:flex'>
         <Link to='/' aria-label='AuksionGO'>

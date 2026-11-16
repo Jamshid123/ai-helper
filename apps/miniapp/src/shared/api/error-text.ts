@@ -24,6 +24,8 @@ const KNOWN = new Set([
   'OTP_LIMIT',
   'SMS_DISABLED',
   'RATE_LIMITED',
+  'PAYMENT_CLOSED',
+  'ALREADY_PAID',
 ])
 const SESSION = new Set(['UNAUTHORIZED', 'CSRF'])
 

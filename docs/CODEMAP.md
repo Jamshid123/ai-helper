@@ -43,12 +43,17 @@
 | `apps/admin/src/features/manage/product-photos.tsx` | Блок фото в карточке товара; сжатие в браузере — `src/lib/image.ts` |
 | `apps/miniapp/src/shared/ui/photo-carousel.tsx` | Карусель фото лота (свайп, на весь экран) |
 | `apps/api/src/modules/payments/refunds.service.ts` | Снятие допуска с возвратом 100% (выход, отмена допуска/лота) |
+| `apps/api/src/modules/fulfillment/buyout.service.ts` | Выкуп: оплата 10% и остатка, просрочки (sweep: 7 дней / решение по 10%), повторные торги (черновик + перенос допуска), выдача по коду, решение финансов |
+| `apps/api/src/modules/fulfillment/admin-fulfillment.controller.ts` | `/admin/fulfillment` (список, остаток на месте, выдача по коду), `/admin/finance/buyouts` (решение по 10%) |
+| `apps/api/src/common/pickup-code.ts` | Код выдачи: 6 цифр из секрета и id обязательства, в БД — только хэш |
+| `apps/miniapp/src/entities/purchase/api.ts`, `features/purchase-card.tsx`, `features/win-banner.tsx` | Сайт: мои покупки, карточка победителя (10%, таймер, код, остаток), баннер «оплатите 10%» |
+| `apps/admin/src/features/manage/fulfillment-page.tsx` | Админка: раздел «Выдача» (остаток на месте, выдача по коду, решение по 10%) |
 | `apps/api/src/common/crypto-box.ts`, `cookies.ts` | AES-256-GCM для секретов в БД; разбор/сборка cookie |
 | `apps/api/src/common/rate-limit.ts` | Ограничение частоты запросов: `@RateLimit(LIMITS.x)` на эндпоинте, глобальный перехватчик, окно в Redis |
 | `.github/workflows/admin-create.yml` | Вручную: создать администратора по телефону (пароль из секрета `ADMIN_INITIAL_PASSWORD`) |
 | `.github/workflows/staff-set-phone.yml` | Вручную: перевести учётку со старого email-логина на телефон |
 | `apps/api/src/scripts/` | `demo-lots.ts` (тестовые лоты демо-стенда), `seed-demo.ts` (CLI) |
-| `apps/miniapp/src/shared/api/` | `client.ts` (вход по initData, сессия, ApiError), `error-text.ts` (код ошибки → текст ru/uz) |
+| `apps/miniapp/src/shared/api/` | `client.ts` (cookie-сессия + CSRF, ApiError), `error-text.ts` (код ошибки → текст ru/uz) |
 | `apps/miniapp/src/entities/lot/api.ts` | Хуки данных: API в Telegram / демо в браузере (`useLots`, `useLot`, `useAdmissions`, `useAdmit`, `useRoom`, `useAutoBid`) |
 | `apps/admin` | Админка (shadcn-admin): вход + разделы «Категории», «Товары», «Лоты», «Участники», «Журнал» (`src/features/manage/`). Карта — `apps/admin/README.md` |
 | `apps/miniapp` | Telegram Mini App покупателя (демо-стенд на тестовых данных; регистрация `routes/register.tsx`, заявка продавца `routes/seller.tsx`, демо-аккаунт `entities/account/`). Карта — `apps/miniapp/README.md` |
