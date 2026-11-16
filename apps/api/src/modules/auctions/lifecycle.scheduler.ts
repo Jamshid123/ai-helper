@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger, type OnApplicationBootstrap, type OnModuleD
 import { ENV } from '../../config/config.module'
 import type { Env } from '../../config/env'
 import { PrismaService } from '../../prisma/prisma.service'
+import { BuyoutService } from '../fulfillment/buyout.service'
 import { RemindersService } from '../reminders/reminders.service'
 import { BidsService } from './bids.service'
 import { LotLifecycleService } from './lot-lifecycle.service'
@@ -25,7 +26,8 @@ export class LifecycleScheduler implements OnApplicationBootstrap, OnModuleDestr
     private readonly prisma: PrismaService,
     private readonly lifecycle: LotLifecycleService,
     private readonly bids: BidsService,
-    private readonly reminders: RemindersService
+    private readonly reminders: RemindersService,
+    private readonly buyout: BuyoutService
   ) {}
 
   onApplicationBootstrap() {
@@ -53,7 +55,10 @@ export class LifecycleScheduler implements OnApplicationBootstrap, OnModuleDestr
         const closed = await this.lifecycle.closeDue()
         await this.reminders.dispatchDue()
         await this.reminders.dispatchIdleBidders()
-        if (opened.length || Object.keys(closed).length) this.log.log({ opened, closed }, 'lifecycle sweep')
+        // Выкуп: не оплатил 10% за 15 мин / не забрал за 24 ч → аннулирование и повторные торги
+        const expired = await this.buyout.expireDue()
+        if (opened.length || Object.keys(closed).length || expired)
+          this.log.log({ opened, closed, expired }, 'lifecycle sweep')
       } finally {
         await this.prisma.$queryRaw`SELECT pg_advisory_unlock(${SWEEP_LOCK_KEY})`
       }

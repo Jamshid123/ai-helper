@@ -8,9 +8,10 @@ import { BidsService } from './bids.service'
 import { LifecycleScheduler } from './lifecycle.scheduler'
 import { LotLifecycleService } from './lot-lifecycle.service'
 import { PaymentsModule } from '../payments/payments.module'
+import { FulfillmentModule } from '../fulfillment/fulfillment.module'
 
 @Module({
-  imports: [RemindersModule, PaymentsModule],
+  imports: [RemindersModule, PaymentsModule, FulfillmentModule],
   controllers: [BidsController, AutoBidController],
   providers: [
     BidsService,

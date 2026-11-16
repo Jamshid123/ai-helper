@@ -42,7 +42,8 @@ export class RefundsService {
       await this.audit.log({ ...audit, entityType: 'admission', entityId: admission.id, meta: { lotId, userId } }, tx)
       return ids
     })
-    return { refunded: (await this.settle(orderIds)) === orderIds.length }
+    // допуск, перенесённый с несостоявшихся торгов, не оплачивался в этом лоте — возвращать нечего
+    return { refunded: orderIds.length > 0 && (await this.settle(orderIds)) === orderIds.length }
   }
 
   /** Возвращает id заказов, ушедших на возврат. */
@@ -56,7 +57,7 @@ export class RefundsService {
     await tx.admission.deleteMany({ where: { id: { in: admissions.map((a) => a.id) } } })
     await tx.autoBid.updateMany({ where: { lotId, userId: { in: users } }, data: { active: false } })
     await tx.lot.update({ where: { id: lotId }, data: { admittedCount: { decrement: admissions.length } } })
-    const orderIds = admissions.map((a) => a.orderId)
+    const orderIds = admissions.map((a) => a.orderId).filter((id): id is string => id !== null)
     await tx.order.updateMany({ where: { id: { in: orderIds }, status: 'PAID' }, data: { status: 'REFUND_PENDING' } })
     await tx.outboxEvent.createMany({
       data: admissions.map((a) => ({

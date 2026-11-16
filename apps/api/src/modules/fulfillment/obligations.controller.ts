@@ -1,21 +1,27 @@
-import { Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common'
+import { BadRequestException, Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common'
+import { z } from 'zod'
+import { LIMITS, RateLimit } from '../../common/rate-limit'
 import type { AuthedRequest } from '../auth/buyer-auth.guard'
-import { ObligationsService } from './obligations.service'
+import { BuyoutService } from './buyout.service'
 
+const paySchema = z.object({ part: z.enum(['prepayment', 'remainder']) })
+
+/** Покупатель: мои выигранные лоты и их оплата (10% сразу после торгов, остаток — онлайн или на месте). */
 @Controller()
 export class ObligationsController {
-  constructor(private readonly obligations: ObligationsService) {}
+  constructor(private readonly buyout: BuyoutService) {}
 
-  /** Мои предложения купить (победы и приглашения следующему участнику). */
   @Get('me/obligations')
   mine(@Req() req: AuthedRequest) {
-    return this.obligations.mine(req.userId)
+    return this.buyout.mine(req.userId)
   }
 
-  /** Подтвердить покупку (за 15 минут после закрытия торгов или приглашения). */
-  @Post('obligations/:id/confirm')
+  @RateLimit(LIMITS.payment)
+  @Post('obligations/:id/pay')
   @HttpCode(200)
-  confirm(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: AuthedRequest) {
-    return this.obligations.confirm(req.userId, id)
+  pay(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: unknown, @Req() req: AuthedRequest) {
+    const p = paySchema.safeParse(body)
+    if (!p.success) throw new BadRequestException({ code: 'BAD_REQUEST', message: 'Что оплачиваем: prepayment или remainder' })
+    return this.buyout.startPayment(req.userId, id, p.data.part)
   }
 }

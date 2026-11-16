@@ -24,6 +24,6 @@ import { RefundsService } from './refunds.service'
         env.PAYMENTS_MODE === 'fake' ? new FakePaymentProvider() : new DisabledPaymentProvider(),
     },
   ],
-  exports: [PaymentsService, RefundsService],
+  exports: [PaymentsService, RefundsService, PAYMENT_PROVIDER],
 })
 export class PaymentsModule {}
