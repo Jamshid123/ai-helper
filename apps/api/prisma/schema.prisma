@@ -37,6 +37,7 @@ model User {
   obligations  Obligation[]
   restrictions Restriction[]
   sessions     BuyerSession[]
+  notifications Notification[]
 }
 
 /// Сессия покупателя на сайте: httpOnly-cookie, в БД — только SHA-256 токена; отзывается при выходе.
@@ -148,6 +149,8 @@ model Lot {
   relistOfId      String?      @unique @db.Uuid
   relistOf        Lot?         @relation("Relist", fields: [relistOfId], references: [id])
   relist          Lot?         @relation("Relist")
+  /// Оператор подтвердил повторную проверку товара перед публикацией повторных торгов (если товар не забрали).
+  relistCheckedAt DateTime?    @db.Timestamptz
   createdAt       DateTime     @default(now()) @db.Timestamptz
   updatedAt       DateTime     @updatedAt @db.Timestamptz
 
@@ -173,6 +176,8 @@ model Admission {
   orderId   String?  @unique @db.Uuid
   /// Лот, с которого перенесён допуск (повторные торги).
   carriedFromLotId String? @db.Uuid
+  /// Перенесённый участник подтвердил, что придёт (иначе место освобождается за 2 ч до старта, решение 16.11.2026).
+  confirmedAt DateTime? @db.Timestamptz
   createdAt DateTime @default(now()) @db.Timestamptz
   /// Напоминание «готовы предложить больше?» отправлено (одно на лот, решение 14.11.2026).
   nudgedAt  DateTime? @db.Timestamptz
@@ -319,6 +324,23 @@ model Obligation {
   @@unique([lotId, rank])
   @@index([status, confirmDeadline])
   @@index([status, prepaymentDeadline])
+}
+
+/// Уведомление покупателю (на сайте; SMS — когда подключён провайдер). Одно на (покупатель, тип, лот).
+model Notification {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  user       User      @relation(fields: [userId], references: [id])
+  /// relist_invite | relist_reminder | relist_released | relist_cancelled
+  type       String
+  lotId      String    @db.Uuid
+  readAt     DateTime? @db.Timestamptz
+  smsSentAt  DateTime? @db.Timestamptz
+  createdAt  DateTime  @default(now()) @db.Timestamptz
+
+  @@unique([userId, type, lotId])
+  @@index([userId, readAt])
+  @@index([smsSentAt, createdAt])
 }
 
 // ───────────── Служебное ─────────────

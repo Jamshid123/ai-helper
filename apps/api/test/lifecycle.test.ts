@@ -6,6 +6,8 @@ import { LotLifecycleService } from '../src/modules/auctions/lot-lifecycle.servi
 import { FakePaymentProvider } from '../src/modules/payments/payment-provider'
 import { RefundsService } from '../src/modules/payments/refunds.service'
 import type { BuyoutService } from '../src/modules/fulfillment/buyout.service'
+import type { RelistService } from '../src/modules/fulfillment/relist.service'
+import type { NotificationsService } from '../src/modules/notifications/notifications.service'
 import { RemindersService } from '../src/modules/reminders/reminders.service'
 import { AuditService } from '../src/modules/staff/audit.service'
 import type { PrismaService } from '../src/prisma/prisma.service'
@@ -93,13 +95,17 @@ describe('LifecycleScheduler.tick', () => {
     const bidsSvc = new BidsService(db as unknown as PrismaService, clock)
     // выкуп проверяется в buyout.test.ts; здесь — только открытие/закрытие
     const noBuyouts = { expireDue: async () => 0 } as unknown as BuyoutService
+    const noRelist = { remindDue: async () => 0, releaseUnconfirmed: async () => 0 } as unknown as RelistService
+    const noNotifications = { dispatchSms: async () => 0 } as unknown as NotificationsService
     const s1 = new LifecycleScheduler(
       env,
       db as unknown as PrismaService,
       lifecycle,
       bidsSvc,
       new RemindersService(db as unknown as PrismaService, clock),
-      noBuyouts
+      noBuyouts,
+      noRelist,
+      noNotifications
     )
     const s2 = new LifecycleScheduler(
       env,
@@ -107,7 +113,9 @@ describe('LifecycleScheduler.tick', () => {
       lifecycle,
       bidsSvc,
       new RemindersService(db as unknown as PrismaService, clock),
-      noBuyouts
+      noBuyouts,
+      noRelist,
+      noNotifications
     )
     const toOpen = await createLot(db, { status: 'SCHEDULED', opensAt: OPEN, closesAt: CLOSE })
     clock.set(OPEN)

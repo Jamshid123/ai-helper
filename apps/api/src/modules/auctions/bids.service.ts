@@ -136,9 +136,11 @@ export class BidsService {
   async history(userId: string, lotId: string, limit = 50) {
     const lot = await this.prisma.lot.findFirst({
       where: { id: lotId, status: { notIn: ['DRAFT', 'CANCELLED'] } },
-      select: { startPrice: true, step: true, currentPrice: true, lastSeq: true },
+      select: { startPrice: true, step: true, currentPrice: true, lastSeq: true, relist: { select: { id: true } } },
     })
     if (!lot) throw new BidRejectedError('LOT_NOT_FOUND')
+    // сделка не состоялась (есть повторные торги) — имена не показываем: не раскрываем, кто сорвал выкуп
+    const hideNames = lot.relist !== null
     const bids = await this.prisma.bid.findMany({
       where: { lotId },
       orderBy: { seq: 'desc' },
@@ -153,7 +155,7 @@ export class BidsService {
       bids: bids.map((b) => ({
         seq: b.seq,
         amount: b.amount.toString(),
-        bidder: b.user.publicName,
+        bidder: hideNames && b.userId !== userId ? 'Участник' : b.user.publicName,
         mine: b.userId === userId,
         createdAt: b.createdAt.toISOString(),
       })),

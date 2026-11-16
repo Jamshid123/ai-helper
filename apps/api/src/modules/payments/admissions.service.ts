@@ -89,6 +89,14 @@ export class AdmissionsService {
       select: { id: true },
     })
     if (restricted) throw new AdmissionError('RESTRICTED')
+    // Сорвавший выкуп не участвует в торгах того же товара — ни бесплатно, ни за деньги (решение 16.11.2026).
+    if (lot.productId) {
+      const defaulted = await this.prisma.obligation.findFirst({
+        where: { userId, status: 'EXPIRED', lot: { productId: lot.productId } },
+        select: { id: true },
+      })
+      if (defaulted) throw new AdmissionError('PRODUCT_BLOCKED')
+    }
 
     const admission = await this.prisma.admission.findUnique({ where: { lotId_userId: { lotId, userId } } })
     if (admission) return { status: 'ADMITTED' as const, orderId: admission.orderId, checkoutUrl: null }

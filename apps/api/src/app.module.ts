@@ -19,6 +19,7 @@ import { StaffModule } from './modules/staff/staff.module'
 import { AdminModule } from './modules/admin/admin.module'
 import { MediaModule } from './modules/media/media.module'
 import { SmsModule } from './modules/sms/sms.module'
+import { NotificationsModule } from './modules/notifications/notifications.module'
 
 /** Поля, которые никогда не попадают в логи (скилл security). */
 export const LOG_REDACT = [
@@ -60,6 +61,7 @@ export const LOG_REDACT = [
     StaffModule,
     MediaModule,
     SmsModule,
+    NotificationsModule,
     AdminModule,
   ],
   providers: [{ provide: APP_INTERCEPTOR, useClass: RateLimitInterceptor }],

@@ -142,6 +142,17 @@ export class LotLifecycleService {
         SELECT status::text AS status, "productId" AS product_id, "admittedCount" AS admitted, "minParticipants" AS min
         FROM "Lot" WHERE id = ${lotId}::uuid FOR UPDATE`
       if (!lot || lot.status !== 'SCHEDULED' || lot.min === null || lot.admitted >= lot.min) return []
+      // перенесённым участникам повторных торгов — уведомление об отмене (возвращать по их допуску нечего)
+      const carried = await tx.admission.findMany({
+        where: { lotId, carriedFromLotId: { not: null } },
+        select: { userId: true },
+      })
+      if (carried.length) {
+        await tx.notification.createMany({
+          data: carried.map((a) => ({ userId: a.userId, type: 'relist_cancelled', lotId, createdAt: now })),
+          skipDuplicates: true,
+        })
+      }
       const ids = await this.refunds.revokeAdmissionsInTx(tx, lotId)
       await tx.lot.update({ where: { id: lotId }, data: { status: 'CANCELLED', closedAt: now } })
       if (lot.product_id) await tx.product.update({ where: { id: lot.product_id }, data: { status: 'AVAILABLE' } })

@@ -3,6 +3,7 @@ import type { Category, Lot, Prisma } from '@prisma/client'
 import { RULES } from '@auksion/shared'
 import { Clock } from '../../common/clock'
 import { PrismaService } from '../../prisma/prisma.service'
+import { RelistService } from '../fulfillment/relist.service'
 import { RefundsService } from '../payments/refunds.service'
 import { AuditService } from '../staff/audit.service'
 import { conflict, unprocessable } from './admin.schemas'
@@ -27,7 +28,13 @@ export type LotInput = {
   bidTimeoutSec?: number | null
 }
 type Actor = { staffId: string; ip: string | null }
-type LotFull = Lot & { category: Pick<Category, 'slug' | 'nameRu'> }
+type LotFull = Lot & {
+  category: Pick<Category, 'slug' | 'nameRu'>
+  relistOf?: { obligations: { expiredReason: string | null }[] } | null
+  _count?: { admissions: number }
+}
+/** Повторные торги: товар не забрали после оплаты 10% — перед публикацией нужна повторная проверка. */
+const needsRelistCheck = (l: LotFull) => Boolean(l.relistOf?.obligations.some((o) => o.expiredReason === 'PICKUP_MISSED'))
 
 export const lotDto = (l: LotFull) => ({
   id: l.id,
@@ -52,8 +59,17 @@ export const lotDto = (l: LotFull) => ({
   minParticipants: l.minParticipants,
   bidTimeoutSec: l.bidTimeoutSec,
   createdAt: l.createdAt.toISOString(),
+  // повторные торги (решение 16.11.2026): откуда, сколько перенесённых, нужна ли перепроверка товара
+  relistOfId: l.relistOfId,
+  carriedCount: l._count?.admissions ?? 0,
+  needsRelistCheck: needsRelistCheck(l),
+  relistCheckedAt: l.relistCheckedAt?.toISOString() ?? null,
 })
-const include = { category: { select: { slug: true, nameRu: true } } } as const
+const include = {
+  category: { select: { slug: true, nameRu: true } },
+  relistOf: { select: { obligations: { select: { expiredReason: true } } } },
+  _count: { select: { admissions: { where: { carriedFromLotId: { not: null } } } } },
+} as const
 
 /**
  * Лоты в админке. Правила: шаг ≥ минимального (ТЗ), старт не ниже себестоимости (решение 13.11.2026),
@@ -66,7 +82,8 @@ export class AdminLotsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly refunds: RefundsService,
-    private readonly clock: Clock
+    private readonly clock: Clock,
+    private readonly relist: RelistService
   ) {}
 
   async list(status?: Lot['status']) {
@@ -172,12 +189,35 @@ export class AdminLotsService {
     return lotDto(lot)
   }
 
-  async publish(id: string, actor: Actor) {
+  async publish(id: string, actor: Actor, opts: { inspectionConfirmed?: boolean } = {}) {
     const lot = await this.prisma.$transaction(async (tx) => {
       const l = await this.lock(tx, id)
       if (l.status !== 'DRAFT') throw conflict('NOT_DRAFT', 'Опубликовать можно только черновик')
-      if (l.opensAt <= this.clock.now()) throw unprocessable('LOT_IN_PAST', 'Время начала уже прошло — измените время')
-      const updated = await tx.lot.update({ where: { id }, data: { status: 'SCHEDULED' }, include })
+      const now = this.clock.now()
+      if (l.opensAt <= now) throw unprocessable('LOT_IN_PAST', 'Время начала уже прошло — измените время')
+      let relistCheckedAt: Date | undefined
+      if (l.relistOfId) {
+        // Повторные торги (решение 16.11.2026): участники должны успеть узнать — не позже чем за 24 ч до начала
+        if (l.opensAt.getTime() - now.getTime() < RULES.RELIST_MIN_NOTICE_H * 3_600_000) {
+          throw unprocessable(
+            'RELIST_TOO_SOON',
+            `Повторные торги публикуются не позже чем за ${RULES.RELIST_MIN_NOTICE_H} часа до начала — перенесите время`
+          )
+        }
+        const full = await tx.lot.findUniqueOrThrow({ where: { id }, include })
+        if (needsRelistCheck(full)) {
+          if (!opts.inspectionConfirmed) {
+            throw unprocessable('RELIST_CHECK_REQUIRED', 'Товар не забрали — подтвердите, что он перепроверен')
+          }
+          relistCheckedAt = now
+        }
+      }
+      const updated = await tx.lot.update({
+        where: { id },
+        data: { status: 'SCHEDULED', ...(relistCheckedAt && { relistCheckedAt }) },
+        include,
+      })
+      const invited = l.relistOfId ? await this.relist.inviteOnPublish(tx, id) : 0
       await this.audit.log(
         {
           actorType: 'staff',
@@ -186,6 +226,7 @@ export class AdminLotsService {
           entityType: 'lot',
           entityId: id,
           ip: actor.ip,
+          ...(l.relistOfId && { meta: { relist: true, invited, inspectionConfirmed: Boolean(relistCheckedAt) } }),
         },
         tx
       )
