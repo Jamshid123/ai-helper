@@ -9,6 +9,7 @@ import { PurchaseCard } from '@/features/purchase-card'
 import { usePurchases } from '@/entities/purchase/api'
 import { type Lot } from '@/entities/lot/types'
 import { cn } from '@/shared/lib/cn'
+import { formatSessionDate } from '@/shared/lib/format-date'
 
 function MePage() {
   const { t, locale, setLocale } = useI18n()
@@ -19,7 +20,15 @@ function MePage() {
   const name = registered ? me.publicName : null
   const admissions = useAdmissions()
   const { data: all = [] } = useLots()
-  const lots = admissions.ids.map((id) => all.find((l) => l.id === id)).filter((l): l is Lot => Boolean(l))
+  // название и дата — из /me/admissions (черновики повторных торгов в публичный каталог не попадают);
+  // в демо — из списка лотов
+  const lots = admissions.list
+    .map((a) => {
+      const pub = all.find((l: Lot) => l.id === a.lotId)
+      const title = a.title ?? pub?.title
+      return title ? { ...a, title, opensAt: a.opensAt ?? pub?.opensAt } : null
+    })
+    .filter((a): a is NonNullable<typeof a> => a !== null)
   const purchases = usePurchases()
 
   return (
@@ -100,9 +109,19 @@ function MePage() {
         ) : (
           <ul className='divide-y divide-line'>
             {lots.map((l) => (
-              <li key={l!.id}>
-                <Link to='/lot/$lotId' params={{ lotId: l!.id }} className='block py-3 text-[15px]'>
-                  {l!.title}
+              <li key={l.lotId}>
+                <Link to='/lot/$lotId' params={{ lotId: l.lotId }} className='grid gap-0.5 py-3'>
+                  <span className='text-[15px]'>{l.title}</span>
+                  <span className='text-[12.5px] text-muted'>
+                    {l.opensAt ? formatSessionDate(new Date(l.opensAt), locale) : ''}
+                    {l.carried && (
+                      <span className='font-medium text-ok'>
+                        {' · ✓ '}
+                        {t('relist.badge')}
+                        {!l.confirmed && ` · ${t('relist.confirm')}?`}
+                      </span>
+                    )}
+                  </span>
                 </Link>
               </li>
             ))}

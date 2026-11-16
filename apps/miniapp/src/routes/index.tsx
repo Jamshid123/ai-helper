@@ -78,7 +78,11 @@ function LotCard({ lot }: { lot: Lot }) {
                 className={cn('text-[17px] font-bold', lot.currentPrice && 'text-brand-ink')}
               />
             </span>
-            {admitted && <span className='text-[11.5px] font-medium text-ok'>✓ {t('lot.admittedBadge')}</span>}
+            {admitted && (
+              <span className='text-[11.5px] font-medium text-ok'>
+                ✓ {t(admissions.info(lot.id)?.carried ? 'relist.badge' : 'lot.admittedBadge')}
+              </span>
+            )}
           </div>
         </div>
       </Link>

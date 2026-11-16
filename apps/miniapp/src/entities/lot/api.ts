@@ -82,9 +82,20 @@ export function useCategories(): Category[] {
 
 /* ── Допуски ─────────────────────────────────────────────── */
 
+/** Допуск покупателя (GET /me/admissions). carried — перенесён на повторные торги без нового взноса. */
+export type AdmissionInfo = {
+  lotId: string
+  title?: string
+  status?: string
+  opensAt?: string
+  carried?: boolean
+  confirmed?: boolean
+}
 type Admissions = {
   ids: string[]
   has: (lotId: string) => boolean
+  info: (lotId: string) => AdmissionInfo | undefined
+  list: AdmissionInfo[]
   ready: boolean
 }
 
@@ -94,15 +105,22 @@ export function useAdmissions(): Admissions {
     queryKey: ['admissions'],
     // гость (401) — просто без допусков, без ошибки
     queryFn: () =>
-      api<{ lotId: string }[]>('/me/admissions').catch((e: unknown) => {
+      api<AdmissionInfo[]>('/me/admissions').catch((e: unknown) => {
         if (e instanceof ApiError && e.status === 401) return []
         throw e
       }),
     enabled: !DEMO,
     retry: false,
   })
-  const ids = DEMO ? admittedLotIds() : (q.data ?? []).map((a) => a.lotId)
-  return { ids, has: (lotId) => ids.includes(lotId), ready: DEMO || q.isSuccess }
+  const list: AdmissionInfo[] = DEMO ? admittedLotIds().map((lotId) => ({ lotId })) : (q.data ?? [])
+  const ids = list.map((a) => a.lotId)
+  return {
+    ids,
+    has: (lotId) => ids.includes(lotId),
+    info: (lotId) => list.find((a) => a.lotId === lotId),
+    list,
+    ready: DEMO || q.isSuccess,
+  }
 }
 
 type AdmissionStart =
@@ -287,4 +305,16 @@ export function useAutoBid(lotId: string): { max: bigint | null; set: (max: bigi
   )
   const max = DEMO ? demoGetAutoBid(lotId) : q.data?.active ? BigInt(q.data.maxAmount) : null
   return { max, set }
+}
+
+/** Повторные торги: «Подтверждаю участие» для перенесённого допуска (иначе место освободится за 2 ч до старта). */
+export function useConfirmParticipation(): (lotId: string) => Promise<void> {
+  const qc = useQueryClient()
+  return useCallback(
+    async (lotId: string) => {
+      await api(`/lots/${lotId}/admission/confirm`, { method: 'POST' })
+      await qc.invalidateQueries({ queryKey: ['admissions'] })
+    },
+    [qc]
+  )
 }

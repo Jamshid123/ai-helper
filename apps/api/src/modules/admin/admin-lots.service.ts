@@ -302,7 +302,8 @@ export class AdminLotsService {
   private async lockEditable(tx: Prisma.TransactionClient, id: string): Promise<Lot> {
     const l = await this.lock(tx, id)
     const beforeOpen = l.opensAt > this.clock.now()
-    if (l.status === 'DRAFT' && beforeOpen) return l
+    // черновик сам не открывается — его можно править и с прошедшим временем (например, повторные торги)
+    if (l.status === 'DRAFT') return l
     if (l.status === 'SCHEDULED' && beforeOpen) {
       if (l.admittedCount > 0) {
         throw conflict('LOT_HAS_PARTICIPANTS', 'У лота уже есть участники — сначала отмените их допуски с возвратом')

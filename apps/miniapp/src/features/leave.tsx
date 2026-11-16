@@ -5,7 +5,7 @@ import { useLeave } from '@/entities/lot/api'
 import { errorText } from '@/shared/api/error-text'
 
 /** Выход из лота до начала торгов с полным возвратом (решение 14.11.2026). Второе касание — подтверждение. */
-export function LeaveCard({ lotId }: { lotId: string }) {
+export function LeaveCard({ lotId, carried = false }: { lotId: string; carried?: boolean }) {
   const { t } = useI18n()
   const leave = useLeave()
   const [step, setStep] = useState<'idle' | 'confirm' | 'pending'>('idle')
@@ -21,13 +21,13 @@ export function LeaveCard({ lotId }: { lotId: string }) {
         }}
         className='min-h-11 text-left text-[13.5px] text-muted underline underline-offset-4'
       >
-        {t('lot.leave')}
+        {t(carried ? 'lot.leave.carried' : 'lot.leave')}
       </button>
     )
   }
   return (
     <section className='grid gap-3 rounded-2xl border border-line px-4 py-3' role='alertdialog' aria-live='polite'>
-      <p className='text-[14px]'>{t('lot.leave.confirm')}</p>
+      <p className='text-[14px]'>{t(carried ? 'lot.leave.carried.confirm' : 'lot.leave.confirm')}</p>
       {error && <p className='text-[13px] text-hot-text'>{error}</p>}
       <div className='grid grid-cols-2 gap-2'>
         <button
@@ -54,7 +54,7 @@ export function LeaveCard({ lotId }: { lotId: string }) {
           }}
           className='h-11 rounded-xl bg-fg text-[14px] font-semibold text-bg disabled:opacity-60'
         >
-          {t('lot.leave.yes')}
+          {t(carried ? 'lot.leave.carried.yes' : 'lot.leave.yes')}
         </button>
       </div>
     </section>

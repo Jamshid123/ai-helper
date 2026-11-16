@@ -64,6 +64,11 @@ export type Lot = {
   maxParticipants: number | null
   minParticipants: number | null
   bidTimeoutSec: number | null
+  /** Повторные торги (решение 16.11.2026): исходный лот, число перенесённых, нужна ли перепроверка товара. */
+  relistOfId?: string | null
+  carriedCount?: number
+  needsRelistCheck?: boolean
+  relistCheckedAt?: string | null
 }
 export type Restriction = {
   id: string
@@ -238,7 +243,11 @@ export const useUpdateLot = () =>
   )
 export const usePublishLot = () =>
   useAction(
-    (id: string) => api<Lot>(`/admin/lots/${id}/publish`, { method: 'POST' }),
+    ({ id, inspectionConfirmed }: { id: string; inspectionConfirmed?: boolean }) =>
+      api<Lot>(`/admin/lots/${id}/publish`, {
+        method: 'POST',
+        body: { inspectionConfirmed: Boolean(inspectionConfirmed) },
+      }),
     [['lots']],
     'Лот опубликован'
   )

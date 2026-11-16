@@ -26,6 +26,7 @@ const KNOWN = new Set([
   'RATE_LIMITED',
   'PAYMENT_CLOSED',
   'ALREADY_PAID',
+  'PRODUCT_BLOCKED',
 ])
 const SESSION = new Set(['UNAUTHORIZED', 'CSRF'])
 
