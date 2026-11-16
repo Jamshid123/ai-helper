@@ -11,6 +11,7 @@ import { type Lot } from '@/entities/lot/types'
 import { cn } from '@/shared/lib/cn'
 import { formatCountdown, useNow } from '@/shared/lib/use-now'
 import { LeaveCard } from '@/features/leave'
+import { CarriedCard, RelistNotice } from '@/features/relist'
 import { RemindCard } from '@/features/remind'
 import { Button } from '@/shared/ui/button'
 import { LiveBadge } from '@/shared/ui/live-badge'
@@ -154,6 +155,7 @@ function LotPage() {
 
   const admissions = useAdmissions()
   const admitted = lot ? admissions.has(lot.id) : false
+  const carriedInfo = lot ? admissions.info(lot.id) : undefined
   const live = lot?.status === 'live'
   const full = Boolean(lot && !admitted && isFull(lot))
   const primary = useCallback(() => {
@@ -237,12 +239,18 @@ function LotPage() {
 
         {!live && <RemindCard lotId={lot.id} opensAt={opens} now={now} />}
 
-        {admitted && (
-          <div className='rounded-2xl border border-ok/30 px-4 py-3 text-[14px] font-medium text-ok'>
-            ✓ {t('lot.admittedBadge')}
-          </div>
+        <RelistNotice lot={lot} />
+
+        {admitted && carriedInfo?.carried && !live && opens > now ? (
+          <CarriedCard info={carriedInfo} opensAt={opens} />
+        ) : (
+          admitted && (
+            <div className='rounded-2xl border border-ok/30 px-4 py-3 text-[14px] font-medium text-ok'>
+              ✓ {t('lot.admittedBadge')}
+            </div>
+          )
         )}
-        {admitted && !live && opens > now && <LeaveCard lotId={lot.id} />}
+        {admitted && !live && opens > now && <LeaveCard lotId={lot.id} carried={Boolean(carriedInfo?.carried)} />}
 
         <section className='divide-y divide-line'>
           <Row label={t('lot.start')}>

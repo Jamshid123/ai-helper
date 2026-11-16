@@ -2,7 +2,17 @@ import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { SECTIONS_BY_ID } from '@/config/sections'
 import { MoreHorizontal } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,9 +34,10 @@ import { LotDialog } from './lot-dialog'
 import { EmptyRow, LotStatusBadge, ReasonDialog } from './ui'
 import { useCanEdit } from './use-can-edit'
 
+// черновик правится всегда (сам не открывается), запланированный — до начала торгов
 const beforeOpen = (l: Lot) =>
-  ['DRAFT', 'SCHEDULED'].includes(l.status) &&
-  Date.parse(l.opensAt) > Date.now()
+  l.status === 'DRAFT' ||
+  (l.status === 'SCHEDULED' && Date.parse(l.opensAt) > Date.now())
 
 export function LotsPage() {
   const meta = SECTIONS_BY_ID.lots
@@ -36,6 +47,15 @@ export function LotsPage() {
   const canEditLots = useCanEdit('lots')
   const [editing, setEditing] = useState<Lot | null>(null)
   const [cancelling, setCancelling] = useState<Lot | null>(null)
+  const [publishing, setPublishing] = useState<Lot | null>(null)
+  const [checked, setChecked] = useState(false)
+  // повторные торги публикуем через диалог: правило 24 ч, перепроверка товара, минимум участников
+  const startPublish = (l: Lot) => {
+    if (l.relistOfId) {
+      setChecked(false)
+      setPublishing(l)
+    } else publish.mutate({ id: l.id })
+  }
 
   return (
     <PageShell
@@ -77,6 +97,21 @@ export function LotsPage() {
                     <span className='block text-xs text-muted-foreground'>
                       {l.categoryName}
                     </span>
+                    {l.relistOfId && (
+                      <span className='mt-1 block text-xs text-muted-foreground'>
+                        <Badge variant='outline'>Повторные торги</Badge>{' '}
+                        перенесено допусков: {l.carriedCount ?? 0}
+                      </span>
+                    )}
+                    {l.relistOfId &&
+                      l.status === 'DRAFT' &&
+                      l.minParticipants !== null &&
+                      (l.carriedCount ?? 0) < l.minParticipants && (
+                        <span className='mt-1 block text-xs text-amber-600 dark:text-amber-400'>
+                          Перенесённых меньше минимума ({l.carriedCount ?? 0} из{' '}
+                          {l.minParticipants}) — без новых участников торги отменятся
+                        </span>
+                      )}
                   </TableCell>
                   <TableCell>
                     <LotStatusBadge status={l.status} />
@@ -102,7 +137,7 @@ export function LotsPage() {
                         <Button
                           size='sm'
                           disabled={publish.isPending}
-                          onClick={() => publish.mutate(l.id)}
+                          onClick={() => startPublish(l)}
                         >
                           Опубликовать
                         </Button>
@@ -177,6 +212,52 @@ export function LotsPage() {
           )
         }
       />
+      <Dialog open={publishing !== null} onOpenChange={(v) => !v && setPublishing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Опубликовать повторные торги</DialogTitle>
+            <DialogDescription>
+              {publishing
+                ? `«${publishing.title}», начало ${windowText(publishing.opensAt, publishing.closesAt)}. Перенесённые участники (${publishing.carriedCount ?? 0}) получат приглашение и должны подтвердить участие до 2 часов до старта — иначе места освободятся для новых.`
+                : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <ul className='list-disc space-y-1 pl-5 text-sm text-muted-foreground'>
+            <li>Начало — не раньше чем через 24 часа после публикации, чтобы участники успели узнать.</li>
+            <li>Победителю, который не выкупил лот, участие в торгах этого товара закрыто.</li>
+          </ul>
+          {publishing?.needsRelistCheck && (
+            <label className='flex items-start gap-2 text-sm'>
+              <Checkbox
+                checked={checked}
+                onCheckedChange={(v) => setChecked(v === true)}
+                className='mt-0.5'
+              />
+              <span>
+                Товар не забрали после оплаты 10% — я перепроверил его по акту, описание и фото
+                соответствуют.
+              </span>
+            </label>
+          )}
+          <DialogFooter>
+            <Button variant='outline' onClick={() => setPublishing(null)}>
+              Отмена
+            </Button>
+            <Button
+              disabled={publish.isPending || (Boolean(publishing?.needsRelistCheck) && !checked)}
+              onClick={() =>
+                publishing &&
+                publish.mutate(
+                  { id: publishing.id, inspectionConfirmed: checked },
+                  { onSuccess: () => setPublishing(null) }
+                )
+              }
+            >
+              Опубликовать
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   )
 }

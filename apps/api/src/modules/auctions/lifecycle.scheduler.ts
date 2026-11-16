@@ -3,6 +3,8 @@ import { ENV } from '../../config/config.module'
 import type { Env } from '../../config/env'
 import { PrismaService } from '../../prisma/prisma.service'
 import { BuyoutService } from '../fulfillment/buyout.service'
+import { RelistService } from '../fulfillment/relist.service'
+import { NotificationsService } from '../notifications/notifications.service'
 import { RemindersService } from '../reminders/reminders.service'
 import { BidsService } from './bids.service'
 import { LotLifecycleService } from './lot-lifecycle.service'
@@ -27,7 +29,9 @@ export class LifecycleScheduler implements OnApplicationBootstrap, OnModuleDestr
     private readonly lifecycle: LotLifecycleService,
     private readonly bids: BidsService,
     private readonly reminders: RemindersService,
-    private readonly buyout: BuyoutService
+    private readonly buyout: BuyoutService,
+    private readonly relist: RelistService,
+    private readonly notifications: NotificationsService
   ) {}
 
   onApplicationBootstrap() {
@@ -57,6 +61,10 @@ export class LifecycleScheduler implements OnApplicationBootstrap, OnModuleDestr
         await this.reminders.dispatchIdleBidders()
         // Выкуп: не оплатил 10% за 15 мин / не забрал за 24 ч → аннулирование и повторные торги
         const expired = await this.buyout.expireDue()
+        // Повторные торги: напоминание за 6 ч, освобождение неподтверждённых мест за 2 ч; SMS — если подключены
+        await this.relist.remindDue()
+        await this.relist.releaseUnconfirmed()
+        await this.notifications.dispatchSms()
         if (opened.length || Object.keys(closed).length || expired)
           this.log.log({ opened, closed, expired }, 'lifecycle sweep')
       } finally {

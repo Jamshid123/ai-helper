@@ -1,3 +1,4 @@
+import { FulfillmentModule } from '../fulfillment/fulfillment.module'
 import { Module } from '@nestjs/common'
 import { PaymentsModule } from '../payments/payments.module'
 import { AdminAuditController } from './admin-audit.controller'
@@ -11,7 +12,7 @@ import { AdminStaffController } from './admin-staff.controller'
 
 /** API админки (все эндпоинты — @StaffOnly: cookie-сессия сотрудника, CSRF, роли). */
 @Module({
-  imports: [PaymentsModule],
+  imports: [PaymentsModule, FulfillmentModule],
   controllers: [
     AdminCategoriesController,
     AdminProductsController,

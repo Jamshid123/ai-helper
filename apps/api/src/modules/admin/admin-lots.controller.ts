@@ -99,8 +99,9 @@ export class AdminLotsController {
 
   @Post(':id/publish')
   @HttpCode(200)
-  publish(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: StaffRequest) {
-    return this.lots.publish(id, { staffId: req.staff.id, ip: req.ip ?? null })
+  publish(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: unknown, @Req() req: StaffRequest) {
+    const inspectionConfirmed = (body as { inspectionConfirmed?: unknown } | null)?.inspectionConfirmed === true
+    return this.lots.publish(id, { staffId: req.staff.id, ip: req.ip ?? null }, { inspectionConfirmed })
   }
 
   @Post(':id/cancel')

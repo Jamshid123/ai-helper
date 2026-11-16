@@ -62,12 +62,25 @@ export class PaymentsController {
   async mine(@Req() req: AuthedRequest) {
     const list = await this.prisma.admission.findMany({
       where: { userId: req.userId },
-      select: { lotId: true, createdAt: true, lot: { select: { admittedCount: true } } },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        lotId: true,
+        createdAt: true,
+        carriedFromLotId: true,
+        confirmedAt: true,
+        lot: { select: { admittedCount: true, title: true, status: true, opensAt: true } },
+      },
     })
     return list.map((a) => ({
       lotId: a.lotId,
       admittedAt: a.createdAt.toISOString(),
       admittedCount: a.lot.admittedCount,
+      title: a.lot.title,
+      status: a.lot.status,
+      opensAt: a.lot.opensAt.toISOString(),
+      // повторные торги: допуск перенесён без нового взноса; нужно подтвердить участие
+      carried: a.carriedFromLotId !== null,
+      confirmed: a.carriedFromLotId === null || a.confirmedAt !== null,
     }))
   }
 

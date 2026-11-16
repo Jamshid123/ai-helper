@@ -34,6 +34,10 @@ export type LotDto = {
   /** Фото товара (адреса), видны всем, в т.ч. до допуска (решение 14.11.2026). */
   photos: string[]
   hue: number
+  /** Сделка не состоялась → повторные торги: id нового лота, когда он опубликован (решение 16.11.2026). */
+  relistLotId: string | null
+  /** Повторные торги готовятся (дата ещё не опубликована). */
+  relistPending: boolean
 }
 
 const STATUS: Record<Lot['status'], LotDto['status'] | null> = {
@@ -75,12 +79,14 @@ function inspectionOf(raw: unknown): LotDto['inspection'] {
 export type LotWithCategory = Lot & {
   category: Pick<Category, 'slug'>
   product?: { photos: { file: string }[] } | null
+  relist?: { id: string; status: Lot['status'] } | null
 }
 
 /** Что подтянуть для карточки лота: код категории и фото товара по порядку. */
 export const LOT_DTO_INCLUDE = {
   category: { select: { slug: true } },
   product: { select: { photos: { orderBy: { position: 'asc' }, select: { file: true } } } },
+  relist: { select: { id: true, status: true } },
 } as const
 
 export function toLotDto(lot: LotWithCategory): LotDto {
@@ -106,5 +112,7 @@ export function toLotDto(lot: LotWithCategory): LotDto {
     inspection: inspectionOf(lot.inspection),
     photos: (lot.product?.photos ?? []).map((ph) => photoUrl(ph.file)),
     hue: hueOf(lot.id),
+    relistLotId: lot.relist && STATUS[lot.relist.status] ? lot.relist.id : null,
+    relistPending: lot.relist?.status === 'DRAFT',
   }
 }

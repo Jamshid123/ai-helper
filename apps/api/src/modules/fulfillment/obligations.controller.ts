@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { LIMITS, RateLimit } from '../../common/rate-limit'
 import type { AuthedRequest } from '../auth/buyer-auth.guard'
 import { BuyoutService } from './buyout.service'
+import { RelistService } from './relist.service'
 
 const paySchema = z.object({ part: z.enum(['prepayment', 'remainder']) })
 
@@ -23,5 +24,18 @@ export class ObligationsController {
     const p = paySchema.safeParse(body)
     if (!p.success) throw new BadRequestException({ code: 'BAD_REQUEST', message: 'Что оплачиваем: prepayment или remainder' })
     return this.buyout.startPayment(req.userId, id, p.data.part)
+  }
+}
+
+/** Повторные торги: перенесённый участник подтверждает, что придёт (иначе место освободится за 2 ч до старта). */
+@Controller()
+export class RelistController {
+  constructor(private readonly relist: RelistService) {}
+
+  @RateLimit(LIMITS.admission)
+  @Post('lots/:lotId/admission/confirm')
+  @HttpCode(200)
+  confirm(@Param('lotId', new ParseUUIDPipe()) lotId: string, @Req() req: AuthedRequest) {
+    return this.relist.confirm(req.userId, lotId)
   }
 }

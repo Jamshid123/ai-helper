@@ -46,6 +46,9 @@
 | `apps/api/src/modules/payments/refunds.service.ts` | Снятие допуска с возвратом 100% (выход, отмена допуска/лота) |
 | `apps/api/src/modules/fulfillment/buyout.service.ts` | Выкуп: оплата 10% и остатка, просрочки (sweep: 7 дней / решение по 10%), повторные торги (черновик + перенос допуска), выдача по коду, решение финансов |
 | `apps/api/src/modules/fulfillment/admin-fulfillment.controller.ts` | `/admin/fulfillment` (список, остаток на месте, выдача по коду), `/admin/finance/buyouts` (решение по 10%) |
+| `apps/api/src/modules/fulfillment/relist.service.ts` | Повторные торги: приглашение при публикации, «Подтверждаю участие», напоминание за 6 ч, освобождение мест за 2 ч |
+| `apps/api/src/modules/notifications/` | Уведомления покупателю (таблица `Notification`): `/me/notifications`, рассылка SMS через `SmsProvider` из планировщика |
+| `apps/miniapp/src/features/relist.tsx`, `entities/notifications/api.ts` | Сайт: плашка уведомлений, «Допуск сохранён» + подтверждение, ссылка со старого лота на повторные торги |
 | `apps/api/src/common/pickup-code.ts` | Код выдачи: 6 цифр из секрета и id обязательства, в БД — только хэш |
 | `apps/miniapp/src/entities/purchase/api.ts`, `features/purchase-card.tsx`, `features/win-banner.tsx` | Сайт: мои покупки, карточка победителя (10%, таймер, код, остаток), баннер «оплатите 10%» |
 | `apps/admin/src/features/manage/fulfillment-page.tsx` | Админка: раздел «Выдача» (остаток на месте, выдача по коду, решение по 10%) |

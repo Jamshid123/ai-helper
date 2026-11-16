@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import { SECTIONS_BY_ID } from '@/config/sections'
 import { CalendarPlus, Timer, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -115,13 +116,19 @@ export function SchedulePage() {
                       : 'без ожидания'}
                   </span>
                   <LotStatusBadge status={l.status} />
-                  {canEditLots && l.status === 'DRAFT' && (
+                  {canEditLots && l.status === 'DRAFT' && !l.relistOfId && (
                     <Button
                       size='sm'
                       disabled={publish.isPending}
-                      onClick={() => publish.mutate(l.id)}
+                      onClick={() => publish.mutate({ id: l.id })}
                     >
                       Опубликовать
+                    </Button>
+                  )}
+                  {canEditLots && l.status === 'DRAFT' && l.relistOfId && (
+                    // повторные торги — через «Лоты»: там правило 24 ч и перепроверка товара
+                    <Button size='sm' variant='outline' asChild>
+                      <Link to='/lots'>Повторные торги → в «Лотах»</Link>
                     </Button>
                   )}
                 </li>
