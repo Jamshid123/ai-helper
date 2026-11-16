@@ -80,7 +80,7 @@ export class PaymentsController {
     const order = await this.prisma.order.findUnique({ where: { id: orderId } })
     if (!order) throw new NotFoundException()
     if (order.userId !== req.userId) throw new ForbiddenException()
-    const outcome = await this.payments.confirmAdmissionPayment({
+    const outcome = await this.payments.confirmPayment({
       orderId,
       providerTxId: `fake-${orderId}`,
       amount: order.amount,

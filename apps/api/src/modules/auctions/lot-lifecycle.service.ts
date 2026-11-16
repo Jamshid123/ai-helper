@@ -98,6 +98,7 @@ export class LotLifecycleService {
       }
 
       await tx.lot.update({ where: { id: lotId }, data: { status: 'CLOSED_SOLD', closedAt: now } })
+      const deadline = new Date(now.getTime() + RULES.PREPAYMENT_WINDOW_MIN * 60_000)
       const obligation = await tx.obligation.create({
         data: {
           lotId,
@@ -106,7 +107,10 @@ export class LotLifecycleService {
           rank: 1,
           amount: top.amount,
           prepaymentAmount: prepaymentAmount(top.amount),
-          confirmDeadline: new Date(now.getTime() + RULES.CONFIRM_WINDOW_MIN * 60_000),
+          // Выкуп (решение 14.11.2026): 10% за 15 минут после торгов; подтверждать покупку отдельно не нужно.
+          status: 'AWAITING_PREPAYMENT',
+          prepaymentDeadline: deadline,
+          confirmDeadline: deadline,
         },
       })
       await tx.outboxEvent.createMany({
@@ -120,7 +124,7 @@ export class LotLifecycleService {
               userId: top.user_id,
               amount: top.amount.toString(),
               prepayment: obligation.prepaymentAmount.toString(),
-              confirmDeadline: obligation.confirmDeadline.toISOString(),
+              prepaymentDeadline: deadline.toISOString(),
             },
           },
         ],

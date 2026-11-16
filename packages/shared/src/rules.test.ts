@@ -12,11 +12,11 @@ describe('minNextBid', () => {
 })
 
 describe('prepaymentAmount', () => {
-  it('30% от ставки', () => {
-    expect(prepaymentAmount(8_400_000n)).toBe(2_520_000n)
+  it('10% от цены победителя', () => {
+    expect(prepaymentAmount(8_400_000n)).toBe(840_000n)
   })
   it('округляет вверх до целого сума', () => {
-    expect(prepaymentAmount(1_000_001n)).toBe(300_001n)
+    expect(prepaymentAmount(1_000_001n)).toBe(100_001n)
   })
   it('предоплата + остаток = цена', () => {
     const price = 7_333_333n

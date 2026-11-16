@@ -11,6 +11,8 @@ import { errorText } from '@/shared/api/error-text'
 import { cn } from '@/shared/lib/cn'
 import { formatCountdown, useNow } from '@/shared/lib/use-now'
 import { AutoBidCard } from '@/features/auto-bid'
+import { PurchaseCard } from '@/features/purchase-card'
+import { usePurchases } from '@/entities/purchase/api'
 import { Button } from '@/shared/ui/button'
 import { LiveBadge } from '@/shared/ui/live-badge'
 import { Price } from '@/shared/ui/price'
@@ -46,6 +48,7 @@ function RoomScreen({ lot, view }: { lot: Lot; view: RoomView }) {
   const closed = now >= room.closesAt
   const admissions = useAdmissions()
   const admitted = admissions.has(lotId)
+  const purchase = usePurchases().find((p) => p.lotId === lotId)
   const [extra, setExtra] = useState(0n)
   // Если пока выбирали, цену перебили — выбор пересчитывается от новой минимальной.
   const amount = min + extra * room.step
@@ -166,7 +169,12 @@ function RoomScreen({ lot, view }: { lot: Lot; view: RoomView }) {
           </div>
         </section>
 
-        {banner && <div className={cn('rounded-xl px-4 py-3 text-[14px] font-medium', banner.cls)}>{banner.text}</div>}
+        {/* Торги закрылись и вы победили — сразу оплата 10% и дальнейшие шаги */}
+        {closed && purchase ? (
+          <PurchaseCard p={purchase} showTitle={false} />
+        ) : (
+          banner && <div className={cn('rounded-xl px-4 py-3 text-[14px] font-medium', banner.cls)}>{banner.text}</div>
+        )}
 
         {!closed && lot.bidTimeoutSec ? (
           <p className='-mt-2 text-[12.5px] text-muted'>

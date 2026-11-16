@@ -144,6 +144,10 @@ model Lot {
   opensAt         DateTime     @db.Timestamptz
   closesAt        DateTime     @db.Timestamptz
   closedAt        DateTime?    @db.Timestamptz
+  /// Повторные торги: лот, победитель которого не выкупил товар (решение 16.11.2026).
+  relistOfId      String?      @unique @db.Uuid
+  relistOf        Lot?         @relation("Relist", fields: [relistOfId], references: [id])
+  relist          Lot?         @relation("Relist")
   createdAt       DateTime     @default(now()) @db.Timestamptz
   updatedAt       DateTime     @updatedAt @db.Timestamptz
 
@@ -165,7 +169,10 @@ model Admission {
   lot       Lot      @relation(fields: [lotId], references: [id])
   userId    String   @db.Uuid
   user      User     @relation(fields: [userId], references: [id])
-  orderId   String   @unique @db.Uuid
+  /// Оплаченный заказ допуска; null — допуск перенесён с несостоявшихся торгов (повторные торги, решение 16.11.2026).
+  orderId   String?  @unique @db.Uuid
+  /// Лот, с которого перенесён допуск (повторные торги).
+  carriedFromLotId String? @db.Uuid
   createdAt DateTime @default(now()) @db.Timestamptz
   /// Напоминание «готовы предложить больше?» отправлено (одно на лот, решение 14.11.2026).
   nudgedAt  DateTime? @db.Timestamptz
@@ -270,6 +277,12 @@ enum ObligationStatus {
   CANCELLED
 }
 
+enum PrepaymentDecision {
+  PENDING
+  REFUNDED
+  RETAINED
+}
+
 /// Предложение купить лот: победителю (rank 1) или следующему по рейтингу. Одно на (лот, место в очереди).
 /// Продажа заключается только после подтверждения (confirmedAt) — лидерство само по себе не продажа.
 model Obligation {
@@ -291,6 +304,15 @@ model Obligation {
   remainderDeadline  DateTime?        @db.Timestamptz
   /// Хэш одноразового кода выдачи (сам код показывается только покупателю).
   pickupCodeHash     String?
+  /// Почему победа аннулирована: PREPAYMENT_MISSED (не оплачены 10%) | PICKUP_MISSED (не забрал за 24 ч).
+  expiredReason      String?
+  /// Судьба оплаченных 10%, если товар не забран: решают финансы вручную (решение 16.11.2026).
+  prepaymentDecision PrepaymentDecision?
+  decisionReason     String?
+  decidedBy          String?
+  completedAt        DateTime?        @db.Timestamptz
+  /// Сотрудник, выдавший товар.
+  issuedBy           String?
   createdAt          DateTime         @default(now()) @db.Timestamptz
   updatedAt          DateTime         @updatedAt @db.Timestamptz
 

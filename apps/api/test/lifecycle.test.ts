@@ -5,6 +5,7 @@ import { BidsService } from '../src/modules/auctions/bids.service'
 import { LotLifecycleService } from '../src/modules/auctions/lot-lifecycle.service'
 import { FakePaymentProvider } from '../src/modules/payments/payment-provider'
 import { RefundsService } from '../src/modules/payments/refunds.service'
+import type { BuyoutService } from '../src/modules/fulfillment/buyout.service'
 import { RemindersService } from '../src/modules/reminders/reminders.service'
 import { AuditService } from '../src/modules/staff/audit.service'
 import type { PrismaService } from '../src/prisma/prisma.service'
@@ -40,7 +41,7 @@ describe('Жизненный цикл лота', () => {
     expect(await db.outboxEvent.count({ where: { type: 'lot.opened' } })).toBe(1)
   })
 
-  it('закрытие: побеждает максимальная сумма; предложение купить с 30% и сроком подтверждения 15 минут', async () => {
+  it('закрытие: побеждает максимальная сумма; победитель платит 10% своей цены за 15 минут', async () => {
     const lot = await createLot(db, { opensAt: OPEN, closesAt: CLOSE })
     await bid(lot.id, 2_000_000n, 1)
     const best = await bid(lot.id, 2_400_000n, 2)
@@ -51,11 +52,10 @@ describe('Жизненный цикл лота', () => {
       userId: best.userId,
       rank: 1,
       amount: 2_400_000n,
-      prepaymentAmount: 720_000n,
-      status: 'AWAITING_CONFIRMATION',
+      prepaymentAmount: 240_000n,
+      status: 'AWAITING_PREPAYMENT',
     })
-    expect(ob.confirmDeadline.toISOString()).toBe('2026-11-20T13:15:00.000Z')
-    expect(ob.prepaymentDeadline).toBeNull() // продажа ещё не заключена
+    expect(ob.prepaymentDeadline!.toISOString()).toBe('2026-11-20T13:15:00.000Z')
   })
 
   it('без предложений — закрытие без продажи, обязательств нет', async () => {
@@ -91,19 +91,23 @@ describe('LifecycleScheduler.tick', () => {
     await cleanDb(db)
     const env = { SCHEDULER_ENABLED: false, SCHEDULER_INTERVAL_MS: 5000 } as never
     const bidsSvc = new BidsService(db as unknown as PrismaService, clock)
+    // выкуп проверяется в buyout.test.ts; здесь — только открытие/закрытие
+    const noBuyouts = { expireDue: async () => 0 } as unknown as BuyoutService
     const s1 = new LifecycleScheduler(
       env,
       db as unknown as PrismaService,
       lifecycle,
       bidsSvc,
-      new RemindersService(db as unknown as PrismaService, clock)
+      new RemindersService(db as unknown as PrismaService, clock),
+      noBuyouts
     )
     const s2 = new LifecycleScheduler(
       env,
       db as unknown as PrismaService,
       lifecycle,
       bidsSvc,
-      new RemindersService(db as unknown as PrismaService, clock)
+      new RemindersService(db as unknown as PrismaService, clock),
+      noBuyouts
     )
     const toOpen = await createLot(db, { status: 'SCHEDULED', opensAt: OPEN, closesAt: CLOSE })
     clock.set(OPEN)

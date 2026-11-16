@@ -412,3 +412,71 @@ export const useDeleteRole = () =>
     [['roles']],
     'Роль удалена'
   )
+
+/* Выкуп и выдача (решения 14.11 и 16.11.2026): 10% за 15 минут → 24 часа на остаток и получение по коду */
+export type BuyoutStatus =
+  | 'AWAITING_PREPAYMENT'
+  | 'AWAITING_PICKUP'
+  | 'COMPLETED'
+  | 'EXPIRED'
+  | (string & {})
+export type Buyout = {
+  id: string
+  lotId: string
+  lotTitle: string
+  buyer: { name: string; firstName: string; phone: string | null }
+  status: BuyoutStatus
+  amount: string
+  prepaymentAmount: string
+  remainderAmount: string
+  prepaymentDeadline: string | null
+  remainderDeadline: string | null
+  remainderPaid: 'online' | 'onsite' | null
+  expiredReason: 'PREPAYMENT_MISSED' | 'PICKUP_MISSED' | null
+  prepaymentDecision: 'PENDING' | 'REFUNDED' | 'RETAINED' | null
+  decisionReason: string | null
+  completedAt: string | null
+  relist: { id: string; status: LotStatus } | null
+}
+export type BuyoutFilter = 'active' | 'decisions' | 'all'
+export const useBuyouts = (filter: BuyoutFilter) =>
+  useQuery({
+    queryKey: ['buyouts', filter],
+    queryFn: () => api<Buyout[]>(`/admin/fulfillment?filter=${filter}`),
+    refetchInterval: 30_000,
+  })
+export const useRemainderOnSite = () =>
+  useAction(
+    ({ id, method }: { id: string; method: 'cash' | 'card' }) =>
+      api(`/admin/fulfillment/${id}/remainder-onsite`, {
+        method: 'POST',
+        body: { method },
+      }),
+    [['buyouts']],
+    'Остаток отмечен как полученный'
+  )
+export const useIssue = () =>
+  useAction(
+    ({ id, code }: { id: string; code: string }) =>
+      api(`/admin/fulfillment/${id}/issue`, { method: 'POST', body: { code } }),
+    [['buyouts'], ['products']],
+    'Товар выдан'
+  )
+export const useDecidePrepayment = () =>
+  useAction(
+    ({
+      id,
+      decision,
+      reason,
+    }: {
+      id: string
+      decision: 'REFUNDED' | 'RETAINED'
+      reason: string
+    }) =>
+      api(`/admin/finance/buyouts/${id}/decision`, {
+        method: 'POST',
+        body: { decision, reason },
+      }),
+    [['buyouts']],
+    'Решение по предоплате сохранено'
+  )

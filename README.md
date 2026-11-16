@@ -28,10 +28,14 @@ bash scripts/agent-setup.sh          # зависимости, сборка shar
 cp apps/api/.env.example apps/api/.env
 cp apps/miniapp/.env.example apps/miniapp/.env.local    # VITE_DEMO_DATA=false — работать с локальным API
 cp apps/admin/.env.example apps/admin/.env.local
-pnpm --filter @auksion/api db:migrate
 ```
 
-В `apps/api/.env` впишите `DATA_ENCRYPTION_KEY` (`openssl rand -hex 32`) и `JWT_SECRET` (`openssl rand -base64 48`) — только локальные значения, в git они не попадают.
+В `apps/api/.env` впишите `DATA_ENCRYPTION_KEY` (`openssl rand -hex 32`) и `JWT_SECRET` (`openssl rand -base64 48`) — только локальные значения, в git они не попадают. Затем миграции:
+
+```bash
+set -a && . apps/api/.env && set +a          # переменные API в эту консоль (для миграций и скриптов)
+pnpm --filter @auksion/api db:migrate
+```
 
 ```bash
 pnpm --filter @auksion/api dev        # http://localhost:3000/api/v1/health
@@ -40,8 +44,9 @@ pnpm --filter @auksion/admin dev      # следующий свободный п
 ```
 
 С `SMS_MODE=fake` (по умолчанию в `.env.example`) код входа показывается прямо на экране — SMS не отправляются.
-Владелец для локальной админки (пароль — из stdin, не в аргументах и не в истории):
-`read -rs PW && printf '%s' "$PW" | pnpm --filter @auksion/api exec tsx src/scripts/create-admin.ts --phone +998901234567 --first Имя`.
+Владелец для локальной админки (после `pnpm --filter @auksion/api build`; пароль — из stdin, не в аргументах и не в истории):
+`read -rs PW && printf '%s' "$PW" | node apps/api/dist/scripts/create-admin.js --phone +998901234567 --first Имя`.
+API запускается из сборки (`tsc`), а не через `tsx`: NestJS нужны метаданные декораторов, которых нет в esbuild/tsx. `pnpm dev` сам пересобирает и перезапускает API, `.env` подхватывает автоматически.
 
 ## Проверки (то же самое запускает CI)
 

@@ -5,6 +5,8 @@ import { maskPhone, resetAccount, useAccount } from '@/entities/account/demo-acc
 import { isSignedIn, useAuthActions, useMe } from '@/entities/account/session'
 import { DEMO, useAdmissions, useLots } from '@/entities/lot/api'
 import { openOnboarding } from '@/features/onboarding-store'
+import { PurchaseCard } from '@/features/purchase-card'
+import { usePurchases } from '@/entities/purchase/api'
 import { type Lot } from '@/entities/lot/types'
 import { cn } from '@/shared/lib/cn'
 
@@ -18,6 +20,7 @@ function MePage() {
   const admissions = useAdmissions()
   const { data: all = [] } = useLots()
   const lots = admissions.ids.map((id) => all.find((l) => l.id === id)).filter((l): l is Lot => Boolean(l))
+  const purchases = usePurchases()
 
   return (
     <div className='flex flex-col gap-5 px-4 pt-4 md:mx-auto md:w-full md:max-w-xl md:pt-8'>
@@ -59,6 +62,15 @@ function MePage() {
               <ChevronRight className='size-4 text-muted' aria-hidden='true' />
             </span>
           </Link>
+        </section>
+      )}
+
+      {purchases.length > 0 && (
+        <section className='grid gap-2' id='purchases'>
+          <h2 className='text-[13px] text-muted'>{t('me.purchases')}</h2>
+          {purchases.map((p) => (
+            <PurchaseCard key={p.id} p={p} />
+          ))}
         </section>
       )}
 
