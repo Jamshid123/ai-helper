@@ -1,0 +1,7 @@
+# Единые переводы строк (LF) у всех участников, в том числе на Windows.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.webp binary
+# Записи CHANGELOG из разных веток не конфликтуют — сохраняются обе.
+CHANGELOG.md merge=union

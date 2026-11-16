@@ -1,6 +1,6 @@
 ---
 name: backend
-description: Use when writing or changing server code in apps/api or packages/shared — NestJS modules, Prisma schema and migrations, bidding/auction logic, payments and webhooks, BullMQ jobs, WebSocket rooms, Telegram bot/auth. Covers module layout, transactions and row locks, idempotency, money and time handling.
+description: Use when writing or changing server code in apps/api or packages/shared — NestJS modules, Prisma schema and migrations, bidding/auction logic, payments and webhooks, background jobs, SSE live feed, buyer auth (phone + SMS code, cookie session), rate limits. Covers module layout, transactions and row locks, idempotency, money and time handling.
 ---
 
 # Backend (NestJS + Prisma + PostgreSQL + Redis)
@@ -102,12 +102,12 @@ async placeBid(userId: string, lotId: string, amount: bigint, idempotencyKey: st
 - Успех — только по проверенному вебхуку (подпись) **или** запросу статуса у провайдера. Сверить сумму, валюту, ID заказа. Повторный вебхук → no-op (unique `providerTxId` + проверка статуса).
 - Оплата допуска после закрытия торгов → автоматически на возврат.
 
-## Telegram
+## Вход покупателя и уведомления (сайт, решение 15.11.2026)
 
-- Аутентификация Mini App: проверка `initData` на сервере (`@telegram-apps/init-data-node`, `validate(initData, BOT_TOKEN, { expiresIn: 3600 })`), затем выдаём свою короткоживущую сессию (JWT 15 мин + refresh в httpOnly cookie или в памяти клиента).
-- Телефон: пользователь жмёт «Поделиться контактом» → бот получает `message.contact`; принимаем только если `contact.user_id === message.from.id`. Телефон в Mini App из `responseUnsafe` — не доверять.
-- Вебхук бота: проверять заголовок `X-Telegram-Bot-Api-Secret-Token`.
-- Уведомления через бота: дедупликация по ключу `(userId, type, entityId)`; уважать лимиты Telegram (≈30 msg/s) — отправка через очередь.
+- Вход по телефону и SMS-коду: `modules/auth/otp.service.ts` (код 6 цифр, 5 мин, 5 попыток, в БД только HMAC), сессия — `buyer-session.service.ts` (httpOnly-cookie, в БД SHA-256 токена, CSRF double submit). SMS — через `modules/sms` (`SMS_MODE`: disabled | fake; fake в production только на демо-стенде).
+- Метка устройства (`buyer_device`) — лимит номеров и запрет двух аккаунтов одного устройства в одном лоте; ограничение частоты — `common/rate-limit.ts` (`@RateLimit`).
+- Вход по Telegram `initData` (`/auth/telegram`, Bearer JWT) оставлен на переходный период — новое на нём не строить.
+- Уведомления: SMS для критичного + push в браузере (провайдер SMS не выбран); дедупликация по `(userId, type, entityId)`, отправка через outbox/очередь.
 
 ## Чек-лист перед коммитом
 

@@ -1,13 +1,13 @@
 ---
 name: ux-review
-description: Use when asked for a UI/UX or product-design review (ревью дизайна, UX-аудит, «сделай удобнее/понятнее») of the Mini App, admin or mobile screens, or before a release. Senior product-designer method — walks real user flows on rendered screens (phone viewport, light/dark, ru/uz), checks against heuristics, accessibility, platform guidelines and AuksionGO-specific rules, and returns severity-ranked findings with evidence and concrete fixes.
+description: Use when asked for a UI/UX or product-design review (ревью дизайна, UX-аудит, «сделай удобнее/понятнее») of the buyer website (phone and desktop), admin or mobile screens, or before a release. Senior product-designer method — walks real user flows on rendered screens (phone viewport, light/dark, ru/uz), checks against heuristics, accessibility, platform guidelines and AuksionGO-specific rules, and returns severity-ranked findings with evidence and concrete fixes.
 ---
 
 # UX/UI-ревью уровня senior product designer
 
 Ты — ведущий продуктовый дизайнер маркетплейсов и финтеха. Ревью — это не мнение о вкусе, а проверка, **может ли конкретный человек быстро и уверенно сделать нужное действие и понимает ли он последствия**. Каждая находка подкреплена скриншотом и правилом, каждое предложение — конкретное и реализуемое в текущем стеке.
 
-Опора: эвристики Нильсена, WCAG 2.2 AA, Apple HIG и Material 3 (размеры, жесты, системные паттерны), рекомендации Telegram Mini Apps (нативные MainButton/BackButton, тема пользователя, safe area), исследования Baymard по карточке товара и оформлению оплаты, Laws of UX (Fitts, Hick, Jakob, Doherty), Refactoring UI (иерархия, отступы, цвет).
+Опора: эвристики Нильсена, WCAG 2.2 AA, Apple HIG и Material 3 (размеры, жесты, системные паттерны), исследования Baymard по карточке товара и оформлению оплаты, Laws of UX (Fitts, Hick, Jakob, Doherty), Refactoring UI (иерархия, отступы, цвет).
 
 ## Контекст проекта (прочитать перед ревью)
 
@@ -27,7 +27,7 @@ description: Use when asked for a UI/UX or product-design review (ревью д�
 
 ### 2. Сними экраны, а не читай код
 Запусти приложение (демо: `VITE_DEMO_DATA=true pnpm -F @auksion/miniapp dev`, админка: `VITE_DEMO_AUTH=true pnpm -F @auksion/admin dev`) и пройди сценарии Playwright-скриптом:
-- Mini App: `devices['iPhone 13']` и маленький экран (`iPhone SE`), светлая и тёмная тема (`colorScheme`), `ru` и `uz` (длинные узбекские строки ломают вёрстку чаще всего).
+- Сайт: `devices['iPhone 13']`, маленький экран (`iPhone SE`) и десктоп 1280/1440, светлая и тёмная тема (`colorScheme`), `ru` и `uz` (длинные узбекские строки ломают вёрстку чаще всего).
 - Админка: 1280×800 и 1440×900, светлая и тёмная.
 - Состояния: пусто, загрузка, ошибка сети, длинные названия, очень большие суммы (`99 999 999 сум`), таймер < 1 мин, торги закрыты.
 Смотри каждый скриншот глазами. Находка без скриншота — гипотеза.
@@ -61,7 +61,7 @@ description: Use when asked for a UI/UX or product-design review (ревью д�
 - Видимый фокус с клавиатуры (админка), `prefers-reduced-motion`, подписи у иконок-кнопок.
 
 **Платформа**
-- Mini App: тема Telegram, safe area, BackButton вместо своей «назад», нет своей шапки, дублирующей Telegram; работает на узком экране без горизонтального скролла.
+- Сайт: тема системы (`prefers-color-scheme`), safe area на телефоне, своя «назад» на экранах, на телефоне — нижняя навигация и действие под пальцем, на десктопе — шапка и две колонки; нет горизонтального скролла.
 - Mobile (Expo): системные жесты назад, Dynamic Type не ломает вёрстку, нативные пикеры/листы.
 - Админка: плотные таблицы с фильтрами и поиском, массовые действия, ПДн замаскированы, обязательная «Причина» у решений.
 

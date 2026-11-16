@@ -1,6 +1,6 @@
 name: Deploy
 
-# Пуш в main = выкладка на сервер. Также ручной запуск (Run workflow).
+# Пуш (мерж PR) в main = выкладка на сервер. Ручной запуск (Run workflow) — только с main.
 # Секреты: SERVER_HOST, DEPLOY_SSH_KEY, TELEGRAM_BOT_TOKEN.
 
 on:
@@ -16,7 +16,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  guard:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Deploy only from main
+        run: |
+          [ "$GITHUB_REF" = "refs/heads/main" ] || { echo "::error::Выкладка только из main (сейчас $GITHUB_REF). Откройте PR в main."; exit 1; }
+
   ci:
+    needs: guard
     uses: ./.github/workflows/ci.yml
 
   deploy:

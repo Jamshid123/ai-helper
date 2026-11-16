@@ -16,7 +16,8 @@ description: Use when touching auth, sessions, roles/permissions, secrets or env
 - Секреты не логируются, не возвращаются в ответах, не попадают в ошибки. pino с `redact` для `authorization`, `cookie`, `password`, `token`, `initData`, `phone`, `imei`.
 
 **Аутентификация**
-- Mini App: подпись `initData` проверяется на сервере (HMAC от bot token), `auth_date` не старше 1 часа. Только после этого — своя сессия.
+- Сайт: вход по телефону и SMS-коду; сессия покупателя — httpOnly-cookie (`SameSite=Strict`), изменения только с CSRF-заголовком. Переходный вход Telegram: подпись `initData` проверяется на сервере, `auth_date` не старше 1 часа.
+- IP клиента — последний адрес X-Forwarded-For (доверяем одному прокси); левые адреса клиент может подделать.
 - Сессии: access JWT 15 мин (HS256 с секретом ≥ 32 байт или EdDSA), refresh с ротацией и отзывом. Админка — httpOnly + Secure + SameSite=Strict cookie, CSRF-токен.
 - Админка: пароль (argon2id, ≥ 12 символов); блокировка после 5 неудачных попыток на 15 мин; сессия админки ≤ 8 ч. Второй фактор (TOTP) отключён решением заказчика 14.11.2026 (ТЗ требует MFA — риск принят заказчиком); не возвращать без его решения.
 - Телефон принимается только из `message.contact` бота, где `contact.user_id === from.id`.
@@ -43,7 +44,7 @@ description: Use when touching auth, sessions, roles/permissions, secrets or env
 - Только параметризованные запросы. `$queryRawUnsafe` запрещён.
 - Rate limit (Redis): запросы контакта/OTP, вход в админку, ставки (на пользователя и на лот), создание заказов.
 - CORS — явный список: `https://auksion.expertly.uz` и домен админки. Никогда `*` с credentials.
-- Заголовки: Helmet, HSTS. CSP для Mini App должен разрешать встраивание в Telegram Web: `frame-ancestors https://web.telegram.org https://*.telegram.org`. Для админки — `frame-ancestors 'none'`.
+- Заголовки: Helmet, HSTS. CSP сайта и админки — `frame-ancestors 'none'` (встраивание во фрейм запрещено).
 - Загрузка файлов: проверка MIME по сигнатуре, лимит размера, перекодирование изображений (sharp), удаление EXIF.
 - Ошибки наружу — без стектрейсов и SQL; детали — только в логах.
 

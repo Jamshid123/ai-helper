@@ -1,0 +1,25 @@
+# Локальные PostgreSQL и Redis для разработки и интеграционных тестов API.
+# Порты совпадают с умолчаниями (apps/api/.env.example, apps/api/test/global-setup.ts).
+# Только для своей машины: слушают 127.0.0.1, пароль не нужен (trust).
+#   docker compose -f infra/docker-compose.dev.yml up -d
+name: auksion-dev
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_DB: auksion_dev
+    ports: ['127.0.0.1:55432:5432']
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./dev/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 3s
+      retries: 20
+  redis:
+    image: redis:7-alpine
+    ports: ['127.0.0.1:56379:6379']
+volumes:
+  pgdata:

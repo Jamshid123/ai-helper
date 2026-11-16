@@ -6,10 +6,18 @@
 
 | Путь | Назначение |
 |---|---|
-| `CLAUDE.md` | Правила работы, таблица скиллов, процесс изменений |
-| `CHANGELOG.md` | Журнал изменений |
+| `AGENTS.md` | **Единые правила** для людей и агентов (Codex читает напрямую): таблица скиллов, процесс `main` + PR |
+| `CLAUDE.md` | Подключает `AGENTS.md` (`@AGENTS.md`) + заметки только для Claude Code |
+| `README.md` | Что это, состав, быстрый старт, команды проверок |
+| `CONTRIBUTING.md` | Ветки, PR, конфликты (миграции, lock-файл), подключение Codex |
+| `CHANGELOG.md` | Журнал изменений (`merge=union` в `.gitattributes`) |
 | `.claude/skills/<name>/SKILL.md` | Скиллы: backend, frontend, mobile, testing, security, deploy, spec-check, token-economy, ux-review |
-| `.claude/settings.json` | Запрет чтения секретов и сгенерированных артефактов |
+| `.agents/skills/<name>` | Ссылки на `.claude/skills/<name>` — те же скиллы для Codex |
+| `.claude/settings.json` | Запрет чтения секретов и сгенерированных артефактов (Claude Code) |
+| `scripts/agent-setup.sh` | Зависимости + локальные PostgreSQL/Redis (Docker или пакеты); setup-скрипт облачного Codex |
+| `scripts/check-agent-skills.sh` | Проверка в CI: у каждого скилла есть ссылка для Codex, `CLAUDE.md` подключает `AGENTS.md` |
+| `infra/docker-compose.dev.yml` | Локальные PostgreSQL :55432 (+ база `auksion_test`) и Redis :56379 |
+| `.github/pull_request_template.md` | Шаблон PR с чек-листом из `AGENTS.md` |
 | `docs/STATUS.md` | Текущее состояние и следующий шаг |
 | `docs/PROJECT_CONTEXT.md` | Архитектура, стек, инварианты, решения, открытые вопросы |
 | `docs/spec/tz.md` | ТЗ (эталон) |

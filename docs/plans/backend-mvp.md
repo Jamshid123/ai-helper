@@ -6,7 +6,7 @@ _Утверждён заказчиком 13.11.2026. Выполняется но
 
 - Читать по порядку: `docs/STATUS.md` → `docs/CODEMAP.md` → нужные разделы `docs/PROJECT_CONTEXT.md` и `docs/spec/tz.md` → скиллы (`backend`, `testing`, `security`, `frontend`, `deploy`, `spec-check`, `ux-review`).
 - Этапы — строго по порядку; внутри этапа — маленькими шагами: сначала падающий тест, потом код (скилл `testing`).
-- Каждый законченный шаг: lint + typecheck + test + build зелёные → коммит (Conventional Commits) → `CHANGELOG.md` + `STATUS.md` (+ `CODEMAP.md`/`PROJECT_CONTEXT.md`, если менялась структура/архитектура) → **push в рабочую ветку** `claude/telegram-miniapp-setup-70vky4` (исключение, утверждённое заказчиком, см. `CLAUDE.md`).
+- Каждый законченный шаг: lint + typecheck + test + build зелёные → коммит (Conventional Commits) → `CHANGELOG.md` + `STATUS.md` (+ `CODEMAP.md`/`PROJECT_CONTEXT.md`, если менялась структура/архитектура) → **PR в `main`** по `AGENTS.md` (с 16.11.2026; раньше — пуш в рабочую ветку).
 - **Никогда:** push в `main`, запуск Deploy/bootstrap, изменения на сервере, удаление чужих данных, отключение тестов.
 - Нет ответа в ТЗ или решениях → не придумывать: записать вопрос в `STATUS.md` → «Вопросы к заказчику», взять безопасный вариант по умолчанию и пометить его.
 - В конце сессии (или при приближении лимитов) — обновить `STATUS.md`: что сделано, на чём остановились, следующий шаг, вопросы.

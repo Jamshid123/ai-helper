@@ -1,6 +1,6 @@
 ---
 name: testing
-description: Use when implementing any feature or bugfix (write the failing test first), when adding unit/integration/e2e tests, and before claiming anything works. Covers TDD loop, Testcontainers for Postgres/Redis, concurrency tests for bids, fake clock, Playwright e2e for Mini App and admin, and the acceptance scenarios from the spec.
+description: Use when implementing any feature or bugfix (write the failing test first), when adding unit/integration/e2e tests, and before claiming anything works. Covers TDD loop, Testcontainers for Postgres/Redis, concurrency tests for bids, fake clock, Playwright e2e for the buyer website and admin, and the acceptance scenarios from the spec.
 ---
 
 # Testing
@@ -21,7 +21,7 @@ description: Use when implementing any feature or bugfix (write the failing test
 | Unit | Vitest | Чистые функции: правила ставки, расчёт 30%, календарь Ташкента, переходы статусов, `formatSum` |
 | Integration | Vitest + **Testcontainers** (реальные PostgreSQL и Redis) | Сервисы с БД: ставки под конкуренцией, идемпотентность, закрытие лота, вебхуки платежей, баны |
 | API/contract | Supertest по Nest-приложению | Авторизация, роли, коды ошибок, отсутствие лишних полей в ответах |
-| E2E | Playwright | Mini App (с моком Telegram-окружения) и админка: ключевые пути пользователя |
+| E2E | Playwright | Сайт (телефон и десктоп) и админка: ключевые пути пользователя |
 
 Не мокать БД в тестах логики ставок и платежей — блокировки и уникальные индексы работают только на настоящем Postgres.
 
@@ -71,7 +71,7 @@ it('из двух одинаковых одновременных ставок �
 
 ## E2E (Playwright)
 
-- Mini App: открыть каталог → карточка → оплатить допуск (fake provider) → комната → ставка → увидеть себя лидером; второй браузерный контекст перебивает ставку → первый видит обновление.
+- Сайт: каталог → карточка → «Участвовать» → вход (код из SMS при `SMS_MODE=fake`) → допуск (fake provider) → комната → предложить цену → «Ваша цена — лучшая»; второй браузерный контекст перебивает ставку → первый видит обновление.
 - Админка: вход с TOTP → создать лот → акт эксперта → публикация; выдача по коду.
 - Запуск: `pnpm e2e -- --trace off` (trace включать только для отладки упавшего теста).
 

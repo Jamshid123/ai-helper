@@ -1,9 +1,9 @@
 ---
 name: frontend
-description: Use when building or changing apps/miniapp (Telegram Mini App for buyers) or apps/admin (staff admin panel) — React + Vite + TypeScript, Telegram WebApp SDK, TanStack Query, WebSocket auction room, i18n ru/uz, RBAC-aware admin screens.
+description: Use when building or changing apps/miniapp (the buyer website — phone and desktop; historically a Telegram Mini App) or apps/admin (staff admin panel) — React + Vite + TypeScript, TanStack Router/Query, phone + SMS login with cookie session, SSE auction room, i18n ru/uz, RBAC-aware admin screens.
 ---
 
-# Frontend: Telegram Mini App + Админка
+# Frontend: сайт покупателя + админка
 
 Общее для обоих приложений: React 19, Vite, TypeScript strict, TanStack Query (серверное состояние), zod-схемы и типы из `packages/shared`, i18next (`ru`, `uz` — латиница), ESLint + Prettier. Глобальный стейт-менеджер не нужен, пока нет явной причины.
 
@@ -25,26 +25,27 @@ description: Use when building or changing apps/miniapp (Telegram Mini App for b
 - Секретов во фронте нет и быть не может: всё, что в `VITE_*`, публично.
 - Не рендерить HTML из данных (`dangerouslySetInnerHTML` запрещён).
 
-## Mini App (`apps/miniapp`)
+## Сайт покупателя (`apps/miniapp`)
 
-Структура:
+С 15.11.2026 это обычный сайт, удобный на телефоне и на компьютере (из Telegram ушли — защита от фрода; `docs/PROJECT_CONTEXT.md` §8). Папка называется `miniapp` исторически.
+
+Структура (подробнее — `docs/CODEMAP.md`):
 ```
 src/
-  app/          # провайдеры, роутер, init Telegram SDK
-  pages/        # catalog, lot/:id, room/:id, profile, admission, checkout
-  features/     # bid-form, countdown, admission-pay, contact-share
-  entities/     # lot, bid, user — типы, хуки запросов, мелкие UI
-  shared/       # api-client, i18n, ui-kit, format, ws-client
+  app/          # i18n.tsx (словарь ru/uz), platform.ts (haptic, ссылка на поддержку; заглушки бывших кнопок Telegram)
+  routes/       # TanStack Router: каталог, лот, комната, вход (register), профиль, заявка продавца
+  features/     # онбординг, автопредложение
+  entities/     # lot (API, движок цены), account (session.ts — кто вошёл)
+  shared/       # api-client (cookie + CSRF), ui (кнопки, фото, логотип), lib
 ```
 
-Telegram:
-- Официальный скрипт `telegram-web-app.js` + типизированная обёртка `apps/miniapp/src/app/telegram.ts` (`useMainButton`, `useBackButton`, `haptic`, `rawInitData`). Тема: CSS-переменные `--tg-theme-*` с фолбэком на палитру B.
-- Учитывать safe area / content safe area insets, тёмную и светлую тему Telegram.
-- Нативные элементы: `BackButton` для навигации назад, `MainButton` для главного действия экрана (оплатить допуск / поставить), `HapticFeedback` на успешную ставку.
-- Авторизация: при старте отправляем **сырую** строку `initData` на `/api/v1/auth/telegram`, получаем сессию. Никогда не доверять `initDataUnsafe` для чего-либо, кроме отображения.
-- Телефон: кнопка «Поделиться контактом» (`requestContact`), затем ждём подтверждения от сервера (сервер получает контакт через бота).
-- Deep links: `startapp=lot_<id>` → сразу на карточку лота.
-- Работа вне Telegram (обычный браузер) — показываем экран «Откройте в Telegram», в dev — мок окружения (`mockTelegramEnv`) только под `import.meta.env.DEV`.
+Платформа:
+- Вход: телефон с маской → код из SMS → имя (`routes/register.tsx`, `entities/account/session.ts`). Сессия — httpOnly-cookie, токенов в JS нет; изменяющие запросы шлют `X-CSRF-Token` из cookie `buyer_csrf` (это делает `shared/api/client.ts`).
+- Раскладка: телефон — нижняя навигация и кнопка действия внизу экрана; `md:` и шире — шапка, сетка каталога, лот и комната в две колонки. Проверять обе ширины (iPhone 13 и 1280 px), светлую и тёмную тему (`prefers-color-scheme`).
+- Демо-данные — только при `VITE_DEMO_DATA=true`; сайт сам в демо не переключается.
+- Лента торгов — SSE (`/lots/:id/events`), при переподключении — актуальное состояние с сервера.
+- Поддержка — ссылка `SUPPORT_URL` из `app/platform.ts`.
+- Логотип — `shared/ui/logo.tsx` (название одним цветом, решение 15.11.2026).
 
 Экраны по ТЗ (см. `docs/spec/tz.md` «Регистрация и каталог», «Экран торгов»):
 - Каталог: время ближайших торгов сверху, категории (старт — «Телефоны»), фильтр «Новые» / «Б/у».
@@ -52,19 +53,19 @@ Telegram:
 - Комната торгов: лидер, минимальная следующая ставка, таймер, история ставок, допущенные, «Сейчас в комнате». Публичное имя — «Имя Ф.» или псевдоним.
 - После победы: сумма 30% и таймер 15 мин; затем остаток и 24 ч; код выдачи.
 
-WebSocket в комнате:
-- Подключение с токеном сессии; при реконнекте шлём `lastSeq`, применяем снапшот + пропущенные события. События применяем только по возрастанию `seq`, дубли игнорируем.
-- При отказе ставки показываем причину и обновлённую минимальную ставку из ответа.
-- Каждая отправка ставки — новый `idempotencyKey` (`crypto.randomUUID()`), повтор той же попытки (сетевой ретрай) — тот же ключ. Кнопку блокировать до ответа.
+Комната торгов:
+- При отказе показываем причину и обновлённую минимальную цену из ответа.
+- Каждая отправка — новый `idempotencyKey` (`crypto.randomUUID()`), сетевой повтор той же попытки — тот же ключ. Кнопку блокировать до ответа.
+- Ошибки — через `shared/api/error-text.ts` (код ответа → текст ru/uz); новый код ошибки API = новая строка в словаре.
 
-Производительность: бандл Mini App < 300 KB gzip на первый экран, ленивые роуты, изображения через `srcset`/webp с бэкенда.
+Производительность: бандл сайта < 300 KB gzip на первый экран, ленивые роуты, изображения через `srcset`/webp с бэкенда.
 
 ## Админка (`apps/admin`)
 
-- Отдельное приложение и поддомен/путь, **не** внутри Mini App. Основа — шаблон shadcn-admin (shadcn/ui, Tailwind 4, TanStack Router/Query/Table). Карта файлов и контракт API — `apps/admin/README.md`.
+- Отдельное приложение и поддомен, **не** внутри сайта покупателя. Основа — шаблон shadcn-admin (shadcn/ui, Tailwind 4, TanStack Router/Query/Table). Карта файлов и контракт API — `apps/admin/README.md`.
 - Новый раздел: запись в `src/config/sections.ts` + доступ в `src/lib/rbac.ts` (+ тест) + маршрут `src/routes/_authenticated/<id>/index.tsx` с `beforeLoad: requireSection('<id>')`.
 - Демо-вход (`VITE_DEMO_AUTH=true`) — только для `vite dev`; проверять, что в production-бандле нет демо-кода.
-- Вход: логин + пароль + TOTP (MFA обязателен для всех ролей). Сессия в httpOnly secure cookie, SameSite=Strict, CSRF-токен на мутациях.
+- Вход: телефон + пароль (второй фактор убран решением заказчика 14.11.2026 — расходится с ТЗ, вопрос открыт). Сессия в httpOnly secure cookie, SameSite=Strict, CSRF-токен на мутациях.
 - Навигация и кнопки строятся от прав, пришедших с сервера (`/me` → permissions). Это только UX — сервер всё равно проверяет каждое действие.
 - Разделы по ролям ТЗ: Оператор (расписание, лоты), Эксперт (приёмка, акт, чек-лист, фото), Риск (сигналы, разборы, ограничения), Финансы (платежи, возвраты, сверка), Выдача (сверка с актом, выдача по коду), Поддержка (снятие ограничения с обязательной причиной).
 - Чувствительные данные (полный IMEI, ФИО, телефон, документы) по умолчанию замаскированы; «Показать» — отдельный запрос к API, который пишется в аудит.
