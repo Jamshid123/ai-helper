@@ -11,8 +11,9 @@
 | `README.md` | Что это, состав, быстрый старт, команды проверок |
 | `CONTRIBUTING.md` | Ветки, PR, конфликты (миграции, lock-файл), подключение Codex |
 | `CHANGELOG.md` | Журнал изменений (`merge=union` в `.gitattributes`) |
-| `.claude/skills/<name>/SKILL.md` | Скиллы: backend, frontend, mobile, testing, security, deploy, spec-check, token-economy, ux-review |
+| `.claude/skills/<name>/SKILL.md` | Скиллы: backend, frontend, mobile, testing, security, deploy, spec-check, token-economy, ux-review, product, risk-review, idea-review |
 | `.agents/skills/<name>` | Ссылки на `.claude/skills/<name>` — те же скиллы для Codex |
+| `docs/reviews/ideas/` | Цепочка `idea-review`: бриф, четыре независимых ревью, сводка и решение владельца по каждой идее |
 | `.claude/settings.json` | Запрет чтения секретов и сгенерированных артефактов (Claude Code) |
 | `scripts/agent-setup.sh` | Зависимости + локальные PostgreSQL/Redis (Docker или пакеты); setup-скрипт облачного Codex |
 | `scripts/check-agent-skills.sh` | Проверка в CI: у каждого скилла есть ссылка для Codex, `CLAUDE.md` подключает `AGENTS.md` |
