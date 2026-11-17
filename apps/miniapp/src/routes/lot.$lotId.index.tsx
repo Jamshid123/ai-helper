@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { BadgeCheck } from 'lucide-react'
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
+import { BadgeCheck, ChevronLeft } from 'lucide-react'
 import { formatSum } from '@auksion/shared'
 import { useI18n } from '@/app/i18n'
 import { haptic, useBackButton, useMainButton } from '@/app/platform'
@@ -14,7 +14,10 @@ import { cn } from '@/shared/lib/cn'
 import { formatCountdown, useNow } from '@/shared/lib/use-now'
 import { LeaveCard } from '@/features/leave'
 import { CarriedCard, RelistNotice } from '@/features/relist'
+import { PurchaseCard } from '@/features/purchase-card'
+import { usePurchases } from '@/entities/purchase/api'
 import { RemindCard } from '@/features/remind'
+import { ACTION_BAR } from '@/shared/ui/action-bar'
 import { Button } from '@/shared/ui/button'
 import { LiveBadge } from '@/shared/ui/live-badge'
 import { PhotoCarousel } from '@/shared/ui/photo-carousel'
@@ -163,6 +166,10 @@ function LotPage() {
   const admitted = lot ? admissions.has(lot.id) : false
   const carriedInfo = lot ? admissions.info(lot.id) : undefined
   const live = lot?.status === 'live'
+  // Торги закончились: ни «Участвовать», ни обратного отсчёта (баг 17.11.2026 — «Откроется через 00:00:00»)
+  const closed = lot?.status === 'closed'
+  const purchase = usePurchases().find((p) => p.lotId === lotId)
+  const [left, setLeft] = useState<null | 'refund' | 'carried'>(null)
   const full = Boolean(lot && !admitted && isFull(lot))
   const primary = useCallback(() => {
     if (!lot) return
@@ -176,7 +183,7 @@ function LotPage() {
     text: admitted ? t('lot.toRoom') : full ? t('lot.full') : t('lot.participate'),
     onClick: primary,
     enabled: admitted || !full,
-    visible: !sheet && Boolean(lot) && (!admitted || live),
+    visible: !sheet && Boolean(lot) && !closed && (!admitted || live),
   })
 
   if (!lot) return null
@@ -187,9 +194,13 @@ function LotPage() {
     <div
       className={cn(
         'flex flex-col gap-4 px-4 pt-4 lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-start lg:gap-8 lg:px-6 lg:pt-6 lg:pb-10',
-        !native && (!admitted || live) && 'pb-24'
+        !native && !closed && (!admitted || live) && 'pb-24'
       )}
     >
+      {/* На телефоне шапки нет: явный путь назад в каталог (нижнее меню тоже доступно) */}
+      <Link to='/' className='-mb-1 inline-flex min-h-11 items-center gap-1 self-start text-[14px] text-muted md:hidden'>
+        <ChevronLeft className='size-4' aria-hidden='true' /> {t('nav.catalog')}
+      </Link>
       <PhotoCarousel
         photos={lot.photos ?? []}
         hue={lot.hue}
@@ -224,15 +235,24 @@ function LotPage() {
             />
           </div>
           <div className='rounded-2xl bg-surface px-4 py-3'>
-            <div className='text-[12px] text-muted'>{live ? t('lot.endsIn') : t('lot.opensIn')}</div>
-            <div className={`tabular text-lg font-bold min-[360px]:text-xl ${live ? 'text-hot' : ''}`}>
-              {formatCountdown((live ? closes : opens) - now, t('time.d'))}
-            </div>
+            {closed ? (
+              <>
+                <div className='text-[12px] text-muted'>{t('lot.status')}</div>
+                <div className='text-[15px] leading-snug font-semibold'>{t('room.closed')}</div>
+              </>
+            ) : (
+              <>
+                <div className='text-[12px] text-muted'>{live ? t('lot.endsIn') : t('lot.opensIn')}</div>
+                <div className={`tabular text-lg font-bold min-[360px]:text-xl ${live ? 'text-hot' : ''}`}>
+                  {formatCountdown((live ? closes : opens) - now, t('time.d'))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
-        {!native && (!admitted || live) && (
-          <div className='fixed inset-x-0 bottom-0 z-10 border-t border-line bg-bg px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] lg:static lg:z-auto lg:border-0 lg:bg-transparent lg:p-0'>
+        {!native && !closed && (!admitted || live) && (
+          <div className={cn(ACTION_BAR, 'lg:static lg:z-auto lg:border-0 lg:bg-transparent lg:p-0')}>
             <Button
               onClick={primary}
               disabled={!admitted && full}
@@ -243,7 +263,15 @@ function LotPage() {
           </div>
         )}
 
-        {!live && <RemindCard lotId={lot.id} opensAt={opens} now={now} />}
+        {/* Победителю — что делать дальше (10% / код выдачи / остаток), прямо на странице лота */}
+        {purchase && <PurchaseCard p={purchase} showTitle={false} />}
+        {left && (
+          <p role='status' className='rounded-2xl border border-ok/30 px-4 py-3 text-[14px] font-medium text-ok'>
+            ✓ {t(left === 'carried' ? 'lot.leave.carried.done' : 'lot.leave.done')}
+          </p>
+        )}
+
+        {!live && !closed && <RemindCard lotId={lot.id} opensAt={opens} now={now} />}
 
         <RelistNotice lot={lot} />
 
@@ -256,7 +284,13 @@ function LotPage() {
             </div>
           )
         )}
-        {admitted && !live && opens > now && <LeaveCard lotId={lot.id} carried={Boolean(carriedInfo?.carried)} />}
+        {admitted && !live && opens > now && (
+          <LeaveCard
+            lotId={lot.id}
+            carried={Boolean(carriedInfo?.carried)}
+            onLeft={() => setLeft(carriedInfo?.carried ? 'carried' : 'refund')}
+          />
+        )}
 
         <section className='divide-y divide-line'>
           <Row label={t('lot.start')}>

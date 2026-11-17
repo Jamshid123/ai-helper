@@ -80,5 +80,14 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
+      # Сквозные тесты сайта (решение 17.11.2026): свой API на отдельной БД *_e2e + сайт, телефон и компьютер.
+      - name: E2E — сквозные сценарии сайта (Playwright)
+        env:
+          E2E_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/auksion_e2e
+          E2E_REDIS_URL: redis://127.0.0.1:6379/1
+        run: |
+          pnpm --filter @auksion/e2e exec playwright install chromium
+          pnpm --filter @auksion/e2e e2e
+
       - name: Build API image (check only)
         run: docker build -f infra/Dockerfile.api -t auksion-api:ci .
