@@ -3,7 +3,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { FakeClock } from '../src/common/clock'
 import { BidsService } from '../src/modules/auctions/bids.service'
 import { LotLifecycleService } from '../src/modules/auctions/lot-lifecycle.service'
-import { FakePaymentProvider } from '../src/modules/payments/payment-provider'
+import { FakePaymentProvider, PaymentGateway } from '../src/modules/payments/payment-provider'
 import { RefundsService } from '../src/modules/payments/refunds.service'
 import type { BuyoutService } from '../src/modules/fulfillment/buyout.service'
 import type { RelistService } from '../src/modules/fulfillment/relist.service'
@@ -21,7 +21,7 @@ const prisma = db as unknown as PrismaService
 const lifecycle = new LotLifecycleService(
   prisma,
   clock,
-  new RefundsService(prisma, new FakePaymentProvider(), new AuditService(prisma), clock)
+  new RefundsService(prisma, new PaymentGateway([new FakePaymentProvider()]), new AuditService(prisma), clock)
 )
 
 async function bid(lotId: string, amount: bigint, seq: number) {

@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { DEMO } from '@/entities/lot/api'
+import { completeCheckout } from '@/entities/payment/api'
 import { ApiError, api } from '@/shared/api/client'
 
 /** Выигранный лот и его выкуп (решения 14.11 и 16.11.2026): 10% за 15 минут → 24 часа на остаток и получение. */
@@ -36,18 +37,22 @@ export function usePurchases(): Purchase[] {
   return DEMO ? [] : (q.data ?? [])
 }
 
-/** Оплатить 10% или остаток (на тестовом запуске оплату имитирует сервер). */
-export function usePayPurchase(): (id: string, part: 'prepayment' | 'remainder') => Promise<void> {
+/** Оплатить 10% или остаток выбранным способом (Click / Payme — переход на их страницу; тестовый запуск — имитация). */
+export function usePayPurchase(): (
+  id: string,
+  part: 'prepayment' | 'remainder',
+  pay?: { provider?: string; locale?: 'ru' | 'uz' }
+) => Promise<'paid' | 'redirected'> {
   const qc = useQueryClient()
   return useCallback(
-    async (id, part) => {
+    async (id, part, pay = {}) => {
       const r = await api<{ orderId: string; provider: string; checkoutUrl: string | null }>(`/obligations/${id}/pay`, {
         method: 'POST',
-        body: { part },
+        body: { part, ...pay },
       })
-      if (r.provider !== 'fake') throw new ApiError(503, 'PAYMENTS_DISABLED', 'Оплата скоро будет доступна')
-      await api(`/payments/fake/${r.orderId}/complete`, { method: 'POST' })
-      await qc.invalidateQueries({ queryKey: ['purchases'] })
+      const outcome = await completeCheckout(r)
+      if (outcome === 'paid') await qc.invalidateQueries({ queryKey: ['purchases'] })
+      return outcome
     },
     [qc]
   )

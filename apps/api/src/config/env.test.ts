@@ -11,6 +11,25 @@ const base = {
 }
 
 describe('loadEnv', () => {
+  const click = { CLICK_SERVICE_ID: '1', CLICK_MERCHANT_ID: '2', CLICK_MERCHANT_USER_ID: '3', CLICK_SECRET_KEY: 's'.repeat(12) }
+  const payme = { PAYME_MERCHANT_ID: '5e730e8e0b852a417aa49ceb', PAYME_KEY: 'k'.repeat(20) }
+
+  it('платёжные системы (17.11.2026): ключи — комплектом; live без единой системы не стартует; пустые = не заданы', () => {
+    expect(() => loadEnv({ ...base, CLICK_SERVICE_ID: '1' })).toThrow(/Click/)
+    expect(() => loadEnv({ ...base, PAYME_KEY: 'k'.repeat(20) })).toThrow(/Payme/)
+    expect(() => loadEnv({ ...base, PAYMENTS_MODE: 'live' })).toThrow(/ни одна/)
+    expect(loadEnv({ ...base, PAYMENTS_MODE: 'live', ...click }).CLICK_SERVICE_ID).toBe(1)
+    expect(loadEnv({ ...base, PAYMENTS_MODE: 'live', ...payme }).PAYME_IP_CHECK).toBe(true)
+    const empty = loadEnv({ ...base, CLICK_SERVICE_ID: '', CLICK_SECRET_KEY: '', PAYME_KEY: '', PAYME_MERCHANT_ID: '' })
+    expect(empty.CLICK_SERVICE_ID).toBeUndefined()
+  })
+
+  it('в production нельзя выключить проверку адресов Payme и включить песочницу Payme', () => {
+    expect(() => loadEnv({ ...base, ...payme, PAYME_IP_CHECK: 'false' })).toThrow(/PAYME_IP_CHECK/)
+    expect(() => loadEnv({ ...base, ...payme, PAYME_TEST_MODE: 'true' })).toThrow(/PAYME_TEST_MODE/)
+    expect(loadEnv({ ...base, ...payme, PAYME_TEST_MODE: 'true', DEMO_STAND: 'true' }).PAYME_TEST_MODE).toBe(true)
+  })
+
   it('без обязательных переменных не стартует', () => {
     expect(() => loadEnv({})).toThrow(/DATABASE_URL/)
   })

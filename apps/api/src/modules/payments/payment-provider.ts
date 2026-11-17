@@ -1,17 +1,29 @@
 /**
- * Платёжный провайдер. Партнёр (Click / Payme / Uzum) ещё не выбран — реальный адаптер реализует этот интерфейс.
- * Успех оплаты подтверждается ТОЛЬКО проверенным событием партнёра или запросом статуса (ТЗ).
+ * Платёжные системы (решение 17.11.2026: Click + Payme, покупатель выбирает). Успех оплаты подтверждается ТОЛЬКО
+ * проверенным запросом платёжной системы (подпись / ключ) или запросом статуса (ТЗ).
  */
 export type CheckoutSession = { provider: string; checkoutUrl: string | null }
 
-export interface PaymentProvider {
-  readonly name: string
-  createCheckout(order: { id: string; amount: bigint; description: string }): Promise<CheckoutSession>
-  /** Возврат оплаченного заказа. 'REFUNDED' — проведён сразу; 'PENDING' — ждём подтверждения партнёра. */
-  refund(order: { id: string; amount: bigint; providerTxId: string | null }): Promise<'REFUNDED' | 'PENDING'>
+export type CheckoutOrder = {
+  id: string
+  /** В сумах. */
+  amount: bigint
+  description: string
+  /** Куда вернуть покупателя после оплаты (путь на сайте, например /lot/<id>). */
+  returnPath: string
+  locale: 'ru' | 'uz'
 }
 
-export const PAYMENT_PROVIDER = Symbol('PAYMENT_PROVIDER')
+export type RefundOrder = { id: string; amount: bigint; provider: string; providerTxId: string | null }
+
+export interface PaymentProvider {
+  readonly name: string
+  createCheckout(order: CheckoutOrder): Promise<CheckoutSession>
+  /** Возврат оплаченного заказа. 'REFUNDED' — проведён сразу; 'PENDING' — вручную / ждём подтверждения. */
+  refund(order: RefundOrder): Promise<'REFUNDED' | 'PENDING'>
+}
+
+export const PAYMENT_GATEWAY = Symbol('PAYMENT_GATEWAY')
 
 export class PaymentsDisabledError extends Error {
   constructor() {
@@ -19,15 +31,9 @@ export class PaymentsDisabledError extends Error {
   }
 }
 
-/** PAYMENTS_MODE=disabled: оплата выключена до подключения партнёра. */
-export class DisabledPaymentProvider implements PaymentProvider {
-  readonly name = 'disabled'
-  async createCheckout(): Promise<CheckoutSession> {
-    throw new PaymentsDisabledError()
-  }
-  /** Без партнёра вернуть нечего автоматически — заказ остаётся в REFUND_PENDING для ручной обработки. */
-  async refund(): Promise<'PENDING'> {
-    return 'PENDING'
+export class UnknownProviderError extends Error {
+  constructor() {
+    super('UNKNOWN_PROVIDER')
   }
 }
 
@@ -39,5 +45,31 @@ export class FakePaymentProvider implements PaymentProvider {
   }
   async refund(): Promise<'REFUNDED'> {
     return 'REFUNDED'
+  }
+}
+
+/**
+ * Набор доступных покупателю платёжных систем. Пустой (PAYMENTS_MODE=disabled) — оплата выключена.
+ * Возврат идёт через ту систему, которой оплачен заказ; неизвестная — вручную (заказ остаётся REFUND_PENDING).
+ */
+export class PaymentGateway {
+  constructor(private readonly providers: PaymentProvider[]) {}
+
+  available(): string[] {
+    return this.providers.map((p) => p.name)
+  }
+
+  /** Выбранная покупателем система; без выбора — первая доступная (старые клиенты). */
+  pick(name?: string): PaymentProvider {
+    if (!this.providers.length) throw new PaymentsDisabledError()
+    if (!name) return this.providers[0]
+    const p = this.providers.find((x) => x.name === name)
+    if (!p) throw new UnknownProviderError()
+    return p
+  }
+
+  async refund(order: RefundOrder): Promise<'REFUNDED' | 'PENDING'> {
+    const p = this.providers.find((x) => x.name === order.provider)
+    return p ? p.refund(order) : 'PENDING'
   }
 }

@@ -268,8 +268,39 @@ model Order {
   paidAt       DateTime?    @db.Timestamptz
   createdAt    DateTime     @default(now()) @db.Timestamptz
   updatedAt    DateTime     @updatedAt @db.Timestamptz
+  transactions PaymentTransaction[]
 
   @@index([userId, lotId, purpose])
+}
+
+/// Транзакция платёжной системы (Click / Payme) по заказу (решение 17.11.2026: подключаем обе).
+/// Состояния — как в Payme Merchant API: 1 создана, 2 проведена, -1 отменена, -2 отменена после проведения.
+/// id — целый номер у нас (Click merchant_prepare_id, Payme «transaction»).
+model PaymentTransaction {
+  id           Int       @id @default(autoincrement())
+  provider     String
+  /// ID у платёжной системы: Click click_trans_id, Payme id транзакции.
+  externalId   String
+  orderId      String    @db.Uuid
+  order        Order     @relation(fields: [orderId], references: [id])
+  /// В сумах (у Payme в запросах — тийины, у Click — сумы).
+  amount       BigInt
+  state        Int       @default(1)
+  /// Причина отмены (коды Payme Reason).
+  reason       Int?
+  /// Время создания у платёжной системы (Payme params.time) — для выписки GetStatement.
+  providerTime DateTime? @db.Timestamptz
+  /// Номер платежа для отмены у платёжной системы (Click click_paydoc_id).
+  paymentRef   String?
+  /// Проведена, но заказ уже был оплачен другой транзакцией — деньги нужно вернуть.
+  needsRefund  Boolean   @default(false)
+  createdAt    DateTime  @default(now()) @db.Timestamptz
+  performedAt  DateTime? @db.Timestamptz
+  cancelledAt  DateTime? @db.Timestamptz
+
+  @@unique([provider, externalId])
+  @@index([orderId, state])
+  @@index([provider, providerTime])
 }
 
 enum ObligationStatus {

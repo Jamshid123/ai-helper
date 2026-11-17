@@ -3,7 +3,9 @@ import { Link } from '@tanstack/react-router'
 import { CheckCircle2, Clock, PackageCheck, XCircle } from 'lucide-react'
 import { useI18n } from '@/app/i18n'
 import { haptic } from '@/app/platform'
+import { usePayMethod } from '@/entities/payment/api'
 import { type Purchase, usePayPurchase } from '@/entities/purchase/api'
+import { PayMethodChoice } from '@/features/pay-method'
 import { errorText } from '@/shared/api/error-text'
 import { formatSessionDate } from '@/shared/lib/format-date'
 import { formatCountdown, useNow } from '@/shared/lib/use-now'
@@ -18,6 +20,7 @@ export function PurchaseCard({ p, showTitle = true }: { p: Purchase; showTitle?:
   const { t, locale } = useI18n()
   const now = useNow()
   const pay = usePayPurchase()
+  const [method, setMethod, methods] = usePayMethod()
   const [pending, setPending] = useState<'prepayment' | 'remainder' | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -25,16 +28,21 @@ export function PurchaseCard({ p, showTitle = true }: { p: Purchase; showTitle?:
     if (pending) return
     setPending(part)
     setError(null)
-    pay(p.id, part)
-      .then(
-        () => haptic('success'),
-        (e: unknown) => {
-          haptic('error')
-          setError(errorText(t, e))
-        }
-      )
-      .finally(() => setPending(null))
+    pay(p.id, part, { provider: method, locale }).then(
+      (outcome) => {
+        // ушли на страницу Click / Payme — кнопка остаётся занятой до перехода
+        if (outcome === 'redirected') return
+        haptic('success')
+        setPending(null)
+      },
+      (e: unknown) => {
+        haptic('error')
+        setError(errorText(t, e))
+        setPending(null)
+      }
+    )
   }
+  const choice = <PayMethodChoice methods={methods} value={method} onChange={setMethod} />
 
   const title = showTitle && (
     <Link to='/lot/$lotId' params={{ lotId: p.lotId }} className='text-[15px] leading-snug font-semibold'>
@@ -65,6 +73,7 @@ export function PurchaseCard({ p, showTitle = true }: { p: Purchase; showTitle?:
             </span>
           </div>
         </div>
+        {choice}
         <Button onClick={() => run('prepayment')} disabled={pending !== null || left <= 0} className='w-full'>
           {t('buy.pay10.cta')} <Price value={BigInt(p.prepaymentAmount)} />
         </Button>
@@ -101,6 +110,7 @@ export function PurchaseCard({ p, showTitle = true }: { p: Purchase; showTitle?:
         </div>
         {!p.remainderPaid && (
           <>
+            {choice}
             <Button onClick={() => run('remainder')} disabled={pending !== null} variant='ghost' className='w-full'>
               {t('buy.remainder.online')}
             </Button>

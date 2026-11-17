@@ -5,7 +5,12 @@ import type { AuthedRequest } from '../auth/buyer-auth.guard'
 import { BuyoutService } from './buyout.service'
 import { RelistService } from './relist.service'
 
-const paySchema = z.object({ part: z.enum(['prepayment', 'remainder']) })
+const paySchema = z.object({
+  part: z.enum(['prepayment', 'remainder']),
+  /** Click / Payme — что выбрал покупатель (решение 17.11.2026); без выбора — первая доступная система. */
+  provider: z.string().max(20).optional(),
+  locale: z.enum(['ru', 'uz']).optional(),
+})
 
 /** Покупатель: мои выигранные лоты и их оплата (10% сразу после торгов, остаток — онлайн или на месте). */
 @Controller()
@@ -23,7 +28,7 @@ export class ObligationsController {
   pay(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: unknown, @Req() req: AuthedRequest) {
     const p = paySchema.safeParse(body)
     if (!p.success) throw new BadRequestException({ code: 'BAD_REQUEST', message: 'Что оплачиваем: prepayment или remainder' })
-    return this.buyout.startPayment(req.userId, id, p.data.part)
+    return this.buyout.startPayment(req.userId, id, p.data.part, { provider: p.data.provider, locale: p.data.locale })
   }
 }
 

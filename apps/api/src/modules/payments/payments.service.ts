@@ -8,11 +8,24 @@ import { PrismaService } from '../../prisma/prisma.service'
 
 export type PaymentConfirmation = {
   orderId: string
+  /** Система, которой фактически оплачено (покупатель мог переключиться): по ней пойдёт возврат. */
+  provider?: string
   providerTxId: string
   amount: bigint
   /** Подтверждённое партнёром время операции. */
   paidAt: Date
+  /**
+   * Когда платёжная система начала оплату (наш ответ «можно платить»). Сроки (15 минут на 10%, окно торгов)
+   * сравниваются с ним: начал вовремя — успел, даже если банк списал секундой позже (решение 17.11.2026, п. 1).
+   */
+  startedAt?: Date
 }
+
+/** Почему заказ сейчас нельзя оплатить (ответ платёжной системе на «проверь заказ»). */
+export type PayableRefusal = 'NOT_FOUND' | 'PAID' | 'CANCELLED' | 'CLOSED' | 'BUSY'
+
+/** Сколько ждём начатую оплату в другой платёжной системе, прежде чем разрешить новую (защита от двойной оплаты). */
+export const PAYMENT_LOCK_MS = 10 * 60_000
 
 export type ConfirmOutcome =
   | 'ADMITTED'
@@ -37,6 +50,64 @@ export class PaymentsService {
     private readonly prisma: PrismaService,
     @Inject(ENV) private readonly env: Env
   ) {}
+
+  /**
+   * Можно ли сейчас оплатить заказ (вызывают Click Prepare и Payme CheckPerform/Create до списания денег).
+   * `except` — транзакция, которую проверяем сами (повтор того же запроса не считается чужой оплатой).
+   */
+  async payable(
+    orderId: string,
+    at: Date,
+    except?: { provider: string; externalId: string }
+  ): Promise<{ ok: true; amount: bigint } | { ok: false; reason: PayableRefusal }> {
+    const order = await this.prisma.order.findUnique({ where: { id: orderId } })
+    if (!order) return { ok: false, reason: 'NOT_FOUND' }
+    if (['PAID', 'REFUND_PENDING', 'REFUNDED'].includes(order.status)) return { ok: false, reason: 'PAID' }
+    if (order.status !== 'PENDING') return { ok: false, reason: 'CANCELLED' }
+
+    if (order.purpose === 'ADMISSION') {
+      const lot = await this.prisma.lot.findUnique({ where: { id: order.lotId } })
+      const admitted = await this.prisma.admission.findUnique({
+        where: { lotId_userId: { lotId: order.lotId, userId: order.userId } },
+        select: { id: true },
+      })
+      const full = lot?.maxParticipants != null && lot.admittedCount >= lot.maxParticipants
+      if (!lot || !['SCHEDULED', 'LIVE'].includes(lot.status) || at >= lot.closesAt || full || admitted) {
+        return { ok: false, reason: 'CLOSED' }
+      }
+    } else if (order.purpose === 'PREPAYMENT' || order.purpose === 'REMAINDER') {
+      const o = await this.prisma.obligation.findFirst({
+        where: { lotId: order.lotId, userId: order.userId },
+        orderBy: { rank: 'asc' },
+      })
+      const open =
+        order.purpose === 'PREPAYMENT'
+          ? o?.status === 'AWAITING_PREPAYMENT' && !!o.prepaymentDeadline && at < o.prepaymentDeadline
+          : o?.status === 'AWAITING_PICKUP' && !!o.remainderDeadline && at < o.remainderDeadline
+      if (!open) return { ok: false, reason: 'CLOSED' }
+      if (order.purpose === 'REMAINDER') {
+        const paid = await this.prisma.order.count({
+          where: { lotId: order.lotId, userId: order.userId, purpose: 'REMAINDER', status: 'PAID' },
+        })
+        if (paid) return { ok: false, reason: 'PAID' }
+      }
+    } else {
+      return { ok: false, reason: 'NOT_FOUND' }
+    }
+
+    // Уже идёт оплата этого заказа в другой транзакции (другая система или вторая вкладка) — ждём её.
+    const busy = await this.prisma.paymentTransaction.findFirst({
+      where: {
+        orderId,
+        state: 1,
+        createdAt: { gt: new Date(at.getTime() - PAYMENT_LOCK_MS) },
+        ...(except ? { NOT: { provider: except.provider, externalId: except.externalId } } : {}),
+      },
+      select: { id: true },
+    })
+    if (busy) return { ok: false, reason: 'BUSY' }
+    return { ok: true, amount: order.amount }
+  }
 
   /** Единая точка подтверждения оплаты (событие партнёра / запрос статуса): допуск, 10% или остаток. */
   async confirmPayment(c: PaymentConfirmation): Promise<ConfirmOutcome> {
@@ -69,7 +140,8 @@ export class PaymentsService {
         SELECT id, status::text AS status, "prepaymentDeadline" AS prepayment_deadline, "remainderDeadline" AS remainder_deadline
         FROM "Obligation" WHERE "lotId" = ${order.lot_id}::uuid AND "userId" = ${order.user_id}::uuid
         ORDER BY rank LIMIT 1 FOR UPDATE`
-      const paid = { status: 'PAID' as const, providerTxId: c.providerTxId, paidAt: c.paidAt }
+      const paid = { status: 'PAID' as const, providerTxId: c.providerTxId, paidAt: c.paidAt, ...(c.provider && { provider: c.provider }) }
+      const started = c.startedAt ?? c.paidAt
       const refund = async () => {
         await tx.order.update({ where: { id: order.id }, data: { ...paid, status: 'REFUND_PENDING' } })
         await this.audit(tx, order.id, 'payment.refund_expired', {})
@@ -77,7 +149,7 @@ export class PaymentsService {
       }
 
       if (order.purpose === 'PREPAYMENT') {
-        if (!o || o.status !== 'AWAITING_PREPAYMENT' || !o.prepayment_deadline || c.paidAt >= o.prepayment_deadline) {
+        if (!o || o.status !== 'AWAITING_PREPAYMENT' || !o.prepayment_deadline || started >= o.prepayment_deadline) {
           return refund()
         }
         await tx.order.update({ where: { id: order.id }, data: paid })
@@ -102,7 +174,7 @@ export class PaymentsService {
       }
 
       // Остаток: только пока победа действует и срок получения не прошёл; второй оплаченный остаток — на возврат.
-      if (!o || o.status !== 'AWAITING_PICKUP' || !o.remainder_deadline || c.paidAt >= o.remainder_deadline) {
+      if (!o || o.status !== 'AWAITING_PICKUP' || !o.remainder_deadline || started >= o.remainder_deadline) {
         return refund()
       }
       const already = await tx.order.findFirst({
@@ -144,10 +216,10 @@ export class PaymentsService {
       const [lot] = await tx.$queryRaw<{ closes_at: Date; status: string; admitted: number; max: number | null }[]>`
         SELECT "closesAt" AS closes_at, status::text AS status, "admittedCount" AS admitted, "maxParticipants" AS max
         FROM "Lot" WHERE id = ${order.lot_id}::uuid FOR UPDATE`
-      const paid = { status: 'PAID' as const, providerTxId: c.providerTxId, paidAt: c.paidAt }
+      const paid = { status: 'PAID' as const, providerTxId: c.providerTxId, paidAt: c.paidAt, ...(c.provider && { provider: c.provider }) }
 
       // Поздняя оплата (по подтверждённому времени операции) → на возврат, допуск не выдаётся.
-      if (!lot || c.paidAt >= lot.closes_at || !['SCHEDULED', 'LIVE'].includes(lot.status)) {
+      if (!lot || (c.startedAt ?? c.paidAt) >= lot.closes_at || !['SCHEDULED', 'LIVE'].includes(lot.status)) {
         await tx.order.update({ where: { id: order.id }, data: { ...paid, status: 'REFUND_PENDING' } })
         await this.audit(tx, order.id, 'payment.refund_late', {})
         return 'REFUND_LATE'

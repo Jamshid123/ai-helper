@@ -6,7 +6,8 @@ import { pickupCode, pickupCodeMatches } from '../../common/pickup-code'
 import { ENV } from '../../config/config.module'
 import type { Env } from '../../config/env'
 import { PrismaService } from '../../prisma/prisma.service'
-import { PAYMENT_PROVIDER, type PaymentProvider } from '../payments/payment-provider'
+import { PAYMENT_GATEWAY, type PaymentGateway } from '../payments/payment-provider'
+import { PAYMENT_LOCK_MS } from '../payments/payments.service'
 import { RefundsService } from '../payments/refunds.service'
 import { AuditService } from '../staff/audit.service'
 
@@ -32,7 +33,7 @@ export class BuyoutService {
     private readonly clock: Clock,
     private readonly refunds: RefundsService,
     private readonly audit: AuditService,
-    @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider,
+    @Inject(PAYMENT_GATEWAY) private readonly gateway: PaymentGateway,
     @Inject(ENV) private readonly env: Env
   ) {}
 
@@ -50,7 +51,12 @@ export class BuyoutService {
   }
 
   /** Начать оплату 10% или остатка: заказ на сумму, которую считает сервер, → оплата у провайдера. */
-  async startPayment(userId: string, obligationId: string, part: Part) {
+  async startPayment(
+    userId: string,
+    obligationId: string,
+    part: Part,
+    choice: { provider?: string; locale?: 'ru' | 'uz' } = {}
+  ) {
     const o = await this.prisma.obligation.findUnique({ where: { id: obligationId }, include: { lot: true } })
     if (!o) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Покупка не найдена' })
     if (o.userId !== userId) throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Это не ваша покупка' })
@@ -71,15 +77,19 @@ export class BuyoutService {
       if (paid) throw conflict('ALREADY_PAID', 'Остаток уже оплачен')
     }
     const amount = part === 'prepayment' ? o.prepaymentAmount : o.amount - o.prepaymentAmount
-    const order =
-      (await this.prisma.order.findFirst({ where: { userId, lotId: o.lotId, purpose, status: 'PENDING' } })) ??
-      (await this.prisma.order.create({
-        data: { userId, lotId: o.lotId, purpose, amount, provider: this.provider.name },
-      }))
-    const checkout = await this.provider.createCheckout({
+    const provider = this.gateway.pick(choice.provider)
+    const existing = await this.prisma.order.findFirst({ where: { userId, lotId: o.lotId, purpose, status: 'PENDING' } })
+    const order = existing
+      ? existing.provider === provider.name
+        ? existing
+        : await this.prisma.order.update({ where: { id: existing.id }, data: { provider: provider.name } })
+      : await this.prisma.order.create({ data: { userId, lotId: o.lotId, purpose, amount, provider: provider.name } })
+    const checkout = await provider.createCheckout({
       id: order.id,
       amount: order.amount,
       description: `${part === 'prepayment' ? 'Предоплата 10%' : 'Остаток'}: ${o.lot.title}`,
+      returnPath: `/lot/${o.lotId}`,
+      locale: choice.locale ?? 'ru',
     })
     return {
       orderId: order.id,
@@ -121,6 +131,23 @@ export class BuyoutService {
       } else if (o.status === 'AWAITING_PICKUP' && o.remainderDeadline && o.remainderDeadline <= now) {
         reason = 'PICKUP_MISSED'
       } else return false
+
+      // Оплата начата до срока и ещё идёт (банк списывает) — ждём её результата, не дольше PAYMENT_LOCK_MS
+      // (решение 17.11.2026, п. 1: начал вовремя — успел).
+      const deadline = reason === 'PREPAYMENT_MISSED' ? o.prepaymentDeadline! : o.remainderDeadline!
+      const inFlight = await tx.paymentTransaction.count({
+        where: {
+          state: 1,
+          createdAt: { lt: deadline, gt: new Date(now.getTime() - PAYMENT_LOCK_MS) },
+          order: {
+            lotId: o.lotId,
+            userId: o.userId,
+            purpose: reason === 'PREPAYMENT_MISSED' ? 'PREPAYMENT' : 'REMAINDER',
+            status: 'PENDING',
+          },
+        },
+      })
+      if (inFlight) return false
 
       await tx.obligation.update({
         where: { id },

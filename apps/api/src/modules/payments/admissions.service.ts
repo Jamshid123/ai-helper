@@ -3,7 +3,7 @@ import { Clock } from '../../common/clock'
 import { PrismaService } from '../../prisma/prisma.service'
 import { DEVICE } from '../auth/buyer-session.service'
 import { AdmissionError } from './admission.errors'
-import { PAYMENT_PROVIDER, type PaymentProvider } from './payment-provider'
+import { PAYMENT_GATEWAY, type PaymentGateway } from './payment-provider'
 import { RefundsService } from './refunds.service'
 
 /** Версия правил торгов, которую принимает покупатель (меняется вместе с публичной офертой). */
@@ -19,7 +19,7 @@ export class AdmissionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly clock: Clock,
-    @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider,
+    @Inject(PAYMENT_GATEWAY) private readonly gateway: PaymentGateway,
     private readonly refunds: RefundsService
   ) {}
 
@@ -77,7 +77,13 @@ export class AdmissionsService {
    * Начать оформление допуска: условия приняты → заказ ADMISSION на сумму взноса (считает сервер) → оплата у провайдера.
    * Уже есть допуск — возвращаем его; есть неоплаченный заказ — переиспользуем.
    */
-  async start(userId: string, lotId: string, acceptRules: boolean, deviceHash: string | null = null) {
+  async start(
+    userId: string,
+    lotId: string,
+    acceptRules: boolean,
+    deviceHash: string | null = null,
+    choice: { provider?: string; locale?: 'ru' | 'uz' } = {}
+  ) {
     if (!acceptRules) throw new AdmissionError('RULES_NOT_ACCEPTED')
     const now = this.clock.now()
     const lot = await this.prisma.lot.findUnique({ where: { id: lotId } })
@@ -108,15 +114,23 @@ export class AdmissionsService {
       where: { id: userId },
       data: { rulesVersion: RULES_VERSION, rulesAcceptedAt: now },
     })
-    const order =
-      (await this.prisma.order.findFirst({ where: { userId, lotId, purpose: 'ADMISSION', status: 'PENDING' } })) ??
-      (await this.prisma.order.create({
-        data: { userId, lotId, purpose: 'ADMISSION', amount: lot.fee, provider: this.provider.name },
-      }))
-    const checkout = await this.provider.createCheckout({
+    const provider = this.gateway.pick(choice.provider)
+    const existing = await this.prisma.order.findFirst({
+      where: { userId, lotId, purpose: 'ADMISSION', status: 'PENDING' },
+    })
+    const order = existing
+      ? existing.provider === provider.name
+        ? existing
+        : await this.prisma.order.update({ where: { id: existing.id }, data: { provider: provider.name } })
+      : await this.prisma.order.create({
+          data: { userId, lotId, purpose: 'ADMISSION', amount: lot.fee, provider: provider.name },
+        })
+    const checkout = await provider.createCheckout({
       id: order.id,
       amount: order.amount,
       description: `Допуск к лоту: ${lot.title}`,
+      returnPath: `/lot/${lotId}`,
+      locale: choice.locale ?? 'ru',
     })
     return {
       status: 'PAYMENT_REQUIRED' as const,
