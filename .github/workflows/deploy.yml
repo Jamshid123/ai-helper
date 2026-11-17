@@ -1,6 +1,8 @@
-name: Deploy
+name: Deploy dev
 
-# Пуш (мерж PR) в main = выкладка на сервер. Ручной запуск (Run workflow) — только с main.
+# Тестовый стенд dev (решение 17.11.2026): пуш (мерж PR) в main = выкладка на dev.auksiongo.uz.
+# Ручной запуск (Run workflow) — только с main. Прод — отдельный workflow «Deploy prod» с подтверждением владельца.
+# Сервер: /opt/auksion, проект «auksion», порты 127.0.0.1:3400–3402. Имитация оплаты и SMS, демо-данные.
 # Секреты: SERVER_HOST, DEPLOY_SSH_KEY, TELEGRAM_BOT_TOKEN.
 
 on:
@@ -12,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: deploy-prod
+  group: deploy-dev
   cancel-in-progress: false
 
 jobs:
@@ -75,7 +77,8 @@ jobs:
           ssh srv "set -e; cd /opt/auksion
             [ -f .deploy.env ] && cp .deploy.env .deploy.env.prev || true
             # Демо-стенд (решение заказчика 14.11.2026): имитация оплаты допуска. Убрать при подключении партнёра.
-            printf 'TAG=%s\nDEMO_STAND=true\nPAYMENTS_MODE=fake\nSMS_MODE=fake\n' $TAG > .deploy.env
+            printf 'TAG=%s\nDEMO_STAND=true\nPAYMENTS_MODE=fake\nSMS_MODE=fake\nSITE_URL=%s\nCORS_ORIGINS=%s\n' \
+              $TAG https://dev.auksiongo.uz https://dev.auksiongo.uz,https://dev-admin.auksiongo.uz,https://auksion.expertly.uz,https://auksion-admin.expertly.uz > .deploy.env
             # Секрет сессий генерируется на сервере один раз и никуда не передаётся.
             grep -q '^JWT_SECRET=' .env || { umask 077; echo \"JWT_SECRET=\$(openssl rand -hex 32)\" >> .env; }
             # Ключ шифрования секретов в БД (TOTP сотрудников). Потеря ключа = заново подключить коды сотрудникам.
@@ -89,8 +92,9 @@ jobs:
       - name: Health check (rollback on failure)
         run: |
           for i in $(seq 1 20); do
-            if curl -fsS "$APP_URL/healthz" >/dev/null && curl -fsS "$APP_URL/api/v1/health" >/dev/null \
-                && ssh srv 'curl -fsS http://127.0.0.1:3402/healthz' >/dev/null; then echo "healthy (miniapp, api, admin)"; exit 0; fi
+            # Проверка на самом сервере (не зависит от DNS и сертификатов): сайт, API через nginx сайта, админка.
+            if ssh srv 'curl -fsS http://127.0.0.1:3401/healthz && curl -fsS http://127.0.0.1:3401/api/v1/health && curl -fsS http://127.0.0.1:3402/healthz' >/dev/null; then
+              echo "healthy (miniapp, api, admin)"; exit 0; fi
             sleep 3
           done
           echo "::error::Health check failed — rolling back"
@@ -99,7 +103,8 @@ jobs:
 
       - name: Prune old images (keep 3 latest)
         run: |
-          ssh srv "for img in auksion-miniapp auksion-admin auksion-api; do docker images \$img --format '{{.Tag}}' | tail -n +4 | xargs -r -I{} docker rmi \$img:{} || true; done"
+          # образы прода (теги prod-*) не трогаем — их чистит Deploy prod
+          ssh srv "for img in auksion-miniapp auksion-admin auksion-api; do docker images \$img --format '{{.Tag}}' | grep -v '^prod-' | tail -n +4 | xargs -r -I{} docker rmi \$img:{} || true; done"
 
       - name: Telegram menu button → Mini App
         env:
