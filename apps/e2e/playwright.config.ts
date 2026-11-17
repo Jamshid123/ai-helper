@@ -26,8 +26,15 @@ export default defineConfig({
     launchOptions: process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {},
   },
   projects: [
-    { name: 'phone', use: { ...devices['iPhone 13'], defaultBrowserType: 'chromium' } },
-    { name: 'desktop', use: { viewport: { width: 1280, height: 800 } } },
+    // основные сценарии (ru, светлая тема)
+    { name: 'phone', testIgnore: /small-uz-dark/, use: { ...devices['iPhone 13'], defaultBrowserType: 'chromium' } },
+    { name: 'desktop', testIgnore: /small-uz-dark/, use: { viewport: { width: 1280, height: 800 } } },
+    // маленький экран (iPhone SE, 375×667) + узбекский + тёмная тема: вёрстка, перекрытия, длинные строки
+    {
+      name: 'small-uz-dark',
+      testMatch: /small-uz-dark/,
+      use: { ...devices['iPhone SE'], defaultBrowserType: 'chromium', colorScheme: 'dark', locale: 'uz-UZ' },
+    },
   ],
   webServer: [
     {
