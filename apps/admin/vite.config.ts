@@ -18,7 +18,8 @@ export default defineConfig({
   ],
   server: {
     // Локально API проксируется на backend, чтобы cookie были same-origin, как в проде.
-    proxy: { '/api': 'http://localhost:3000' },
+    // API_PROXY — для сквозных тестов (apps/e2e поднимает свой API на другом порту)
+    proxy: { '/api': process.env.API_PROXY ?? 'http://localhost:3000' },
   },
   resolve: {
     alias: {

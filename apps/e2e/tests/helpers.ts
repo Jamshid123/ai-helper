@@ -2,7 +2,14 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { expect, type Page } from '@playwright/test'
 
-export type Fixtures = { liveLotId: string; scheduledLotId: string; soldLotId: string; winnerPhone: string }
+export type Fixtures = {
+  liveLotId: string
+  scheduledLotId: string
+  soldLotId: string
+  winnerPhone: string
+  /** сотрудник-владелец и код выдачи для тестов админки */
+  admin: { phone: string; password: string; pickupCode: string }
+}
 
 /** id тестовых лотов и телефон победителя (пишет scripts/seed.cjs при старте API). */
 export function fixtures(): Fixtures {
