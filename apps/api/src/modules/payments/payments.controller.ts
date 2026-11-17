@@ -23,7 +23,12 @@ import { AdmissionsService } from './admissions.service'
 import { PaymentsService } from './payments.service'
 import { LIMITS, RateLimit } from '../../common/rate-limit'
 
-const startSchema = z.object({ acceptRules: z.literal(true) })
+const startSchema = z.object({
+  acceptRules: z.literal(true),
+  /** Click / Payme — что выбрал покупатель (решение 17.11.2026); без выбора — первая доступная система. */
+  provider: z.string().max(20).optional(),
+  locale: z.enum(['ru', 'uz']).optional(),
+})
 
 @Controller()
 export class PaymentsController {
@@ -43,7 +48,10 @@ export class PaymentsController {
     const parsed = startSchema.safeParse(body)
     if (!parsed.success)
       throw new BadRequestException({ code: 'RULES_NOT_ACCEPTED', message: 'Примите правила торгов' })
-    return this.admissions.start(req.userId, lotId, true, req.deviceHash ?? null)
+    return this.admissions.start(req.userId, lotId, true, req.deviceHash ?? null, {
+      provider: parsed.data.provider,
+      locale: parsed.data.locale,
+    })
   }
 
   /** Выйти из лота до начала торгов — возврат 100% (решение 14.11.2026). */

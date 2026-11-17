@@ -44,6 +44,12 @@
 | `apps/admin/src/features/manage/product-photos.tsx` | Блок фото в карточке товара; сжатие в браузере — `src/lib/image.ts` |
 | `apps/miniapp/src/shared/ui/photo-carousel.tsx` | Карусель фото лота (свайп, на весь экран) |
 | `apps/api/src/modules/payments/refunds.service.ts` | Снятие допуска с возвратом 100% (выход, отмена допуска/лота) |
+| `apps/api/src/modules/payments/payment-provider.ts` | `PaymentGateway`: доступные способы оплаты (Click / Payme / fake), ссылка на оплату, возврат через систему, которой оплачено |
+| `apps/api/src/modules/payments/click/` | Click: ссылка на my.click.uz (`click.provider.ts`), SHOP API Prepare/Complete с подписью MD5 (`click.service.ts`, `click-sign.ts`), возврат `payment/reversal` |
+| `apps/api/src/modules/payments/payme/` | Payme: чек checkout.paycom.uz (`payme.provider.ts`), Merchant API JSON-RPC — Check/Create/Perform/Cancel/CheckTransaction/GetStatement (`payme.service.ts`) |
+| `apps/api/src/modules/payments/payment-callbacks.controller.ts` | `GET /payments/providers`, `POST /payments/click`, `POST /payments/payme` (публичные, доверие — по подписи/ключу) |
+| `apps/miniapp/src/entities/payment/api.ts`, `features/pay-method.tsx` | Сайт: способы оплаты, выбор Click / Payme (запоминается на устройстве), переход на страницу оплаты |
+| `docs/integrations/payments.md` | Подключение Click и Payme: что отдать платёжным системам, переменные, песочница, вопросы |
 | `apps/api/src/modules/fulfillment/buyout.service.ts` | Выкуп: оплата 10% и остатка, просрочки (sweep: 7 дней / решение по 10%), повторные торги (черновик + перенос допуска), выдача по коду, решение финансов |
 | `apps/api/src/modules/fulfillment/admin-fulfillment.controller.ts` | `/admin/fulfillment` (список, остаток на месте, выдача по коду), `/admin/finance/buyouts` (решение по 10%) |
 | `apps/api/src/modules/fulfillment/relist.service.ts` | Повторные торги: приглашение при публикации, «Подтверждаю участие», напоминание за 6 ч, освобождение мест за 2 ч |

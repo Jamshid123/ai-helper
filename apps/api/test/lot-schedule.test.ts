@@ -4,7 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { FakeClock } from '../src/common/clock'
 import { BidsService } from '../src/modules/auctions/bids.service'
 import { LotLifecycleService } from '../src/modules/auctions/lot-lifecycle.service'
-import { FakePaymentProvider } from '../src/modules/payments/payment-provider'
+import { FakePaymentProvider, PaymentGateway } from '../src/modules/payments/payment-provider'
 import { RefundsService } from '../src/modules/payments/refunds.service'
 import { AuditService } from '../src/modules/staff/audit.service'
 import type { PrismaService } from '../src/prisma/prisma.service'
@@ -15,7 +15,7 @@ const db = new PrismaClient()
 const prisma = db as unknown as PrismaService
 const T0 = new Date('2026-11-17T07:00:00Z') // вторник 12:00 Ташкент — торги не в пятницу
 const clock = new FakeClock(T0)
-const refunds = new RefundsService(prisma, new FakePaymentProvider(), new AuditService(prisma), clock)
+const refunds = new RefundsService(prisma, new PaymentGateway([new FakePaymentProvider()]), new AuditService(prisma), clock)
 const lifecycle = new LotLifecycleService(prisma, clock, refunds)
 const bids = new BidsService(prisma, clock)
 const at = (sec: number) => new Date(T0.getTime() + sec * 1000)

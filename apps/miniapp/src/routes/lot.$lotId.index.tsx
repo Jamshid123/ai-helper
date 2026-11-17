@@ -5,6 +5,8 @@ import { formatSum } from '@auksion/shared'
 import { useI18n } from '@/app/i18n'
 import { haptic, useBackButton, useMainButton } from '@/app/platform'
 import { endsAtOf, isFull, participantsOf, useAdmissions, useAdmit, useLot } from '@/entities/lot/api'
+import { usePayMethod } from '@/entities/payment/api'
+import { PayMethodChoice } from '@/features/pay-method'
 import { isSignedIn, useMe } from '@/entities/account/session'
 import { errorText } from '@/shared/api/error-text'
 import { type Lot } from '@/entities/lot/types'
@@ -40,24 +42,27 @@ function AdmissionSheet({ lot, onClose, onPaid }: { lot: Lot; onClose: () => voi
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const admit = useAdmit()
+  const [method, setMethod, methods] = usePayMethod()
   const pay = useCallback(() => {
     if (!agree || pending) return
-    // Демо — имитация в браузере; в Telegram — заказ на сервере (на тестовом запуске оплату имитирует сервер).
+    // Click / Payme — переход на их страницу (вернёмся на этот лот); тестовый запуск — оплату имитирует сервер.
     setPending(true)
     setError(null)
-    admit(lot.id)
+    admit(lot.id, { provider: method, locale })
       .then(
-        () => {
+        (outcome) => {
+          if (outcome === 'redirected') return
           haptic('success')
+          setPending(false)
           onPaid()
         },
         (e: unknown) => {
           haptic('error')
           setError(errorText(t, e))
+          setPending(false)
         }
       )
-      .finally(() => setPending(false))
-  }, [agree, pending, admit, lot.id, onPaid, t])
+  }, [agree, pending, admit, lot.id, onPaid, t, method, locale])
   const native = useMainButton({
     text: `${t('admission.pay')} ${formatSum(lot.fee, locale)}`,
     onClick: pay,
@@ -109,6 +114,7 @@ function AdmissionSheet({ lot, onClose, onPaid }: { lot: Lot; onClose: () => voi
           />
           {t('admission.agree')}
         </label>
+        <PayMethodChoice methods={methods} value={method} onChange={setMethod} className='mb-5' />
         {error && (
           <p role='alert' className='mb-4 rounded-xl bg-hot/10 px-4 py-3 text-[14px] font-medium text-hot-text'>
             {error}

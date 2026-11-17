@@ -51,6 +51,15 @@ services:
       SMS_MODE: ${SMS_MODE:-disabled}
       # Демо-стенд: разрешает имитацию оплаты и тестовые лоты (задаёт deploy.yml). На боевом запуске — false.
       DEMO_STAND: ${DEMO_STAND:-false}
+      # Платёжные системы (решение 17.11.2026): ключи — в .env на сервере; пустые = система не подключена.
+      CLICK_SERVICE_ID: ${CLICK_SERVICE_ID:-}
+      CLICK_MERCHANT_ID: ${CLICK_MERCHANT_ID:-}
+      CLICK_MERCHANT_USER_ID: ${CLICK_MERCHANT_USER_ID:-}
+      CLICK_SECRET_KEY: ${CLICK_SECRET_KEY:-}
+      PAYME_MERCHANT_ID: ${PAYME_MERCHANT_ID:-}
+      PAYME_KEY: ${PAYME_KEY:-}
+      PAYME_TEST_MODE: ${PAYME_TEST_MODE:-false}
+      PUBLIC_SITE_URL: https://auksion.expertly.uz
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is required}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?DATA_ENCRYPTION_KEY is required}

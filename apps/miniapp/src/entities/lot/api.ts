@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { API_BASE, ApiError, api } from '@/shared/api/client'
+import { completeCheckout } from '@/entities/payment/api'
 import {
   admit as demoAdmit,
   leave as demoLeave,
@@ -127,22 +128,32 @@ type AdmissionStart =
   | { status: 'ADMITTED' }
   | { status: 'PAYMENT_REQUIRED'; orderId: string; provider: string; checkoutUrl: string | null }
 
-/** Оформить допуск: правила приняты → заказ → оплата (на тестовом запуске — имитация сервером). */
-export function useAdmit(): (lotId: string) => Promise<void> {
+/**
+ * Оформить допуск: правила приняты → заказ → оплата выбранным способом (Click / Payme — переход на их страницу;
+ * на тестовом запуске оплату имитирует сервер). 'redirected' — покупатель ушёл на страницу оплаты.
+ */
+export function useAdmit(): (
+  lotId: string,
+  pay?: { provider?: string; locale?: 'ru' | 'uz' }
+) => Promise<'paid' | 'redirected'> {
   const qc = useQueryClient()
   return useCallback(
-    async (lotId: string) => {
-      if (DEMO) return demoAdmit(lotId)
-      const r = await api<AdmissionStart>(`/lots/${lotId}/admission`, { method: 'POST', body: { acceptRules: true } })
-      if (r.status === 'PAYMENT_REQUIRED') {
-        if (r.provider !== 'fake') throw new ApiError(503, 'PAYMENTS_DISABLED', 'Оплата скоро будет доступна')
-        await api(`/payments/fake/${r.orderId}/complete`, { method: 'POST' })
+    async (lotId: string, pay: { provider?: string; locale?: 'ru' | 'uz' } = {}) => {
+      if (DEMO) {
+        await demoAdmit(lotId)
+        return 'paid' as const
       }
+      const r = await api<AdmissionStart>(`/lots/${lotId}/admission`, {
+        method: 'POST',
+        body: { acceptRules: true, ...pay },
+      })
+      if (r.status === 'PAYMENT_REQUIRED' && (await completeCheckout(r)) === 'redirected') return 'redirected' as const
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['admissions'] }),
         qc.invalidateQueries({ queryKey: ['lot', lotId] }),
         qc.invalidateQueries({ queryKey: ['lots'] }),
       ])
+      return 'paid' as const
     },
     [qc]
   )

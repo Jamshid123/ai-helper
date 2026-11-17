@@ -4,7 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service'
 import { Clock } from '../../common/clock'
 import { AuditService, type AuditEntry } from '../staff/audit.service'
 import { AdmissionError } from './admission.errors'
-import { PAYMENT_PROVIDER, type PaymentProvider } from './payment-provider'
+import { PAYMENT_GATEWAY, type PaymentGateway } from './payment-provider'
 
 /**
  * Снятие допуска с возвратом 100% (решения 14.11.2026): выход участника до начала, отмена допуска сотрудником,
@@ -16,7 +16,7 @@ import { PAYMENT_PROVIDER, type PaymentProvider } from './payment-provider'
 export class RefundsService {
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider,
+    @Inject(PAYMENT_GATEWAY) private readonly gateway: PaymentGateway,
     private readonly audit: AuditService,
     private readonly clock: Clock
   ) {}
@@ -75,7 +75,12 @@ export class RefundsService {
     for (const id of orderIds) {
       const order = await this.prisma.order.findUnique({ where: { id } })
       if (!order || order.status !== 'REFUND_PENDING') continue
-      const r = await this.provider.refund({ id: order.id, amount: order.amount, providerTxId: order.providerTxId })
+      let r: 'REFUNDED' | 'PENDING' = 'PENDING'
+      try {
+        r = await this.gateway.refund(order)
+      } catch {
+        // сбой у платёжной системы — заказ остаётся REFUND_PENDING (видно финансам, вернут вручную)
+      }
       if (r === 'REFUNDED') {
         await this.prisma.order.updateMany({ where: { id, status: 'REFUND_PENDING' }, data: { status: 'REFUNDED' } })
         done++

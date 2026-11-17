@@ -34,6 +34,13 @@ export async function createApp(): Promise<NestFastifyApplication> {
     { parseAs: 'buffer', bodyLimit: MAX_PHOTO_BYTES },
     (_req: unknown, body: Buffer, done: (err: Error | null, body?: Buffer) => void) => done(null, body)
   )
+  // Click присылает form-urlencoded (разбирает сам Nest), Payme — «text/json»: тело оставляем строкой,
+  // ошибку разбора PaymeService вернёт кодом JSON-RPC -32700 (HTTP 200).
+  fastify.addContentTypeParser(
+    'text/json',
+    { parseAs: 'string', bodyLimit: 65_536 },
+    (_req: unknown, body: string, done: (err: Error | null, body?: string) => void) => done(null, body)
+  )
   fastify.addHook('onSend', async (_req, reply) => {
     reply.header('X-Content-Type-Options', 'nosniff')
     reply.header('Referrer-Policy', 'no-referrer')
