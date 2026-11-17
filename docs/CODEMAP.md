@@ -49,7 +49,7 @@
 | `apps/api/src/modules/payments/payme/` | Payme: чек checkout.paycom.uz (`payme.provider.ts`), Merchant API JSON-RPC — Check/Create/Perform/Cancel/CheckTransaction/GetStatement (`payme.service.ts`) |
 | `apps/api/src/modules/payments/payment-callbacks.controller.ts` | `GET /payments/providers`, `POST /payments/click`, `POST /payments/payme` (публичные, доверие — по подписи/ключу) |
 | `apps/miniapp/src/entities/payment/api.ts`, `features/pay-method.tsx` | Сайт: способы оплаты, выбор Click / Payme (запоминается на устройстве), переход на страницу оплаты |
-| `apps/e2e/` | Сквозные тесты сайта (Playwright): `playwright.config.ts` (проекты phone/desktop, поднимает API и сайт), `scripts/start-api.sh` + `seed.cjs` (БД `*_e2e`, тестовые лоты), `tests/*.spec.ts`, помощники `tests/helpers.ts` |
+| `apps/e2e/` | Сквозные тесты (Playwright): `playwright.config.ts` (проекты phone/desktop/small-uz-dark/admin, поднимает API, сайт и админку), `scripts/start-api.sh` + `seed.cjs` (БД `*_e2e`, тестовые лоты, сотрудник, выкуп к выдаче), `tests/*.spec.ts` (сайт), `tests/admin/*.spec.ts` (админка), помощники `tests/helpers.ts`, `tests/admin/admin-helpers.ts` |
 | `apps/miniapp/src/shared/ui/action-bar.ts` | Нижняя панель действия на телефоне — над нижним меню, не поверх |
 | `docs/integrations/payments.md` | Подключение Click и Payme: что отдать платёжным системам, переменные, песочница, вопросы |
 | `apps/api/src/modules/fulfillment/buyout.service.ts` | Выкуп: оплата 10% и остатка, просрочки (sweep: 7 дней / решение по 10%), повторные торги (черновик + перенос допуска), выдача по коду, решение финансов |

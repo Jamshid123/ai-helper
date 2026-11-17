@@ -59,10 +59,10 @@ scripts/check-agent-skills.sh         # скиллы общие для Claude Co
 `TEST_DATABASE_URL` / `TEST_REDIS_URL`). Схема пересоздаётся только в базе с суффиксом `_test`.
 Тесты админки идут в браузере: один раз `pnpm --filter @auksion/admin exec playwright install chromium`.
 
-Сквозные тесты сайта (`apps/e2e`, Playwright): поднимают свой API на отдельной базе `*_e2e` и сайт, проходят сценарии
-на телефоне и компьютере. Нужна собранная API.
+Сквозные тесты (`apps/e2e`, Playwright): поднимают свой API на отдельной базе `*_e2e`, сайт и админку, проходят сценарии
+сайта на телефоне и компьютере (плюс узбекский + тёмная тема + маленький экран) и сценарии админки. Нужна собранная API.
 
 ```bash
 pnpm --filter @auksion/api build
-pnpm --filter @auksion/e2e e2e -- --trace off        # БД: E2E_DATABASE_URL (по умолчанию :55432/auksion_e2e)
+pnpm --filter @auksion/e2e e2e --trace off        # БД: E2E_DATABASE_URL (по умолчанию :55432/auksion_e2e)
 ```
