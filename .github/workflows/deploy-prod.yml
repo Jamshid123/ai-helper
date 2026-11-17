@@ -1,0 +1,123 @@
+name: Deploy prod
+
+# Боевой стенд (решение 17.11.2026): auksiongo.uz. Только вручную и только с подтверждения владельца:
+# job привязан к environment «production» (Settings → Environments → production → Required reviewers — владелец).
+# Выкладывается коммит из main, который уже прошёл dev (по умолчанию — текущий main).
+# Сервер: /opt/auksion-prod (создаёт «Server domains»), проект «auksion-prod», порты 127.0.0.1:3403–3405, своя БД.
+# Реальная оплата и SMS включаются переменными репозитория PROD_PAYMENTS_MODE=live / PROD_SMS_MODE (по умолчанию выключены)
+# и ключами в /opt/auksion-prod/.env. Секреты: SERVER_HOST, DEPLOY_SSH_KEY.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Коммит из main (пусто — текущий main)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    runs-on: ubuntu-24.04
+    outputs:
+      sha: ${{ steps.pick.outputs.sha }}
+    steps:
+      - name: Run only from main
+        run: |
+          [ "$GITHUB_REF" = "refs/heads/main" ] || { echo "::error::Запуск только из main (сейчас $GITHUB_REF)."; exit 1; }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Pick commit (must be in main)
+        id: pick
+        env:
+          REF: ${{ inputs.ref }}
+        run: |
+          sha=$(git rev-parse --verify "${REF:-origin/main}^{commit}") || { echo "::error::Коммит не найден: $REF"; exit 1; }
+          git merge-base --is-ancestor "$sha" origin/main || { echo "::error::$sha не входит в main"; exit 1; }
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Выкладываем $sha: $(git log -1 --format=%s "$sha")"
+
+  ci:
+    needs: guard
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: [guard, ci]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: production
+    env:
+      SHA: ${{ needs.guard.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ needs.guard.outputs.sha }}
+
+      - name: Build images (без демо-режима)
+        run: |
+          echo "TAG=prod-${SHA::12}" >> "$GITHUB_ENV"
+          T="prod-${SHA::12}"
+          docker build -f infra/Dockerfile.spa --build-arg APP=miniapp --build-arg VITE_DEMO_DATA=false --build-arg VITE_DEMO_STAND=false -t "auksion-miniapp:$T" .
+          docker build -f infra/Dockerfile.spa --build-arg APP=admin -t "auksion-admin:$T" .
+          docker build -f infra/Dockerfile.api -t "auksion-api:$T" .
+
+      - name: SSH setup
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          [ -n "$HOST" ] && [ -n "$KEY" ] || { echo "::error::Нужны секреты SERVER_HOST и DEPLOY_SSH_KEY"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          ssh-keyscan -T 10 -t ed25519 "$HOST" > ~/.ssh/known_hosts 2>/dev/null
+          printf 'Host srv\n  HostName %s\n  User deploy\n  IdentityFile ~/.ssh/deploy\n  StrictHostKeyChecking yes\n' "$HOST" > ~/.ssh/config
+          ssh srv 'test -f /opt/auksion-prod/.env' || { echo "::error::Нет /opt/auksion-prod/.env — сначала запустите workflow «Server domains»"; exit 1; }
+
+      - name: Ship images and compose file
+        run: |
+          docker save "auksion-miniapp:$TAG" "auksion-admin:$TAG" "auksion-api:$TAG" | gzip | ssh srv 'gunzip | docker load'
+          scp infra/docker-compose.prod.yml srv:/opt/auksion-prod/docker-compose.yml
+
+      - name: Start new version
+        env:
+          PAYMENTS_MODE: ${{ vars.PROD_PAYMENTS_MODE || 'disabled' }}
+          SMS_MODE: ${{ vars.PROD_SMS_MODE || 'disabled' }}
+        run: |
+          case "$PAYMENTS_MODE" in disabled|live) ;; *) echo "::error::PROD_PAYMENTS_MODE: disabled или live"; exit 1;; esac
+          case "$SMS_MODE" in disabled) ;; *) echo "::error::PROD_SMS_MODE: пока только disabled (SMS-провайдер не подключён)"; exit 1;; esac
+          ssh srv "set -e; cd /opt/auksion-prod
+            [ -f .deploy.env ] && cp .deploy.env .deploy.env.prev || true
+            printf 'TAG=%s\nDEMO_STAND=false\nPAYMENTS_MODE=%s\nSMS_MODE=%s\nSITE_URL=%s\nCORS_ORIGINS=%s\nAPI_PORT=3403\nSITE_PORT=3404\nADMIN_PORT=3405\n' \
+              $TAG $PAYMENTS_MODE $SMS_MODE https://auksiongo.uz https://auksiongo.uz,https://admin.auksiongo.uz > .deploy.env
+            # Секреты прода генерируются на сервере один раз и никуда не передаются (свои, не как у dev).
+            grep -q '^JWT_SECRET=' .env || { umask 077; echo \"JWT_SECRET=\$(openssl rand -hex 32)\" >> .env; }
+            grep -q '^DATA_ENCRYPTION_KEY=' .env || { umask 077; echo \"DATA_ENCRYPTION_KEY=\$(openssl rand -hex 32)\" >> .env; }
+            C='docker compose -p auksion-prod --env-file .env --env-file .deploy.env'
+            \$C up -d --wait postgres redis
+            \$C run --rm --no-deps api ./node_modules/.bin/prisma migrate deploy
+            \$C up -d --remove-orphans
+            \$C ps"
+
+      - name: Health check (rollback on failure)
+        run: |
+          for i in $(seq 1 20); do
+            if ssh srv 'curl -fsS http://127.0.0.1:3404/healthz && curl -fsS http://127.0.0.1:3404/api/v1/health && curl -fsS http://127.0.0.1:3405/healthz' >/dev/null; then
+              echo "healthy (prod: miniapp, api, admin)"; exit 0; fi
+            sleep 3
+          done
+          echo "::error::Health check failed — rolling back"
+          ssh srv "cd /opt/auksion-prod && [ -f .deploy.env.prev ] && mv .deploy.env.prev .deploy.env && docker compose -p auksion-prod --env-file .env --env-file .deploy.env up -d" || true
+          exit 1
+
+      - name: Prune old prod images (keep 3 latest)
+        run: |
+          ssh srv "for img in auksion-miniapp auksion-admin auksion-api; do docker images \$img --format '{{.Tag}}' | grep '^prod-' | tail -n +4 | xargs -r -I{} docker rmi \$img:{} || true; done"

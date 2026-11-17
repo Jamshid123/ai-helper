@@ -1,0 +1,69 @@
+name: Server domains
+
+# Домены auksiongo.uz и два стенда (решение 17.11.2026): сертификаты, vhost-ы nginx, каталог прода, «Скоро запуск».
+# Делает только то, что описано в infra/server/domains.sh. Запуск — вручную из main; повторный запуск безопасен.
+# Секреты: SERVER_HOST, SERVER_ROOT_PASSWORD.
+
+on:
+  workflow_dispatch:
+    inputs:
+      prod_mode:
+        description: 'auksiongo.uz: soon — страница «Скоро запуск», app — боевой стенд (127.0.0.1:3404/3405)'
+        type: choice
+        options: [soon, app]
+        default: soon
+      redirect_old:
+        description: 'Перенаправить auksion.expertly.uz и auksion-admin.expertly.uz на dev.auksiongo.uz'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: server-admin
+  cancel-in-progress: false
+
+jobs:
+  domains:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Run only from main
+        run: |
+          [ "$GITHUB_REF" = "refs/heads/main" ] || { echo "::error::Запуск только из main (сейчас $GITHUB_REF)."; exit 1; }
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check secrets
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          SSHPASS: ${{ secrets.SERVER_ROOT_PASSWORD }}
+        run: |
+          [ -n "$HOST" ] || { echo "::error::Не задан секрет SERVER_HOST"; exit 1; }
+          [ -n "$SSHPASS" ] || { echo "::error::Не задан секрет SERVER_ROOT_PASSWORD (нужен root для nginx и certbot)"; exit 1; }
+
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+
+      - name: Upload and run domains.sh
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          SSHPASS: ${{ secrets.SERVER_ROOT_PASSWORD }}
+          PROD_MODE: ${{ inputs.prod_mode }}
+          REDIRECT_OLD: ${{ inputs.redirect_old }}
+        run: |
+          mkdir -p ~/.ssh && ssh-keyscan -T 10 -t ed25519 "$HOST" > ~/.ssh/known_hosts 2>/dev/null
+          SSH="sshpass -e ssh -o StrictHostKeyChecking=yes root@$HOST"
+          $SSH 'rm -rf /tmp/auksion-domains && mkdir -m 700 -p /tmp/auksion-domains/soon'
+          sshpass -e scp -o StrictHostKeyChecking=yes infra/server/domains.sh "root@$HOST:/tmp/auksion-domains/"
+          sshpass -e scp -o StrictHostKeyChecking=yes infra/server/soon/index.html "root@$HOST:/tmp/auksion-domains/soon/"
+          $SSH "PROD_MODE='$PROD_MODE' REDIRECT_OLD='$REDIRECT_OLD' bash /tmp/auksion-domains/domains.sh; s=\$?; rm -rf /tmp/auksion-domains; exit \$s"
+
+      - name: Check from outside
+        run: |
+          for u in https://dev.auksiongo.uz/healthz https://dev.auksiongo.uz/api/v1/health https://dev-admin.auksiongo.uz/healthz https://auksiongo.uz/; do
+            printf '%s → ' "$u"; curl -sS -o /dev/null -w '%{http_code}\n' --max-time 10 "$u" || true
+          done

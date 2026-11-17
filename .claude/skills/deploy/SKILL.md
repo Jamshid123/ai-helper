@@ -1,13 +1,27 @@
 ---
 name: deploy
-description: Use when working on Dockerfiles, docker-compose, Caddy/reverse proxy, GitHub Actions CI/CD, server setup, database provisioning, backups, or a production release/rollback of auksion.expertly.uz.
+description: Use when working on Dockerfiles, docker-compose, Caddy/reverse proxy, GitHub Actions CI/CD, server setup, database provisioning, backups, or a release/rollback of the dev (dev.auksiongo.uz) or prod (auksiongo.uz) stand.
 ---
 
 # Deploy & CI/CD
 
 Цель: просто и надёжно. Один VPS (Европа), Docker Compose, GitHub Actions. Без Kubernetes.
 
-## Топология
+## Стенды (решение 17.11.2026)
+
+| | dev | prod |
+|---|---|---|
+| Адрес | `dev.auksiongo.uz`, `dev-admin.auksiongo.uz` | `auksiongo.uz` (+ `www`), `admin.auksiongo.uz` |
+| Сервер | `/opt/auksion`, проект `auksion`, `127.0.0.1:3400–3402` | `/opt/auksion-prod`, проект `auksion-prod`, `127.0.0.1:3403–3405` |
+| Выкладка | мерж в `main` → «Deploy dev» | «Deploy prod» вручную, environment `production` (подтверждает владелец) |
+| Режимы | `DEMO_STAND=true`, оплата и SMS — имитация | реальные; `PROD_PAYMENTS_MODE` / `PROD_SMS_MODE` — переменные репозитория |
+| Образы | `auksion-*:<sha12>` | `auksion-*:prod-<sha12>` (свой бандл без демо-режима) |
+
+Один `infra/docker-compose.prod.yml` на оба стенда: порты, `SITE_URL`, `CORS_ORIGINS` — из `.deploy.env`, который пишет workflow.
+Домены, сертификаты (certbot webroot) и vhost-ы — `infra/server/domains.sh` через workflow «Server domains» (root).
+До запуска прод-домен отдаёт «Скоро запуск» (`infra/server/soon/index.html`, `prod_mode=soon`). DNS — Cloudflare, режим DNS only.
+
+## Топология (исходная схема, адреса — см. «Стенды»)
 
 ```
 Internet ─▶ reverse proxy (TLS) ─┬─▶ miniapp (static, nginx-unprivileged)   auksion.expertly.uz
@@ -98,6 +112,6 @@ jobs:
 
 ## Релиз
 
-- В `main` попадает только PR после зелёного CI (`AGENTS.md`, п. 3–4); мерж в `main` = автоматическая выкладка. Ручной Deploy — только с `main`.
+- В `main` попадает только PR после зелёного CI (`AGENTS.md`, п. 3–4); мерж в `main` = автоматическая выкладка на dev. Ручной «Deploy dev» — только с `main`. «Deploy prod» — только с «да» владельца.
 - После деплоя: проверить статус workflow и healthcheck, открыть сайт, сообщить результат с фактами (номер выкладки, статус health).
 - Откат: `./deploy.sh <previous_sha>`.

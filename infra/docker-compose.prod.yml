@@ -1,6 +1,9 @@
-# Прод/демо-стенд AuksionGO на сервере: /opt/auksion/docker-compose.yml
-# Запуск: docker compose --env-file .env --env-file .deploy.env up -d
-# .env (секреты, создаётся bootstrap, chmod 600) · .deploy.env (TAG текущей версии, пишет deploy)
+# Стенды AuksionGO на сервере (решение 17.11.2026: dev + prod), один файл для обоих:
+#   dev  — /opt/auksion,      проект «auksion»,      порты 3400–3402, dev.auksiongo.uz (выкладка — мерж в main)
+#   prod — /opt/auksion-prod, проект «auksion-prod», порты 3403–3405, auksiongo.uz (выкладка — Deploy prod)
+# Запуск: docker compose [-p auksion-prod] --env-file .env --env-file .deploy.env up -d
+# .env (секреты, создаётся на сервере, chmod 600) · .deploy.env (TAG версии и настройки стенда, пишет workflow)
+# Тома и сети у каждого проекта свои (префикс — имя проекта).
 name: auksion
 
 services:
@@ -45,7 +48,8 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://auksion:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/auksion
       REDIS_URL: redis://redis:6379
-      CORS_ORIGINS: https://auksion.expertly.uz,https://auksion-admin.expertly.uz
+      # Адреса стенда (пишет workflow в .deploy.env); по умолчанию — старые адреса демо-стенда.
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://auksion.expertly.uz,https://auksion-admin.expertly.uz}
       PAYMENTS_MODE: ${PAYMENTS_MODE:-disabled}
       # SMS-код входа: disabled — вход закрыт (по умолчанию); fake — только демо-стенд (код показывается на экране)
       SMS_MODE: ${SMS_MODE:-disabled}
@@ -59,7 +63,7 @@ services:
       PAYME_MERCHANT_ID: ${PAYME_MERCHANT_ID:-}
       PAYME_KEY: ${PAYME_KEY:-}
       PAYME_TEST_MODE: ${PAYME_TEST_MODE:-false}
-      PUBLIC_SITE_URL: https://auksion.expertly.uz
+      PUBLIC_SITE_URL: ${SITE_URL:-https://auksion.expertly.uz}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is required}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?DATA_ENCRYPTION_KEY is required}
@@ -72,7 +76,7 @@ services:
     # фото товаров (решение 14.11.2026: диск сервера); при восстановлении сервера — переносить вместе с pgdata
     volumes:
       - media:/data/media
-    ports: ['127.0.0.1:3400:3000']
+    ports: ['127.0.0.1:${API_PORT:-3400}:3000']
     # default — для публикации порта на 127.0.0.1 (во внутренних сетях Docker порты не публикует)
     networks: [db, internal, default]
     read_only: true
@@ -84,7 +88,7 @@ services:
   miniapp:
     image: auksion-miniapp:${TAG:?TAG is required}
     restart: unless-stopped
-    ports: ['127.0.0.1:3401:8080']
+    ports: ['127.0.0.1:${SITE_PORT:-3401}:8080']
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]
@@ -94,7 +98,7 @@ services:
   admin:
     image: auksion-admin:${TAG:?TAG is required}
     restart: unless-stopped
-    ports: ['127.0.0.1:3402:8080']
+    ports: ['127.0.0.1:${ADMIN_PORT:-3402}:8080']
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]
