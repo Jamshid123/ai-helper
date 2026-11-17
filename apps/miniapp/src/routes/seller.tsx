@@ -8,6 +8,7 @@ import { isSignedIn, useMe } from '@/entities/account/session'
 import { cn } from '@/shared/lib/cn'
 import { Button } from '@/shared/ui/button'
 import { Check, Field, Steps } from '@/shared/ui/steps'
+import { ACTION_BAR } from '@/shared/ui/action-bar'
 
 /**
  * Заявка продавца (ТЗ «Проверка продавца»): тип профиля → данные → документы → карта выплат → договор.
@@ -176,7 +177,7 @@ function SellerPage() {
       )}
 
       {!native && (
-        <div className='fixed inset-x-0 bottom-0 z-10 border-t border-line bg-bg px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]'>
+        <div className={ACTION_BAR}>
           <div className='mx-auto grid max-w-lg grid-cols-[auto_1fr] gap-2'>
             <Button variant='ghost' onClick={back}>
               {t('reg.back')}

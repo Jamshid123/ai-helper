@@ -5,7 +5,7 @@ import { useLeave } from '@/entities/lot/api'
 import { errorText } from '@/shared/api/error-text'
 
 /** Выход из лота до начала торгов с полным возвратом (решение 14.11.2026). Второе касание — подтверждение. */
-export function LeaveCard({ lotId, carried = false }: { lotId: string; carried?: boolean }) {
+export function LeaveCard({ lotId, carried = false, onLeft }: { lotId: string; carried?: boolean; onLeft?: () => void }) {
   const { t } = useI18n()
   const leave = useLeave()
   const [step, setStep] = useState<'idle' | 'confirm' | 'pending'>('idle')
@@ -44,7 +44,11 @@ export function LeaveCard({ lotId, carried = false }: { lotId: string; carried?:
             setStep('pending')
             setError(null)
             leave(lotId).then(
-              () => haptic('success'),
+              () => {
+                haptic('success')
+                // сама карточка исчезает вместе с допуском — подтверждение показывает страница лота
+                onLeft?.()
+              },
               (e: unknown) => {
                 haptic('error')
                 setError(errorText(t, e))

@@ -73,8 +73,8 @@ function Root() {
         <Outlet />
       </main>
       {!inRoom && (
-        <nav className='fixed inset-x-0 bottom-0 border-t border-line bg-bg pb-[env(safe-area-inset-bottom,0px)] md:hidden'>
-          <div className='mx-auto grid max-w-lg grid-cols-2'>
+        <nav className='fixed inset-x-0 bottom-0 z-20 border-t border-line bg-bg pb-[env(safe-area-inset-bottom,0px)] md:hidden'>
+          <div className='mx-auto grid h-14 max-w-lg grid-cols-2'>
             {[
               {
                 to: '/',
@@ -92,7 +92,7 @@ function Root() {
               <Link
                 key={to}
                 to={to}
-                className={cn('flex flex-col items-center gap-0.5 py-2 text-[11px]', active ? 'text-fg' : 'text-muted')}
+                className={cn('flex flex-col items-center justify-center gap-0.5 text-[11px]', active ? 'text-fg' : 'text-muted')}
               >
                 <Icon className='size-5' strokeWidth={active ? 2.4 : 1.8} />
                 {label}
