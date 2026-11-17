@@ -36,6 +36,8 @@ export async function signIn(page: Page, opts: { phone?: string; firstName?: str
     await first.fill(opts.firstName ?? 'Тест')
     await page.getByRole('button', { name: 'Сохранить' }).click()
   }
+  // дождаться конца входа (сайт сам уходит с /register): иначе следующий переход опередит сессию
+  await expect(page).not.toHaveURL(/\/register/)
   return phone
 }
 
