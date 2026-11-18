@@ -123,4 +123,38 @@ describe('LifecycleScheduler.tick', () => {
     expect((await db.lot.findUniqueOrThrow({ where: { id: toOpen.id } })).status).toBe('LIVE')
     expect(await db.outboxEvent.count({ where: { type: 'lot.opened' } })).toBe(1)
   })
+
+  it('блокировка sweep снимается после прохода: следующие проходы работают (пул из нескольких соединений)', async () => {
+    const { LifecycleScheduler } = await import('../src/modules/auctions/lifecycle.scheduler')
+    await cleanDb(db)
+    const env = { SCHEDULER_ENABLED: false, SCHEDULER_INTERVAL_MS: 5000 } as never
+    const s = new LifecycleScheduler(
+      env,
+      db as unknown as PrismaService,
+      lifecycle,
+      new BidsService(db as unknown as PrismaService, clock),
+      new RemindersService(db as unknown as PrismaService, clock),
+      { expireDue: async () => 0 } as unknown as BuyoutService,
+      { remindDue: async () => 0, releaseUnconfirmed: async () => 0 } as unknown as RelistService,
+      // как в реальном API: во время прохода идут параллельные запросы — соединения пула перемешиваются
+      {
+        dispatchSms: async () => {
+          await Promise.all(Array.from({ length: 6 }, () => db.$queryRaw`SELECT pg_sleep(0.02)::text`))
+          return 0
+        },
+      } as unknown as NotificationsService
+    )
+    // прогреть пул: несколько соединений, чтобы запросы sweep шли через разные
+    await Promise.all(Array.from({ length: 6 }, () => db.$queryRaw`SELECT pg_sleep(0.05)::text`))
+    clock.set(OPEN)
+    for (let i = 0; i < 5; i++) {
+      const lot = await createLot(db, { status: 'SCHEDULED', opensAt: OPEN, closesAt: CLOSE })
+      await s.tick()
+      expect((await db.lot.findUniqueOrThrow({ where: { id: lot.id } })).status, `проход ${i + 1}`).toBe('LIVE')
+    }
+    const [{ held }] = await db.$queryRaw<{ held: bigint }[]>`
+      SELECT count(*) AS held FROM pg_locks l JOIN pg_database d ON d.oid = l.database
+      WHERE l.locktype = 'advisory' AND l.objid = 72911001 AND d.datname = current_database()`
+    expect(Number(held)).toBe(0)
+  })
 })

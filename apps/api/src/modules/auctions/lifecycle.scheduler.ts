@@ -11,6 +11,8 @@ import { LotLifecycleService } from './lot-lifecycle.service'
 
 /** Ключ advisory-блокировки: один sweep на кластер, даже если процессов API несколько. */
 const SWEEP_LOCK_KEY = 72_911_001
+/** Дольше — транзакция блокировки закрывается (сделанная работа остаётся), следующий проход продолжит. */
+const SWEEP_TIMEOUT_MS = 120_000
 
 /**
  * Догоняющий sweep каждые N секунд: открывает и закрывает лоты по расписанию.
@@ -48,32 +50,39 @@ export class LifecycleScheduler implements OnApplicationBootstrap, OnModuleDestr
     if (this.running) return
     this.running = true
     try {
-      const [{ locked }] = await this.prisma.$queryRaw<
-        { locked: boolean }[]
-      >`SELECT pg_try_advisory_lock(${SWEEP_LOCK_KEY}) AS locked`
-      if (!locked) return
-      try {
-        const opened = await this.lifecycle.openDue()
-        // Максимумы, заданные до открытия, начинают работать сразу в 09:00.
-        for (const lotId of opened) await this.bids.runProxies(lotId)
-        const closed = await this.lifecycle.closeDue()
-        await this.reminders.dispatchDue()
-        await this.reminders.dispatchIdleBidders()
-        // Выкуп: не оплатил 10% за 15 мин / не забрал за 24 ч → аннулирование и повторные торги
-        const expired = await this.buyout.expireDue()
-        // Повторные торги: напоминание за 6 ч, освобождение неподтверждённых мест за 2 ч; SMS — если подключены
-        await this.relist.remindDue()
-        await this.relist.releaseUnconfirmed()
-        await this.notifications.dispatchSms()
-        if (opened.length || Object.keys(closed).length || expired)
-          this.log.log({ opened, closed, expired }, 'lifecycle sweep')
-      } finally {
-        await this.prisma.$queryRaw`SELECT pg_advisory_unlock(${SWEEP_LOCK_KEY})`
-      }
+      // Блокировка на транзакцию: берётся и снимается на одном соединении. Сессионная блокировка с пулом Prisma
+      // снималась через другое соединение и «зависала» — sweep переставал работать (баг 18.11.2026).
+      // Сама работа идёт через другие соединения пула (нужно ≥ 2; у Prisma по умолчанию больше).
+      await this.prisma.$transaction(
+        async (tx) => {
+          const [{ locked }] = await tx.$queryRaw<
+            { locked: boolean }[]
+          >`SELECT pg_try_advisory_xact_lock(${SWEEP_LOCK_KEY}) AS locked`
+          if (locked) await this.sweep()
+        },
+        { maxWait: 5_000, timeout: SWEEP_TIMEOUT_MS }
+      )
     } catch (e) {
       this.log.error(e, 'lifecycle sweep failed')
     } finally {
       this.running = false
     }
+  }
+
+  private async sweep(): Promise<void> {
+    const opened = await this.lifecycle.openDue()
+    // Максимумы, заданные до открытия, начинают работать сразу в 09:00.
+    for (const lotId of opened) await this.bids.runProxies(lotId)
+    const closed = await this.lifecycle.closeDue()
+    await this.reminders.dispatchDue()
+    await this.reminders.dispatchIdleBidders()
+    // Выкуп: не оплатил 10% за 15 мин / не забрал за 24 ч → аннулирование и повторные торги
+    const expired = await this.buyout.expireDue()
+    // Повторные торги: напоминание за 6 ч, освобождение неподтверждённых мест за 2 ч; SMS — если подключены
+    await this.relist.remindDue()
+    await this.relist.releaseUnconfirmed()
+    await this.notifications.dispatchSms()
+    if (opened.length || Object.keys(closed).length || expired)
+      this.log.log({ opened, closed, expired }, 'lifecycle sweep')
   }
 }
