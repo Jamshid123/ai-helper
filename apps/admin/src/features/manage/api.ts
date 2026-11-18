@@ -1,3 +1,4 @@
+import type { Attributes, CategoryField } from '@auksion/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { api, apiUpload } from '@/lib/api'
@@ -10,6 +11,10 @@ export type Category = {
   nameUz: string
   enabled: boolean
   sortOrder: number
+  /** Поля карточки товара (решение 18.11.2026). */
+  fields: CategoryField[]
+  /** Блок устройства: IMEI, батарея, «Проверено экспертом». */
+  deviceAct: boolean
   lots: number
   products: number
 }
@@ -29,6 +34,7 @@ export type Product = {
   condition: 'NEW' | 'USED'
   description: string
   inspection: Inspection
+  attributes: Attributes
   imeiLast4: string | null
   inventoryNo: string | null
   costPrice: string | null
@@ -144,6 +150,8 @@ export type CategoryInput = {
   nameUz: string
   enabled: boolean
   sortOrder: number
+  fields?: CategoryField[]
+  deviceAct?: boolean
 }
 export const useSaveCategory = () =>
   useAction(
@@ -171,6 +179,7 @@ export type ProductInput = {
   condition: 'NEW' | 'USED'
   description: string
   inspection: Inspection
+  attributes: Attributes
   imei?: string
   inventoryNo?: string
   costPrice?: string

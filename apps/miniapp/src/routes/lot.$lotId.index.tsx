@@ -197,6 +197,9 @@ function LotPage() {
   })
 
   if (!lot) return null
+  // в демо и у старых ответов API флага нет — считаем, что акт есть (раньше бейдж был всегда)
+  const deviceAct = lot.deviceAct !== false
+  const attributes = lot.attributes ?? []
   const opens = Date.parse(lot.opensAt)
   const closes = endsAtOf(lot)
 
@@ -224,9 +227,12 @@ function LotPage() {
         <div className='grid gap-1.5'>
           <h1 className='text-xl leading-tight font-semibold text-balance'>{lot.title}</h1>
           <div className='flex flex-wrap gap-1.5 text-[12px]'>
-            <span className='inline-flex items-center gap-1 rounded-md bg-surface px-2 py-0.5 font-medium text-brand-ink'>
-              <BadgeCheck className='size-3.5' /> {t('lot.verified')}
-            </span>
+            {/* бейдж — только у категорий с актом эксперта (решение 18.11.2026) */}
+            {deviceAct && (
+              <span className='inline-flex items-center gap-1 rounded-md bg-surface px-2 py-0.5 font-medium text-brand-ink'>
+                <BadgeCheck className='size-3.5' /> {t('lot.verified')}
+              </span>
+            )}
             <span className='rounded-md bg-surface px-2 py-0.5 text-muted'>
               {t(lot.condition === 'new' ? 'lot.condition.new' : 'lot.condition.used')}
             </span>
@@ -318,20 +324,39 @@ function LotPage() {
           </Row>
         </section>
 
-        <section className='grid gap-2'>
-          <h2 className='text-[15px] font-semibold'>{t('lot.inspection')}</h2>
-          <p className='text-[14px] leading-relaxed'>{lot.inspection.summary}</p>
-          <div className='divide-y divide-line'>
-            {lot.inspection.battery !== null && <Row label={t('lot.battery')}>{lot.inspection.battery}%</Row>}
-            <Row label='IMEI'>{lot.inspection.imeiChecked ? '✓' : '—'}</Row>
-            <Row stacked label={t('lot.kit')}>
-              {lot.inspection.kit.join(', ')}
-            </Row>
-            <Row stacked label={t('lot.defects')}>
-              {lot.inspection.defects.length ? lot.inspection.defects.join('; ') : t('lot.noDefects')}
-            </Row>
-          </div>
-        </section>
+        {attributes.length > 0 && (
+          <section className='grid gap-2'>
+            <h2 className='text-[15px] font-semibold'>{t('lot.attributes')}</h2>
+            <div className='divide-y divide-line'>
+              {attributes.map((a) => (
+                <Row key={a.key} label={locale === 'uz' ? a.labelUz : a.labelRu}>
+                  {attributeText(a, t, locale)}
+                </Row>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {(deviceAct || lot.inspection.summary || lot.inspection.kit.length > 0 || lot.inspection.defects.length > 0) && (
+          <section className='grid gap-2'>
+            <h2 className='text-[15px] font-semibold'>{t(deviceAct ? 'lot.inspection' : 'lot.state')}</h2>
+            {lot.inspection.summary && <p className='text-[14px] leading-relaxed'>{lot.inspection.summary}</p>}
+            <div className='divide-y divide-line'>
+              {deviceAct && lot.inspection.battery !== null && (
+                <Row label={t('lot.battery')}>{lot.inspection.battery}%</Row>
+              )}
+              {deviceAct && <Row label='IMEI'>{lot.inspection.imeiChecked ? '✓' : '—'}</Row>}
+              {lot.inspection.kit.length > 0 && (
+                <Row stacked label={t('lot.kit')}>
+                  {lot.inspection.kit.join(', ')}
+                </Row>
+              )}
+              <Row stacked label={t('lot.defects')}>
+                {lot.inspection.defects.length ? lot.inspection.defects.join('; ') : t('lot.noDefects')}
+              </Row>
+            </div>
+          </section>
+        )}
 
         <section className='grid gap-2'>
           <h2 className='text-[15px] font-semibold'>{t('lot.terms')}</h2>
@@ -373,3 +398,18 @@ export const Route = createFileRoute('/lot/$lotId/')({
     s.admit === true || s.admit === 'true' ? { admit: true } : {},
   component: LotPage,
 })
+
+/** Значение характеристики — только текст (без HTML); да/нет и дата — по языку покупателя. */
+function attributeText(
+  a: NonNullable<Lot['attributes']>[number],
+  t: (k: 'lot.yes' | 'lot.no') => string,
+  locale: 'ru' | 'uz'
+): string {
+  if (a.type === 'boolean') return t(a.value === true ? 'lot.yes' : 'lot.no')
+  if (a.type === 'date' && typeof a.value === 'string') {
+    const [y, m, d] = a.value.split('-')
+    return `${d}.${m}.${y}`
+  }
+  if (a.type === 'number' && typeof a.value === 'number') return a.value.toLocaleString(locale === 'uz' ? 'uz-UZ' : 'ru-RU')
+  return String(a.value)
+}

@@ -227,8 +227,43 @@ async function main() {
   const myLotsPhone = await seedMyLots('+998901110004', '+998901110005')
   const myLotsDesktop = await seedMyLots('+998901110006', '+998901110007')
 
+  // Шаблоны товаров (решение 18.11.2026): категория без блока устройства, лот со снимком характеристик
+  const laptops = await db.category.create({
+    data: {
+      slug: 'e2e-laptops',
+      nameRu: 'E2E Ноутбуки',
+      nameUz: 'E2E Noutbuklar',
+      enabled: true,
+      sortOrder: 50,
+      deviceAct: false,
+      fields: [
+        { key: 'cpu', labelRu: 'Процессор', labelUz: 'Protsessor', type: 'text', required: true, public: true },
+        { key: 'supplier', labelRu: 'Поставщик', labelUz: 'Yetkazuvchi', type: 'text', required: false, public: false },
+      ],
+    },
+  })
+  const laptopLot = await db.lot.create({
+    data: {
+      title: 'E2E MacBook Air M1',
+      condition: 'USED',
+      startPrice: 6_000_000n,
+      step: 100_000n,
+      fee: 0n,
+      categoryId: laptops.id,
+      status: 'SCHEDULED',
+      opensAt: new Date(now + 48 * H),
+      closesAt: new Date(now + 50 * H),
+      inspection: { summary: 'Корпус без вмятин', battery: 88, imeiChecked: true, kit: ['Зарядка'], defects: [] },
+      attributes: [
+        { key: 'cpu', labelRu: 'Процессор', labelUz: 'Protsessor', type: 'text', public: true, value: 'Apple M1' },
+        { key: 'supplier', labelRu: 'Поставщик', labelUz: 'Yetkazuvchi', type: 'text', public: false, value: 'ООО Скрытый склад' },
+      ],
+    },
+  })
+
   const fixtures = {
     liveLotId: live.id,
+    laptopLotId: laptopLot.id,
     scheduledLotId: scheduled.id,
     soldLotId: sold.id,
     winnerPhone,
