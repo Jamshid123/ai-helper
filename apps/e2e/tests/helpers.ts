@@ -6,6 +6,8 @@ export type MyLotsBuyer = { phone: string; pickupCode: string; liveLotId: string
 
 export type Fixtures = {
   liveLotId: string
+  /** лот категории без блока устройства, с характеристиками */
+  laptopLotId: string
   scheduledLotId: string
   soldLotId: string
   winnerPhone: string

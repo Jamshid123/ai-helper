@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { SECTIONS_BY_ID } from '@/config/sections'
+import { type CategoryField, fieldsProblems } from '@auksion/shared'
 import { Plus } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -23,6 +24,8 @@ import {
 } from '@/components/ui/table'
 import { PageShell } from '@/components/layout/page-shell'
 import { type Category, useCategories, useSaveCategory } from './api'
+import { CategoryFieldsEditor } from './category-fields'
+import { cleanFields } from './fields-draft'
 import { EmptyRow, Field } from './ui'
 import { useCanEdit } from './use-can-edit'
 
@@ -33,6 +36,8 @@ type Draft = {
   nameUz: string
   enabled: boolean
   sortOrder: string
+  fields: CategoryField[]
+  deviceAct: boolean
 }
 const empty: Draft = {
   slug: '',
@@ -40,6 +45,8 @@ const empty: Draft = {
   nameUz: '',
   enabled: false,
   sortOrder: '100',
+  fields: [],
+  deviceAct: false,
 }
 
 export function CategoriesPage() {
@@ -48,6 +55,10 @@ export function CategoriesPage() {
   const save = useSaveCategory()
   const editable = useCanEdit('categories')
   const [draft, setDraft] = useState<Draft | null>(null)
+  const saved = draft?.id
+    ? (data.find((c) => c.id === draft.id)?.fields ?? []).map((f) => f.key)
+    : []
+  const problems = draft ? fieldsProblems(cleanFields(draft.fields)) : []
 
   const toggle = (c: Category) =>
     save.mutate({
@@ -78,6 +89,7 @@ export function CategoriesPage() {
               <TableHead>Название (uz)</TableHead>
               <TableHead>Код</TableHead>
               <TableHead className='text-right'>Порядок</TableHead>
+              <TableHead className='text-right'>Поля карточки</TableHead>
               <TableHead className='text-right'>Товары / лоты</TableHead>
               <TableHead>Видна покупателям</TableHead>
               <TableHead />
@@ -85,7 +97,7 @@ export function CategoriesPage() {
           </TableHeader>
           <TableBody>
             {!isLoading && data.length === 0 && (
-              <EmptyRow cols={7} text='Категорий пока нет' />
+              <EmptyRow cols={8} text='Категорий пока нет' />
             )}
             {data.map((c) => (
               <TableRow key={c.id}>
@@ -98,6 +110,14 @@ export function CategoriesPage() {
                 </TableCell>
                 <TableCell className='text-right tabular-nums'>
                   {c.sortOrder}
+                </TableCell>
+                <TableCell className='text-right text-sm'>
+                  {c.fields.length || '—'}
+                  {c.deviceAct && (
+                    <Badge variant='secondary' className='ms-2'>
+                      устройство
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell className='text-right tabular-nums'>
                   {c.products} / {c.lots}
@@ -130,7 +150,7 @@ export function CategoriesPage() {
       </div>
 
       <Dialog open={draft !== null} onOpenChange={(v) => !v && setDraft(null)}>
-        <DialogContent>
+        <DialogContent className='max-h-[90svh] overflow-y-auto sm:max-w-2xl'>
           <DialogHeader>
             <DialogTitle>
               {draft?.id ? 'Категория' : 'Новая категория'}
@@ -189,6 +209,33 @@ export function CategoriesPage() {
                 />
                 Видна покупателям
               </label>
+              <label className='flex items-start gap-2 text-sm'>
+                <Switch
+                  checked={draft.deviceAct}
+                  onCheckedChange={(v) => setDraft({ ...draft, deviceAct: v })}
+                />
+                <span className='grid gap-0.5'>
+                  Блок устройства
+                  <span className='text-xs text-muted-foreground'>
+                    IMEI / серийный (шифруется), батарея, «IMEI сверен» и бейдж
+                    «Проверено экспертом» на сайте. Включайте, только если
+                    эксперт проверяет товары этой категории.
+                  </span>
+                </span>
+              </label>
+              <div className='grid gap-2'>
+                <span className='text-sm font-medium'>Поля карточки</span>
+                <CategoryFieldsEditor
+                  fields={draft.fields}
+                  saved={saved}
+                  onChange={(fields) => setDraft({ ...draft, fields })}
+                />
+                {problems.length > 0 && draft.fields.length > 0 && (
+                  <p className='text-xs text-destructive' role='alert'>
+                    {problems.join('; ')}
+                  </p>
+                )}
+              </div>
             </div>
           )}
           <DialogFooter>
@@ -200,6 +247,7 @@ export function CategoriesPage() {
                 !draft?.nameRu.trim() ||
                 !draft?.nameUz.trim() ||
                 (!draft?.id && !draft?.slug) ||
+                problems.length > 0 ||
                 save.isPending
               }
               onClick={() =>
@@ -212,6 +260,8 @@ export function CategoriesPage() {
                     nameUz: draft.nameUz.trim(),
                     enabled: draft.enabled,
                     sortOrder: Number(draft.sortOrder || 0),
+                    fields: cleanFields(draft.fields),
+                    deviceAct: draft.deviceAct,
                   },
                   { onSuccess: () => setDraft(null) }
                 )

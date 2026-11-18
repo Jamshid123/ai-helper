@@ -159,6 +159,10 @@ export const dict = {
     'lot.battery': 'Аккумулятор',
     'lot.defects': 'Дефекты',
     'lot.noDefects': 'Не обнаружены',
+    'lot.attributes': 'Характеристики',
+    'lot.state': 'Состояние',
+    'lot.yes': 'Да',
+    'lot.no': 'Нет',
     'lot.terms': 'Условия',
     'lot.terms.text':
       'Победитель оплачивает 10% своей цены за 15 минут после торгов. Остаток и получение товара в пункте выдачи — в течение 24 часов, остаток можно оплатить на сайте или на месте. При получении можно осмотреть товар. Не оплатили 10% вовремя — победа аннулируется и участие в торгах ограничивается на 7 дней.',
@@ -436,6 +440,10 @@ export const dict = {
     'lot.battery': 'Batareya',
     'lot.defects': 'Nuqsonlar',
     'lot.noDefects': 'Aniqlanmadi',
+    'lot.attributes': 'Xususiyatlari',
+    'lot.state': 'Holati',
+    'lot.yes': 'Ha',
+    'lot.no': 'Yoʻq',
     'lot.terms': 'Shartlar',
     'lot.terms.text':
       'Gʻolib savdodan keyin 15 daqiqada oʻz narxining 10% ini toʻlaydi. Qolgan summani toʻlash va topshirish punktida tovarni olish — 24 soat ichida, qolganini saytda yoki joyida toʻlash mumkin. Olishda tovarni koʻrib chiqish mumkin. 10% vaqtida toʻlanmasa — gʻalaba bekor qilinadi va savdoda ishtirok 7 kunga cheklanadi.',

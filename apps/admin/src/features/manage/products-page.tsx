@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { SECTIONS_BY_ID } from '@/config/sections'
+import { type CategoryField, checkAttributes } from '@auksion/shared'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -30,6 +31,12 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { PageShell } from '@/components/layout/page-shell'
 import { type Product, useCategories, useProducts, useSaveProduct } from './api'
+import { AttributeFields } from './attribute-fields'
+import {
+  type AttributeDraft,
+  fromAttributeDraft,
+  toAttributeDraft,
+} from './fields-draft'
 import { conditionText, digits, sum } from './format'
 import { LotDialog } from './lot-dialog'
 import { ProductPhotos } from './product-photos'
@@ -51,6 +58,8 @@ type Draft = {
   inventoryNo: string
   costPrice: string
   imeiLast4?: string | null
+  /** Значения полей категории (решение 18.11.2026). */
+  attrs: AttributeDraft
 }
 const lines = (s: string) =>
   s
@@ -58,7 +67,7 @@ const lines = (s: string) =>
     .map((x) => x.trim())
     .filter(Boolean)
 
-function toDraft(p: Product): Draft {
+function toDraft(p: Product, fields: CategoryField[]): Draft {
   return {
     id: p.id,
     categoryId: p.categoryId,
@@ -75,6 +84,7 @@ function toDraft(p: Product): Draft {
     inventoryNo: p.inventoryNo ?? '',
     costPrice: p.costPrice ?? '',
     imeiLast4: p.imeiLast4,
+    attrs: toAttributeDraft(fields, p.attributes ?? {}),
   }
 }
 
@@ -106,7 +116,37 @@ export function ProductsPage() {
     imei: '',
     inventoryNo: '',
     costPrice: '',
+    attrs: {},
   })
+  const category = categories.find((c) => c.id === draft?.categoryId)
+  const fields = category?.fields ?? []
+  const device = category?.deviceAct ?? false
+  const attributes = draft ? fromAttributeDraft(fields, draft.attrs) : {}
+  const problems = draft ? checkAttributes(fields, attributes).problems : []
+  const fieldsOf = (categoryId: string) =>
+    categories.find((c) => c.id === categoryId)?.fields ?? []
+
+  /** Смена категории: значения полей, которых нет в новой категории, пропадут — спрашиваем (решение 18.11.2026). */
+  const changeCategory = (categoryId: string) => {
+    if (!draft || categoryId === draft.categoryId) return
+    const next = fieldsOf(categoryId)
+    const lost = fields.filter(
+      (f) =>
+        attributes[f.key] !== undefined && !next.some((n) => n.key === f.key)
+    )
+    if (
+      lost.length &&
+      !window.confirm(
+        `Сменить категорию? Заполненные поля пропадут: ${lost.map((f) => f.labelRu).join(', ')}.`
+      )
+    )
+      return
+    setDraft({
+      ...draft,
+      categoryId,
+      attrs: toAttributeDraft(next, attributes),
+    })
+  }
 
   const submit = () => {
     if (!draft) return
@@ -119,12 +159,17 @@ export function ProductsPage() {
         description: draft.description.trim(),
         inspection: {
           summary: draft.summary.trim(),
-          battery: draft.battery ? Math.min(100, Number(draft.battery)) : null,
-          imeiChecked: draft.imeiChecked,
+          // батарея и сверка IMEI — только в блоке устройства
+          battery:
+            device && draft.battery
+              ? Math.min(100, Number(draft.battery))
+              : null,
+          imeiChecked: device && draft.imeiChecked,
           kit: lines(draft.kit),
           defects: lines(draft.defects),
         },
-        ...(draft.imei.trim() && { imei: draft.imei.trim() }),
+        attributes,
+        ...(device && draft.imei.trim() && { imei: draft.imei.trim() }),
         ...(draft.inventoryNo.trim() && {
           inventoryNo: draft.inventoryNo.trim(),
         }),
@@ -197,7 +242,9 @@ export function ProductsPage() {
                     <Button
                       variant='ghost'
                       size='sm'
-                      onClick={() => setDraft(toDraft(p))}
+                      onClick={() =>
+                        setDraft(toDraft(p, fieldsOf(p.categoryId)))
+                      }
                     >
                       Изменить
                     </Button>
@@ -229,7 +276,9 @@ export function ProductsPage() {
               )}
               <Field label='Название'>
                 <Input
-                  placeholder='iPhone 14 Pro, 256 ГБ'
+                  placeholder={
+                    device ? 'iPhone 14 Pro, 256 ГБ' : 'Название товара'
+                  }
                   value={draft.title}
                   onChange={(e) =>
                     setDraft({ ...draft, title: e.target.value })
@@ -240,7 +289,7 @@ export function ProductsPage() {
                 <Field label='Категория'>
                   <Select
                     value={draft.categoryId}
-                    onValueChange={(v) => setDraft({ ...draft, categoryId: v })}
+                    onValueChange={changeCategory}
                   >
                     <SelectTrigger className='w-full' aria-label='Категория'>
                       <SelectValue />
@@ -280,39 +329,50 @@ export function ProductsPage() {
                   }
                 />
               </Field>
+              <AttributeFields
+                fields={fields}
+                draft={draft.attrs}
+                onChange={(attrs) => setDraft({ ...draft, attrs })}
+              />
               <Field label='Итог проверки'>
                 <Textarea
                   rows={2}
-                  placeholder='Корпус без сколов, Face ID работает'
+                  placeholder={
+                    device
+                      ? 'Корпус без сколов, Face ID работает'
+                      : 'Состояние, что проверили'
+                  }
                   value={draft.summary}
                   onChange={(e) =>
                     setDraft({ ...draft, summary: e.target.value })
                   }
                 />
               </Field>
-              <div className='grid grid-cols-1 gap-3 min-[400px]:grid-cols-2'>
-                <Field label='Батарея, %' hint='Пусто — для новых'>
-                  <Input
-                    inputMode='numeric'
-                    value={draft.battery}
-                    onChange={(e) =>
-                      setDraft({
-                        ...draft,
-                        battery: digits(e.target.value).slice(0, 3),
-                      })
-                    }
-                  />
-                </Field>
-                <label className='flex items-center gap-2 self-end pb-2 text-sm'>
-                  <Checkbox
-                    checked={draft.imeiChecked}
-                    onCheckedChange={(v) =>
-                      setDraft({ ...draft, imeiChecked: v === true })
-                    }
-                  />
-                  IMEI сверен
-                </label>
-              </div>
+              {device && (
+                <div className='grid grid-cols-1 gap-3 min-[400px]:grid-cols-2'>
+                  <Field label='Батарея, %' hint='Пусто — для новых'>
+                    <Input
+                      inputMode='numeric'
+                      value={draft.battery}
+                      onChange={(e) =>
+                        setDraft({
+                          ...draft,
+                          battery: digits(e.target.value).slice(0, 3),
+                        })
+                      }
+                    />
+                  </Field>
+                  <label className='flex items-center gap-2 self-end pb-2 text-sm'>
+                    <Checkbox
+                      checked={draft.imeiChecked}
+                      onCheckedChange={(v) =>
+                        setDraft({ ...draft, imeiChecked: v === true })
+                      }
+                    />
+                    IMEI сверен
+                  </label>
+                </div>
+              )}
               <div className='grid grid-cols-1 gap-3 min-[400px]:grid-cols-2'>
                 <Field label='Комплект' hint='По одному в строке'>
                   <Textarea
@@ -334,22 +394,24 @@ export function ProductsPage() {
                 </Field>
               </div>
               <div className='grid grid-cols-1 gap-3 sm:grid-cols-3'>
-                <Field
-                  label='IMEI / серийный'
-                  hint={
-                    draft.imeiLast4
-                      ? `Сейчас: •••• ${draft.imeiLast4}`
-                      : 'Шифруется'
-                  }
-                >
-                  <Input
-                    value={draft.imei}
-                    autoComplete='off'
-                    onChange={(e) =>
-                      setDraft({ ...draft, imei: e.target.value })
+                {device && (
+                  <Field
+                    label='IMEI / серийный'
+                    hint={
+                      draft.imeiLast4
+                        ? `Сейчас: •••• ${draft.imeiLast4}`
+                        : 'Шифруется'
                     }
-                  />
-                </Field>
+                  >
+                    <Input
+                      value={draft.imei}
+                      autoComplete='off'
+                      onChange={(e) =>
+                        setDraft({ ...draft, imei: e.target.value })
+                      }
+                    />
+                  </Field>
+                )}
                 <Field label='Инв. номер'>
                   <Input
                     value={draft.inventoryNo}
@@ -370,13 +432,21 @@ export function ProductsPage() {
               </div>
             </div>
           )}
+          {draft && problems.length > 0 && (
+            <p className='text-xs text-muted-foreground' role='status'>
+              Заполните: {problems.join('; ')}
+            </p>
+          )}
           <DialogFooter>
             <Button variant='outline' onClick={() => setDraft(null)}>
               Отмена
             </Button>
             <Button
               disabled={
-                !draft?.title.trim() || !draft?.categoryId || save.isPending
+                !draft?.title.trim() ||
+                !draft?.categoryId ||
+                problems.length > 0 ||
+                save.isPending
               }
               onClick={submit}
             >
