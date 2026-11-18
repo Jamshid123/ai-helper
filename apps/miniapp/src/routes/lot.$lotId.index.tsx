@@ -11,6 +11,7 @@ import { isSignedIn, useMe } from '@/entities/account/session'
 import { errorText } from '@/shared/api/error-text'
 import { type Lot } from '@/entities/lot/types'
 import { cn } from '@/shared/lib/cn'
+import { formatSessionDate } from '@/shared/lib/format-date'
 import { formatCountdown, useNow } from '@/shared/lib/use-now'
 import { LeaveCard } from '@/features/leave'
 import { CarriedCard, RelistNotice } from '@/features/relist'
@@ -140,7 +141,7 @@ function AdmissionSheet({ lot, onClose, onPaid }: { lot: Lot; onClose: () => voi
 
 function LotPage() {
   const { lotId } = Route.useParams()
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const navigate = useNavigate()
   const now = useNow()
   const { data: lot } = useLot(lotId)
@@ -171,18 +172,29 @@ function LotPage() {
   const purchase = usePurchases().find((p) => p.lotId === lotId)
   const [left, setLeft] = useState<null | 'refund' | 'carried'>(null)
   const full = Boolean(lot && !admitted && isFull(lot))
+  // Ограничение участия видно сразу, с датой — а не после галочки и «Оплатить» (решение 18.11.2026)
+  const restrictedUntil =
+    !admitted && me?.restrictedUntil && Date.parse(me.restrictedUntil) > now ? me.restrictedUntil : null
+  const blocked = full || Boolean(restrictedUntil)
+  const ctaText = admitted
+    ? t('lot.toRoom')
+    : restrictedUntil
+      ? t('lot.restricted').replace('{until}', formatSessionDate(new Date(restrictedUntil), locale))
+      : full
+        ? t('lot.full')
+        : t('lot.participate')
   const primary = useCallback(() => {
     if (!lot) return
     if (admitted && live) navigate({ to: '/lot/$lotId/room', params: { lotId: lot.id } })
-    else if (!admitted && !full) {
+    else if (!admitted && !blocked) {
       if (registered) setSheet(true)
       else toRegister()
     }
-  }, [admitted, full, live, lot, navigate, registered, toRegister])
+  }, [admitted, blocked, live, lot, navigate, registered, toRegister])
   const native = useMainButton({
-    text: admitted ? t('lot.toRoom') : full ? t('lot.full') : t('lot.participate'),
+    text: ctaText,
     onClick: primary,
-    enabled: admitted || !full,
+    enabled: admitted || !blocked,
     visible: !sheet && Boolean(lot) && !closed && (!admitted || live),
   })
 
@@ -255,10 +267,10 @@ function LotPage() {
           <div className={cn(ACTION_BAR, 'lg:static lg:z-auto lg:border-0 lg:bg-transparent lg:p-0')}>
             <Button
               onClick={primary}
-              disabled={!admitted && full}
+              disabled={!admitted && blocked}
               className='mx-auto flex w-full max-w-lg lg:max-w-none'
             >
-              {admitted ? t('lot.toRoom') : full ? t('lot.full') : t('lot.participate')}
+              {ctaText}
             </Button>
           </div>
         )}

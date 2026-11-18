@@ -58,7 +58,8 @@
 | `apps/api/src/modules/notifications/` | Уведомления покупателю (таблица `Notification`): `/me/notifications`, рассылка SMS через `SmsProvider` из планировщика |
 | `apps/miniapp/src/features/relist.tsx`, `entities/notifications/api.ts` | Сайт: плашка уведомлений, «Допуск сохранён» + подтверждение, ссылка со старого лота на повторные торги |
 | `apps/api/src/common/pickup-code.ts` | Код выдачи: 6 цифр из секрета и id обязательства, в БД — только хэш |
-| `apps/miniapp/src/entities/purchase/api.ts`, `features/purchase-card.tsx`, `features/win-banner.tsx` | Сайт: мои покупки, карточка победителя (10%, таймер, код, остаток), баннер «оплатите 10%» |
+| `apps/miniapp/src/entities/purchase/api.ts`, `features/purchase-card.tsx`, `features/win-banner.tsx` | Сайт: мои покупки, карточка победителя (10%, таймер, код по нажатию, остаток, аннулирование с датой ограничения), баннер «оплатите 10%» |
+| `apps/miniapp/src/features/my-lots/` | Сайт: «Мои лоты» в профиле — `group.ts` (чистая раскладка: нужно действие / идут / предстоящие / история) и `my-lots.tsx`; данные — `GET /me/admissions` (`AdmissionsService.mine`: итог, судьба взноса, возвращённые взносы) и `/me/obligations` |
 | `apps/admin/src/features/manage/fulfillment-page.tsx` | Админка: раздел «Выдача» (остаток на месте, выдача по коду, решение по 10%) |
 | `apps/api/src/common/crypto-box.ts`, `cookies.ts` | AES-256-GCM для секретов в БД; разбор/сборка cookie |
 | `apps/api/src/common/rate-limit.ts` | Ограничение частоты запросов: `@RateLimit(LIMITS.x)` на эндпоинте, глобальный перехватчик, окно в Redis |

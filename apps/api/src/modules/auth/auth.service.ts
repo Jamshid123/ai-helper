@@ -79,7 +79,14 @@ export class AuthService {
   async me(userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } })
     if (!user) throw new UnauthorizedException({ code: 'UNAUTHORIZED', message: 'Нужна авторизация' })
-    return toBuyerDto(user)
+    // Ограничение участия видно заранее, с датой окончания — до окна допуска (решение 18.11.2026)
+    const now = this.clock.now()
+    const restriction = await this.prisma.restriction.findFirst({
+      where: { userId, liftedAt: null, startsAt: { lte: now }, endsAt: { gt: now } },
+      orderBy: { endsAt: 'desc' },
+      select: { endsAt: true },
+    })
+    return { ...toBuyerDto(user), restrictedUntil: restriction?.endsAt.toISOString() ?? null }
   }
 }
 

@@ -47,7 +47,16 @@ export class BuyoutService {
       include: { lot: { select: { title: true } } },
     })
     const paidRemainder = await this.paidRemainderLots(list.map((o) => o.lotId), userId)
-    return list.map((o) => this.buyerDto(o, o.lot.title, paidRemainder.has(o.lotId)))
+    // не оплатил 10% → ограничение: покупатель видит, до какого числа (решение 18.11.2026)
+    const restrictions = await this.prisma.restriction.findMany({
+      where: { userId, liftedAt: null, obligationId: { in: list.map((o) => o.id) } },
+      select: { obligationId: true, endsAt: true },
+    })
+    const until = new Map(restrictions.map((r) => [r.obligationId, r.endsAt.toISOString()]))
+    return list.map((o) => ({
+      ...this.buyerDto(o, o.lot.title, paidRemainder.has(o.lotId)),
+      restrictedUntil: until.get(o.id) ?? null,
+    }))
   }
 
   /** Начать оплату 10% или остатка: заказ на сумму, которую считает сервер, → оплата у провайдера. */

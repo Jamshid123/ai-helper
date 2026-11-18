@@ -142,6 +142,9 @@ describe('Выкуп: 10% за 15 минут, выдача по коду, пов
     })
     const r = await db.restriction.findFirstOrThrow({ where: { userId: winner.userId } })
     expect(r.endsAt.getTime() - r.startsAt.getTime()).toBe(7 * 24 * H)
+    // покупатель видит, до какого числа ограничено участие (решение 18.11.2026)
+    const [mine] = (await req('GET', '/me/obligations', winner.auth)).json()
+    expect(mine).toMatchObject({ status: 'EXPIRED', expiredReason: 'PREPAYMENT_MISSED', restrictedUntil: r.endsAt.toISOString() })
     expect((await db.lot.findUniqueOrThrow({ where: { id: lot.id } })).status).toBe('CLOSED_UNSOLD')
 
     const relist = await db.lot.findFirstOrThrow({ where: { relistOfId: lot.id }, include: { admissions: true } })

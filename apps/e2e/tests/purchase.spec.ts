@@ -13,5 +13,8 @@ test('победитель: баннер «оплатите 10%» → оплат
   await expect(page.getByText('300 000').first()).toBeVisible() // 10% от 3 000 000
   await page.getByRole('button', { name: /Оплатить\s*300 000/ }).first().click()
   await expect(page.getByText('Код выдачи')).toBeVisible()
+  // код — по нажатию (решение 18.11.2026)
+  await page.getByRole('button', { name: 'Показать код' }).click()
+  await expect(page.getByText(/^\d{6}$/)).toBeVisible()
   await expect(page.getByText('2 700 000').first()).toBeVisible() // остаток
 })
