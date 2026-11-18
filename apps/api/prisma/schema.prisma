@@ -125,6 +125,8 @@ model Lot {
   description     String       @default("")
   /// Акт проверки для карточки: summary, battery, imeiChecked, kit[], defects[]. Полный IMEI здесь не хранится.
   inspection      Json         @default("{}")
+  /// Снимок полей категории со значениями товара на момент создания лота: [{key, labelRu, labelUz, type, public, value}].
+  attributes      Json         @default("[]")
   startPrice      BigInt
   step            BigInt
   fee             BigInt
@@ -468,6 +470,10 @@ model Category {
   nameUz    String
   enabled   Boolean   @default(false)
   sortOrder Int       @default(0)
+  /// Поля карточки товара этой категории (решение 18.11.2026): [{key, labelRu, labelUz, type, required, public, options?}].
+  fields    Json      @default("[]")
+  /// Встроенный блок устройства: IMEI/серийный (зашифрован), батарея, «IMEI проверен», бейдж «Проверено экспертом».
+  deviceAct Boolean   @default(false)
   createdAt DateTime  @default(now()) @db.Timestamptz
   updatedAt DateTime  @updatedAt @db.Timestamptz
   products  Product[]
@@ -493,6 +499,8 @@ model Product {
   description String        @default("")
   /// Акт для карточки: summary, battery, imeiChecked, kit[], defects[].
   inspection  Json          @default("{}")
+  /// Значения полей категории: {key: значение} (текст, число, да/нет, дата YYYY-MM-DD, вариант списка).
+  attributes  Json          @default("{}")
   /// Полный IMEI/серийный номер — зашифрован (ТЗ: ограниченный доступ). В админке показываются последние 4 цифры.
   imeiEnc     String?
   imeiLast4   String?

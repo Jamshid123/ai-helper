@@ -34,11 +34,11 @@ export async function cleanDb(db: PrismaClient) {
   await db.category.deleteMany({ where: { slug: { notIn: ['phones', 'travel'] } } })
   await db.category.update({
     where: { slug: 'phones' },
-    data: { nameRu: 'Телефоны', nameUz: 'Telefonlar', enabled: true, sortOrder: 10 },
+    data: { nameRu: 'Телефоны', nameUz: 'Telefonlar', enabled: true, sortOrder: 10, fields: [], deviceAct: true },
   })
   await db.category.update({
     where: { slug: 'travel' },
-    data: { nameRu: 'Путешествия', nameUz: 'Sayohatlar', enabled: false, sortOrder: 20 },
+    data: { nameRu: 'Путешествия', nameUz: 'Sayohatlar', enabled: false, sortOrder: 20, fields: [], deviceAct: false },
   })
 }
 

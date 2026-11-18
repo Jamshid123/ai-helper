@@ -53,6 +53,7 @@ describe('Выкуп: 10% за 15 минут, выдача по коду, пов
       opensAt: new Date(now.getTime() - 2 * H),
       closesAt: new Date(now.getTime() - 1000),
       maxParticipants: 10,
+      attributes: [{ key: 'color', labelRu: 'Цвет', labelUz: 'Rang', type: 'text', public: true, value: 'Синий' }],
     })
     const winner = await loginAs(app, 960_001, 'Победитель')
     const other = await createUser(db)
@@ -153,6 +154,7 @@ describe('Выкуп: 10% за 15 минут, выдача по коду, пов
 
     const relist = await db.lot.findFirstOrThrow({ where: { relistOfId: lot.id }, include: { admissions: true } })
     expect(relist).toMatchObject({ status: 'DRAFT', productId: lot.productId, startPrice: lot.startPrice, admittedCount: 2 })
+    expect(relist.attributes).toEqual(lot.attributes) // характеристики — тот же снимок (решение 18.11.2026)
     expect(relist.admissions.map((a) => a.userId).sort()).toEqual([other.id, third.id].sort())
     expect(relist.admissions.every((a) => a.orderId === null && a.carriedFromLotId === lot.id)).toBe(true)
 

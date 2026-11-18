@@ -101,7 +101,10 @@ describe('Админка: сотрудники и роли', () => {
       permissions: { categories: 'edit', products: 'none' },
     })
     expect(upd.json().permissions).toEqual({ categories: 'edit' })
-    expect((await api('PATCH', `/categories/${phones.id}`, viewer.write, { nameUz: 'Telefon' })).statusCode).toBe(200)
+    const renamed = await api('PATCH', `/categories/${phones.id}`, viewer.write, { nameUz: 'Telefon' })
+    expect(renamed.statusCode).toBe(200)
+    // переименование не выключает категорию и не сбрасывает порядок (баг 18.11.2026: zod 4 подставлял default)
+    expect(renamed.json()).toMatchObject({ nameUz: 'Telefon', enabled: true, sortOrder: 10, deviceAct: true })
   })
 
   it('роли: создать, переименовать, удалить можно только без сотрудников', async () => {
@@ -166,7 +169,9 @@ describe('Админка: сотрудники и роли', () => {
       (await api('POST', `/staff/${s.id}/password`, owner.write, { password: 'new password 22' })).statusCode
     ).toBe(204)
     expect((await login('+998935550000', 'first password 1')).statusCode).toBe(401)
-    expect((await api('PATCH', `/staff/${s.id}`, owner.write, { disabled: true })).json().disabled).toBe(true)
+    const off = (await api('PATCH', `/staff/${s.id}`, owner.write, { disabled: true })).json()
+    expect(off.disabled).toBe(true)
+    expect(off.name).toBe('Тимур Расулов') // PATCH без фамилии её не стирает (баг 18.11.2026)
     expect((await login('+998935550000', 'new password 22')).statusCode).toBe(401)
 
     expect((await api('PATCH', `/staff/${owner.id}`, owner.write, { disabled: true })).json().code).toBe('OWNER_LOCKED')

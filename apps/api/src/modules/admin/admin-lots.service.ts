@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import type { Category, Lot, Prisma } from '@prisma/client'
-import { RULES } from '@auksion/shared'
+import { type Attributes, type CategoryField, RULES, snapshotAttributes } from '@auksion/shared'
 import { Clock } from '../../common/clock'
 import { PrismaService } from '../../prisma/prisma.service'
 import { RelistService } from '../fulfillment/relist.service'
@@ -53,6 +53,7 @@ export const lotDto = (l: LotFull) => ({
   admittedCount: l.admittedCount,
   lastSeq: l.lastSeq,
   inspection: l.inspection,
+  attributes: l.attributes,
   opensAt: l.opensAt.toISOString(),
   closesAt: l.closesAt.toISOString(),
   maxParticipants: l.maxParticipants,
@@ -107,7 +108,10 @@ export class AdminLotsService {
     input: Required<Pick<LotInput, 'startPrice' | 'step' | 'opensAt' | 'closesAt'>> & LotInput,
     actor: Actor
   ) {
-    const product = await this.prisma.product.findUnique({ where: { id: productId } })
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+      include: { category: { select: { fields: true } } },
+    })
     if (!product) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Товар не найден' })
     const values = { ...input }
     this.validate(values, product.costPrice)
@@ -126,6 +130,11 @@ export class AdminLotsService {
           description: values.description ?? product.description,
           condition: product.condition,
           inspection: values.inspection ?? (product.inspection as Prisma.InputJsonValue),
+          // снимок полей категории со значениями товара: правка шаблона не меняет лот (решение 18.11.2026)
+          attributes: snapshotAttributes(
+            (product.category.fields ?? []) as CategoryField[],
+            (product.attributes ?? {}) as Attributes
+          ) as unknown as Prisma.InputJsonValue,
           startPrice: values.startPrice,
           step: values.step,
           fee: DEFAULT_FEE,

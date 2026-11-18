@@ -72,7 +72,7 @@
 | `apps/miniapp` | Telegram Mini App покупателя (демо-стенд на тестовых данных; регистрация `routes/register.tsx`, заявка продавца `routes/seller.tsx`, демо-аккаунт `entities/account/`). Карта — `apps/miniapp/README.md` |
 | `apps/api` | NestJS 11 + Fastify + Prisma 6: `src/config/env.ts` (zod, без фолбэков секретов), `src/bootstrap.ts` (префикс `/api/v1`, CORS, заголовки), `src/modules/health`, `prisma/schema.prisma` + `prisma/migrations/`; тесты `test/` на настоящих PostgreSQL/Redis (`test/factories.ts`) |
 | `infra/Dockerfile.api` | Образ API (node:22-bookworm-slim, non-root, healthcheck) |
-| `packages/shared` | Общие правила: `rules.ts` (шаг, 30%, сроки, мин. ставка), `money.ts` (сумы, bigint), `session-time.ts` (пятница по Ташкенту) |
+| `packages/shared` | Общие правила: `rules.ts` (шаг, 30%, сроки, мин. ставка), `money.ts` (сумы, bigint), `session-time.ts` (пятница по Ташкенту), `attributes.ts` (поля карточки у категории: проверка набора полей и значений товара, снимок для лота — одна проверка для API и админки) |
 
 ## Плановая структура (появится при создании каркаса)
 
