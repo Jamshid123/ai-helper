@@ -78,5 +78,11 @@ test('допуск → комната → предложить цену → «Lo
   await expectBottomNavUsable(page)
   await page.locator('nav.fixed').getByRole('link', { name: 'Profil' }).click()
   await expect(page).toHaveURL(/\/me$/)
+  // «Мои лоты» на узбекском: лот — в «Идут сейчас», кнопка в комнату целиком на экране
+  const block = page.locator('section[aria-labelledby=my-lots]')
+  await expect(block.getByRole('heading', { name: 'Lotlarim' })).toBeVisible()
+  await expect(block.getByRole('heading', { name: 'Hozir bormoqda' })).toBeVisible()
+  const toRoom = block.getByRole('link', { name: 'Savdo xonasiga' })
+  await expectInViewport(page, toRoom)
   await expectNoHorizontalScroll(page)
 })

@@ -19,6 +19,8 @@ export type Purchase = {
   pickupCode: string | null
   expiredReason: 'PREPAYMENT_MISSED' | 'PICKUP_MISSED' | null
   completedAt: string | null
+  /** Не оплатил 10% → ограничение участия до этой даты (решение 18.11.2026). */
+  restrictedUntil?: string | null
 }
 
 export function usePurchases(): Purchase[] {

@@ -32,7 +32,7 @@ test('допуск к живым торгам → комната → предл�
     await expectBottomNavUsable(page)
     await page.locator('nav.fixed').getByRole('link', { name: 'Профиль' }).click()
     await expect(page).toHaveURL(/\/me$/)
-    await expect(page.getByText('E2E iPhone 13, 128 ГБ')).toBeVisible() // «Мои допуски»
+    await expect(page.getByText('E2E iPhone 13, 128 ГБ')).toBeVisible() // «Мои лоты» → «Идут сейчас»
   }
 })
 

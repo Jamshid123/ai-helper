@@ -3,13 +3,10 @@ import { ChevronRight, CircleHelp, Gavel, Store } from 'lucide-react'
 import { useI18n } from '@/app/i18n'
 import { maskPhone, resetAccount, useAccount } from '@/entities/account/demo-account'
 import { isSignedIn, useAuthActions, useMe } from '@/entities/account/session'
-import { DEMO, useAdmissions, useLots } from '@/entities/lot/api'
+import { DEMO } from '@/entities/lot/api'
+import { MyLots } from '@/features/my-lots/my-lots'
 import { openOnboarding } from '@/features/onboarding-store'
-import { PurchaseCard } from '@/features/purchase-card'
-import { usePurchases } from '@/entities/purchase/api'
-import { type Lot } from '@/entities/lot/types'
 import { cn } from '@/shared/lib/cn'
-import { formatSessionDate } from '@/shared/lib/format-date'
 
 function MePage() {
   const { t, locale, setLocale } = useI18n()
@@ -18,22 +15,13 @@ function MePage() {
   const { logout } = useAuthActions()
   const registered = isSignedIn(me)
   const name = registered ? me.publicName : null
-  const admissions = useAdmissions()
-  const { data: all = [] } = useLots()
-  // название и дата — из /me/admissions (черновики повторных торгов в публичный каталог не попадают);
-  // в демо — из списка лотов
-  const lots = admissions.list
-    .map((a) => {
-      const pub = all.find((l: Lot) => l.id === a.lotId)
-      const title = a.title ?? pub?.title
-      return title ? { ...a, title, opensAt: a.opensAt ?? pub?.opensAt } : null
-    })
-    .filter((a): a is NonNullable<typeof a> => a !== null)
-  const purchases = usePurchases()
 
   return (
     <div className='flex flex-col gap-5 px-4 pt-4 md:mx-auto md:w-full md:max-w-xl md:pt-8'>
       <h1 className='text-xl font-semibold'>{name ?? t('me.title')}</h1>
+
+      {/* «Мои лоты» — сразу под именем (решение 18.11.2026) */}
+      {registered && <MyLots />}
 
       {!registered ? (
         <section className='grid gap-2' aria-label={t('welcome.title')}>
@@ -74,15 +62,6 @@ function MePage() {
         </section>
       )}
 
-      {purchases.length > 0 && (
-        <section className='grid gap-2' id='purchases'>
-          <h2 className='text-[13px] text-muted'>{t('me.purchases')}</h2>
-          {purchases.map((p) => (
-            <PurchaseCard key={p.id} p={p} />
-          ))}
-        </section>
-      )}
-
       <section className='grid gap-2'>
         <h2 className='text-[13px] text-muted'>{t('me.language')}</h2>
         <div className='grid grid-cols-2 gap-1 rounded-xl bg-surface p-1'>
@@ -100,33 +79,6 @@ function MePage() {
             </button>
           ))}
         </div>
-      </section>
-
-      <section className='grid gap-2'>
-        <h2 className='text-[13px] text-muted'>{t('me.admissions')}</h2>
-        {lots.length === 0 ? (
-          <p className='text-[14px]'>{t('me.none')}</p>
-        ) : (
-          <ul className='divide-y divide-line'>
-            {lots.map((l) => (
-              <li key={l.lotId}>
-                <Link to='/lot/$lotId' params={{ lotId: l.lotId }} className='grid gap-0.5 py-3'>
-                  <span className='text-[15px]'>{l.title}</span>
-                  <span className='text-[12.5px] text-muted'>
-                    {l.opensAt ? formatSessionDate(new Date(l.opensAt), locale) : ''}
-                    {l.carried && (
-                      <span className='font-medium text-ok'>
-                        {' · ✓ '}
-                        {t('relist.badge')}
-                        {!l.confirmed && ` · ${t('relist.confirm')}?`}
-                      </span>
-                    )}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
       </section>
 
       <button

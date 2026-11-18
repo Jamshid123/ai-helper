@@ -8,7 +8,14 @@ import { isRegistered, publicNameOf, resetAccount, updateAccount, useAccount } f
  * Кто вошёл на сайт (решение 15.11.2026: вход по телефону и SMS-коду).
  * На сайте — сервер (`/auth/me` по cookie-сессии); в демо-режиме — локальный аккаунт этого устройства.
  */
-export type Me = { id: string; firstName: string; publicName: string; phoneVerified: boolean }
+export type Me = {
+  id: string
+  firstName: string
+  publicName: string
+  phoneVerified: boolean
+  /** Активное ограничение участия — до какого момента (решение 18.11.2026: видно заранее). */
+  restrictedUntil?: string | null
+}
 
 /** Код для демо-режима: SMS не отправляются, код один для всех. */
 export const DEMO_CODE = '000000'

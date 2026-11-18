@@ -107,12 +107,90 @@ async function main() {
     data: { phone: '+998901110003', phoneVerifiedAt: new Date(now), firstName: 'Нарушитель', lastName: 'Тестов', publicName: 'Нарушитель Т.' },
   })
 
+  // «Мои лоты» (решение 18.11.2026): покупатель со всеми состояниями — проверяем группы и тексты.
+  // По одному на проект (телефон / компьютер): повторный запрос SMS-кода на тот же номер ограничен.
+  async function seedMyLots(phone, rivalPhone) {
+    const ml = await db.user.create({
+      data: { phone, phoneVerifiedAt: new Date(now), firstName: 'Мои', lastName: 'Лоты', publicName: 'Мои Л.' },
+    })
+    const rival = await db.user.create({ data: { phone: rivalPhone, firstName: 'Соперник', publicName: 'Соперник С.' } })
+    const paidAdmission = async (lotId, userId = ml.id) => {
+      const order = await db.order.create({
+        data: { userId, lotId, purpose: 'ADMISSION', amount: 12_000n, provider: 'fake', status: 'PAID', paidAt: new Date(now) },
+      })
+      await db.admission.create({ data: { lotId, userId, orderId: order.id } })
+      await db.lot.update({ where: { id: lotId }, data: { admittedCount: { increment: 1 } } })
+    }
+    const mlLive = await lot('ML Идущие торги', { status: 'LIVE', opensAt: new Date(now - MIN), closesAt: new Date(now + 3 * H) })
+    await paidAdmission(mlLive.id)
+    const mlSoon = await lot('ML Будущие торги', { status: 'SCHEDULED', opensAt: new Date(now + 20 * H), closesAt: new Date(now + 22 * H) })
+    await paidAdmission(mlSoon.id)
+    const mlCarried = await lot('ML Повторные торги', { status: 'SCHEDULED', opensAt: new Date(now + 30 * H), closesAt: new Date(now + 32 * H) })
+    const mlLost = await lot('ML Проигранный лот', { status: 'CLOSED_SOLD', opensAt: new Date(now - 5 * H), closesAt: new Date(now - 4 * H) })
+    await paidAdmission(mlLost.id)
+    await paidAdmission(mlLost.id, rival.id)
+    await db.admission.create({ data: { lotId: mlCarried.id, userId: ml.id, carriedFromLotId: mlLost.id } })
+    const lostBid = await db.bid.create({
+      data: { lotId: mlLost.id, userId: rival.id, amount: 2_500_000n, seq: 1, idempotencyKey: crypto.randomUUID() },
+    })
+    await db.obligation.create({
+      data: {
+        lotId: mlLost.id, userId: rival.id, bidId: lostBid.id, rank: 1, amount: 2_500_000n, prepaymentAmount: 250_000n,
+        status: 'COMPLETED', confirmDeadline: new Date(now - 4 * H), completedAt: new Date(now - 2 * H),
+      },
+    })
+    const mlLeft = await lot('ML Вышел из лота', { status: 'SCHEDULED', opensAt: new Date(now + 40 * H), closesAt: new Date(now + 42 * H) })
+    await db.order.create({
+      data: { userId: ml.id, lotId: mlLeft.id, purpose: 'ADMISSION', amount: 12_000n, provider: 'fake', status: 'REFUND_PENDING' },
+    })
+    // выигрыш, 10% оплачены — ждёт выдачи (код — по нажатию)
+    const mlPickup = await lot('ML Ждёт выдачи', { status: 'CLOSED_SOLD', opensAt: new Date(now - 3 * H), closesAt: new Date(now - 2 * H) })
+    await paidAdmission(mlPickup.id)
+    const pickupBid2 = await db.bid.create({
+      data: { lotId: mlPickup.id, userId: ml.id, amount: 4_000_000n, seq: 1, idempotencyKey: crypto.randomUUID() },
+    })
+    const mlPickupOb = await db.obligation.create({
+      data: {
+        lotId: mlPickup.id, userId: ml.id, bidId: pickupBid2.id, rank: 1, amount: 4_000_000n, prepaymentAmount: 400_000n,
+        status: 'AWAITING_PICKUP', confirmDeadline: new Date(now - 2 * H), prepaymentDeadline: new Date(now - 2 * H + 15 * MIN),
+        remainderDeadline: new Date(now + 22 * H),
+      },
+    })
+    const mlCode = pickupCode(process.env.JWT_SECRET, mlPickupOb.id)
+    await db.obligation.update({
+      where: { id: mlPickupOb.id },
+      data: { pickupCodeHash: pickupCodeHash(process.env.JWT_SECRET, mlPickupOb.id, mlCode) },
+    })
+    // выигрыш, 10% не оплачены — аннулирован, ограничение 7 дней
+    const mlMissed = await lot('ML Не оплатил 10%', { status: 'CLOSED_UNSOLD', opensAt: new Date(now - 6 * H), closesAt: new Date(now - 5 * H) })
+    const missedBid = await db.bid.create({
+      data: { lotId: mlMissed.id, userId: ml.id, amount: 2_200_000n, seq: 1, idempotencyKey: crypto.randomUUID() },
+    })
+    const missedOb = await db.obligation.create({
+      data: {
+        lotId: mlMissed.id, userId: ml.id, bidId: missedBid.id, rank: 1, amount: 2_200_000n, prepaymentAmount: 220_000n,
+        status: 'EXPIRED', expiredReason: 'PREPAYMENT_MISSED', confirmDeadline: new Date(now - 5 * H),
+        prepaymentDeadline: new Date(now - 5 * H + 15 * MIN),
+      },
+    })
+    await db.restriction.create({
+      data: {
+        userId: ml.id, obligationId: missedOb.id, reason: 'Не оплачены 10% за выигранный лот в течение 15 минут',
+        startsAt: new Date(now - 5 * H + 15 * MIN), endsAt: new Date(now - 5 * H + 15 * MIN + 7 * 24 * H),
+      },
+    })
+      return { phone: ml.phone, pickupCode: mlCode, liveLotId: mlLive.id, soonLotId: mlSoon.id }
+  }
+  const myLotsPhone = await seedMyLots('+998901110004', '+998901110005')
+  const myLotsDesktop = await seedMyLots('+998901110006', '+998901110007')
+
   const fixtures = {
     liveLotId: live.id,
     scheduledLotId: scheduled.id,
     soldLotId: sold.id,
     winnerPhone,
     admin: { phone: process.env.E2E_STAFF_PHONE, password: process.env.E2E_STAFF_PASSWORD, pickupCode: code },
+    myLots: { phone: myLotsPhone, desktop: myLotsDesktop },
   }
   writeFileSync(path.join(__dirname, '../.fixtures.json'), JSON.stringify(fixtures, null, 2))
   console.log('e2e fixtures:', { liveLotId: live.id, soldLotId: sold.id, pickupLotId: pickupLot.id })

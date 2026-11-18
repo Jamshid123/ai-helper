@@ -67,29 +67,8 @@ export class PaymentsController {
    * Число участников лота видно только допущенным (решение 14.11.2026).
    */
   @Get('me/admissions')
-  async mine(@Req() req: AuthedRequest) {
-    const list = await this.prisma.admission.findMany({
-      where: { userId: req.userId },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        lotId: true,
-        createdAt: true,
-        carriedFromLotId: true,
-        confirmedAt: true,
-        lot: { select: { admittedCount: true, title: true, status: true, opensAt: true } },
-      },
-    })
-    return list.map((a) => ({
-      lotId: a.lotId,
-      admittedAt: a.createdAt.toISOString(),
-      admittedCount: a.lot.admittedCount,
-      title: a.lot.title,
-      status: a.lot.status,
-      opensAt: a.lot.opensAt.toISOString(),
-      // повторные торги: допуск перенесён без нового взноса; нужно подтвердить участие
-      carried: a.carriedFromLotId !== null,
-      confirmed: a.carriedFromLotId === null || a.confirmedAt !== null,
-    }))
+  mine(@Req() req: AuthedRequest) {
+    return this.admissions.mine(req.userId)
   }
 
   /** Имитация успешной оплаты — ТОЛЬКО при PAYMENTS_MODE=fake (демо/тесты). Идёт через тот же путь подтверждения. */

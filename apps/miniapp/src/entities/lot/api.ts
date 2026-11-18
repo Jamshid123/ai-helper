@@ -83,14 +83,21 @@ export function useCategories(): Category[] {
 
 /* ── Допуски ─────────────────────────────────────────────── */
 
-/** Допуск покупателя (GET /me/admissions). carried — перенесён на повторные торги без нового взноса. */
+/**
+ * Допуск покупателя (GET /me/admissions). carried — перенесён на повторные торги без нового взноса.
+ * «Мои лоты» (решение 18.11.2026): итог и судьба взноса — с сервера; admitted=false — допуска нет, взнос возвращается/возвращён.
+ */
 export type AdmissionInfo = {
   lotId: string
   title?: string
   status?: string
   opensAt?: string
+  closesAt?: string
   carried?: boolean
   confirmed?: boolean
+  admitted?: boolean
+  outcome?: 'WON' | 'NOT_WON' | null
+  feeStatus?: 'PAID' | 'CARRIED' | 'REFUND_PENDING' | 'REFUNDED' | string
 }
 type Admissions = {
   ids: string[]
@@ -114,11 +121,13 @@ export function useAdmissions(): Admissions {
     retry: false,
   })
   const list: AdmissionInfo[] = DEMO ? admittedLotIds().map((lotId) => ({ lotId })) : (q.data ?? [])
-  const ids = list.map((a) => a.lotId)
+  // в списке есть и возвращённые взносы (допуска уже нет) — «допущен» только по действующим
+  const active = list.filter((a) => a.admitted !== false)
+  const ids = active.map((a) => a.lotId)
   return {
     ids,
     has: (lotId) => ids.includes(lotId),
-    info: (lotId) => list.find((a) => a.lotId === lotId),
+    info: (lotId) => active.find((a) => a.lotId === lotId),
     list,
     ready: DEMO || q.isSuccess,
   }

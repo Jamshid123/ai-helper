@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { CheckCircle2, Clock, PackageCheck, XCircle } from 'lucide-react'
+import { CheckCircle2, CircleHelp, Clock, Eye, PackageCheck, XCircle } from 'lucide-react'
 import { useI18n } from '@/app/i18n'
 import { haptic } from '@/app/platform'
 import { usePayMethod } from '@/entities/payment/api'
@@ -23,6 +23,8 @@ export function PurchaseCard({ p, showTitle = true }: { p: Purchase; showTitle?:
   const [method, setMethod, methods] = usePayMethod()
   const [pending, setPending] = useState<'prepayment' | 'remainder' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // код выдачи — по нажатию (решение 18.11.2026): сложнее подсмотреть и поймать на скриншоте
+  const [codeShown, setCodeShown] = useState(false)
 
   const run = (part: 'prepayment' | 'remainder') => {
     if (pending) return
@@ -97,7 +99,17 @@ export function PurchaseCard({ p, showTitle = true }: { p: Purchase; showTitle?:
         {title}
         <div className='grid justify-items-center gap-1 rounded-xl bg-surface py-4'>
           <span className='text-[12.5px] text-muted'>{t('buy.code')}</span>
-          <span className='tabular text-[32px] leading-none font-bold tracking-[0.25em]'>{p.pickupCode}</span>
+          {codeShown ? (
+            <span className='tabular text-[32px] leading-none font-bold tracking-[0.25em]'>{p.pickupCode}</span>
+          ) : (
+            <button
+              type='button'
+              onClick={() => setCodeShown(true)}
+              className='inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-[15px] font-semibold text-brand-ink'
+            >
+              <Eye className='size-4' aria-hidden='true' /> {t('buy.code.show')}
+            </button>
+          )}
           <span className='px-4 text-center text-[12px] text-muted'>{t('buy.code.hint')}</span>
         </div>
         <div className='flex items-baseline justify-between gap-3 text-[14px]'>
@@ -136,6 +148,11 @@ export function PurchaseCard({ p, showTitle = true }: { p: Purchase; showTitle?:
         <div className='grid gap-0.5'>
           {title}
           <span className='text-[13px] text-muted'>{t('buy.completed')}</span>
+          {p.completedAt && (
+            <span className='text-[12.5px] text-muted'>
+              {t('buy.completedAt').replace('{date}', formatSessionDate(new Date(p.completedAt), locale))}
+            </span>
+          )}
         </div>
       </section>
     )
@@ -150,9 +167,23 @@ export function PurchaseCard({ p, showTitle = true }: { p: Purchase; showTitle?:
           <span className='text-[13px] text-muted'>
             {t(p.expiredReason === 'PICKUP_MISSED' ? 'buy.expired.pickup' : 'buy.expired.prepayment')}
           </span>
+          {p.restrictedUntil && Date.parse(p.restrictedUntil) > now && (
+            <span className='text-[13px] font-medium text-hot-text'>
+              {t('buy.restricted').replace('{until}', formatSessionDate(new Date(p.restrictedUntil), locale))}
+            </span>
+          )}
         </div>
       </section>
     )
   }
-  return null
+  // выкупы по старой схеме и отменённые — не прячем, а говорим, куда обратиться
+  return (
+    <section className='flex items-start gap-3 rounded-2xl border border-line p-4'>
+      <CircleHelp className='mt-0.5 size-5 shrink-0 text-muted' aria-hidden='true' />
+      <div className='grid gap-0.5'>
+        {title}
+        <span className='text-[13px] text-muted'>{t('buy.other')}</span>
+      </div>
+    </section>
+  )
 }

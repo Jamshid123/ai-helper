@@ -24,6 +24,79 @@ export class AdmissionsService {
   ) {}
 
   /** Выход из лота до начала торгов с возвратом 100% (решение 14.11.2026); после выхода можно вернуться. */
+  /**
+   * Мои допуски («Мои лоты», решение 18.11.2026): состояние торгов, итог и судьба взноса считает сервер.
+   * Возвращённые взносы показываем, хотя допуска уже нет (при возврате допуск удаляется).
+   * Только свои данные: ни победителя, ни других участников.
+   */
+  async mine(userId: string) {
+    const lotSelect = { title: true, status: true, opensAt: true, closesAt: true, admittedCount: true } as const
+    const [admissions, refunds, won] = await Promise.all([
+      this.prisma.admission.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          lotId: true,
+          createdAt: true,
+          orderId: true,
+          carriedFromLotId: true,
+          confirmedAt: true,
+          lot: { select: lotSelect },
+        },
+      }),
+      this.prisma.order.findMany({
+        where: { userId, purpose: 'ADMISSION', status: { in: ['REFUND_PENDING', 'REFUNDED'] } },
+        orderBy: { createdAt: 'desc' },
+        select: { lotId: true, status: true, createdAt: true, lot: { select: lotSelect } },
+      }),
+      this.prisma.obligation.findMany({ where: { userId }, select: { lotId: true } }),
+    ])
+    const wonLots = new Set(won.map((o) => o.lotId))
+    const orderStatus = new Map(
+      (
+        await this.prisma.order.findMany({
+          where: { id: { in: admissions.map((a) => a.orderId).filter((id): id is string => id !== null) } },
+          select: { id: true, status: true },
+        })
+      ).map((o) => [o.id, o.status])
+    )
+    const outcome = (lotId: string, status: string) =>
+      wonLots.has(lotId) ? 'WON' : ['CLOSED_SOLD', 'CLOSED_UNSOLD'].includes(status) ? 'NOT_WON' : null
+    type Lot = { title: string; status: string; opensAt: Date; closesAt: Date; admittedCount: number }
+    const base = (lotId: string, lot: Lot) => ({
+      lotId,
+      title: lot.title,
+      status: lot.status,
+      opensAt: lot.opensAt.toISOString(),
+      closesAt: lot.closesAt.toISOString(),
+    })
+    const admitted = admissions.map((a) => ({
+      ...base(a.lotId, a.lot),
+      admitted: true,
+      admittedAt: a.createdAt.toISOString(),
+      // число участников лота видно только допущенным (решение 14.11.2026)
+      admittedCount: a.lot.admittedCount,
+      outcome: outcome(a.lotId, a.lot.status),
+      feeStatus: a.orderId === null ? 'CARRIED' : (orderStatus.get(a.orderId) ?? 'PAID'),
+      // повторные торги: допуск перенесён без нового взноса; нужно подтвердить участие
+      carried: a.carriedFromLotId !== null,
+      confirmed: a.carriedFromLotId === null || a.confirmedAt !== null,
+    }))
+    const have = new Set(admitted.map((a) => a.lotId))
+    const refunded = refunds
+      .filter((r) => !have.has(r.lotId))
+      .map((r) => ({
+        ...base(r.lotId, r.lot),
+        admitted: false,
+        admittedAt: r.createdAt.toISOString(),
+        outcome: null,
+        feeStatus: r.status,
+        carried: false,
+        confirmed: true,
+      }))
+    return [...admitted, ...refunded]
+  }
+
   async leave(userId: string, lotId: string): Promise<{ refunded: boolean }> {
     return this.refunds.revokeOneBeforeStart(lotId, userId, {
       actorType: 'buyer',
