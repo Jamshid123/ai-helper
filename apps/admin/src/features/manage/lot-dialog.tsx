@@ -84,7 +84,6 @@ export function LotDialog({ open, onOpenChange, product: given, lot }: Props) {
     description: lot?.description ?? given?.description ?? '',
     startPrice: lot?.startPrice ?? given?.costPrice ?? '',
     step: lot?.step ?? '100000',
-    fee: lot?.fee ?? '12000',
     start: lot ? toTashkentLocal(lot.opensAt) : defaultStart(),
     minutes: String(initialMinutes),
     minParticipants:
@@ -133,7 +132,6 @@ export function LotDialog({ open, onOpenChange, product: given, lot }: Props) {
       description: v.description.trim(),
       startPrice: v.startPrice,
       step: v.step,
-      fee: v.fee || '0',
       opensAt: new Date(opensAt).toISOString(),
       closesAt,
       minParticipants: min,
@@ -290,7 +288,7 @@ export function LotDialog({ open, onOpenChange, product: given, lot }: Props) {
             </div>
           </div>
 
-          <div className='grid grid-cols-1 gap-3 sm:grid-cols-3'>
+          <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
             <Field
               label='Старт, сум'
               hint={
@@ -312,13 +310,6 @@ export function LotDialog({ open, onOpenChange, product: given, lot }: Props) {
                 inputMode='numeric'
                 value={v.step}
                 onChange={(e) => setV({ ...v, step: digits(e.target.value) })}
-              />
-            </Field>
-            <Field label='Взнос, сум'>
-              <Input
-                inputMode='numeric'
-                value={v.fee}
-                onChange={(e) => setV({ ...v, fee: digits(e.target.value) })}
               />
             </Field>
           </div>

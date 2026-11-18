@@ -13,6 +13,8 @@ export type Fixtures = {
   admin: { phone: string; password: string; pickupCode: string }
   /** покупатель со всеми состояниями «Моих лотов» */
   myLots: Record<'phone' | 'desktop', MyLotsBuyer>
+  /** покупатели, у которых уже 3 допуска (лимит одновременных торгов) */
+  limitPhones: Record<'phone' | 'desktop', string>
 }
 
 /** id тестовых лотов и телефон победителя (пишет scripts/seed.cjs при старте API). */

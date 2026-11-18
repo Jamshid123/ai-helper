@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { BadgeCheck, ChevronLeft } from 'lucide-react'
-import { formatSum } from '@auksion/shared'
+import { RULES } from '@auksion/shared'
 import { useI18n } from '@/app/i18n'
 import { haptic, useBackButton, useMainButton } from '@/app/platform'
 import { endsAtOf, isFull, participantsOf, useAdmissions, useAdmit, useLot } from '@/entities/lot/api'
-import { usePayMethod } from '@/entities/payment/api'
-import { PayMethodChoice } from '@/features/pay-method'
 import { isSignedIn, useMe } from '@/entities/account/session'
 import { errorText } from '@/shared/api/error-text'
 import { type Lot } from '@/entities/lot/types'
@@ -41,35 +39,32 @@ function Row({ label, children, stacked }: { label: string; children: React.Reac
 }
 
 function AdmissionSheet({ lot, onClose, onPaid }: { lot: Lot; onClose: () => void; onPaid: () => void }) {
-  const { t, locale } = useI18n()
+  const { t } = useI18n()
   const [agree, setAgree] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const admit = useAdmit()
-  const [method, setMethod, methods] = usePayMethod()
-  const pay = useCallback(() => {
+  // Допуск бесплатный (решение 18.11.2026): правила и обязательства победителя → допуск сразу, без оплаты
+  const confirm = useCallback(() => {
     if (!agree || pending) return
-    // Click / Payme — переход на их страницу (вернёмся на этот лот); тестовый запуск — оплату имитирует сервер.
     setPending(true)
     setError(null)
-    admit(lot.id, { provider: method, locale })
-      .then(
-        (outcome) => {
-          if (outcome === 'redirected') return
-          haptic('success')
-          setPending(false)
-          onPaid()
-        },
-        (e: unknown) => {
-          haptic('error')
-          setError(errorText(t, e))
-          setPending(false)
-        }
-      )
-  }, [agree, pending, admit, lot.id, onPaid, t, method, locale])
+    admit(lot.id).then(
+      () => {
+        haptic('success')
+        setPending(false)
+        onPaid()
+      },
+      (e: unknown) => {
+        haptic('error')
+        setError(errorText(t, e))
+        setPending(false)
+      }
+    )
+  }, [agree, pending, admit, lot.id, onPaid, t])
   const native = useMainButton({
-    text: `${t('admission.pay')} ${formatSum(lot.fee, locale)}`,
-    onClick: pay,
+    text: t('admission.get'),
+    onClick: confirm,
     enabled: agree && !pending,
     loading: pending,
   })
@@ -87,22 +82,19 @@ function AdmissionSheet({ lot, onClose, onPaid }: { lot: Lot; onClose: () => voi
       >
         <h2 className='mb-1 text-lg font-semibold'>{t('admission.title')}</h2>
         <p className='mb-4 text-[14px] text-muted'>{lot.title}</p>
-        <div className='mb-4 flex items-baseline justify-between rounded-2xl bg-surface px-4 py-3'>
-          <span className='grid'>
-            <span className='text-[14px]'>{t('lot.fee')}</span>
-            <span className='text-[12px] text-muted'>{t('lot.feeNote')}</span>
-          </span>
-          <Price value={lot.fee} className='text-lg font-bold' />
+        <div className='mb-4 grid gap-0.5 rounded-2xl bg-surface px-4 py-3'>
+          <span className='text-[15px] font-semibold text-ok'>{t('admission.free')}</span>
+          <span className='text-[12.5px] text-muted'>{t('admission.free.note')}</span>
+        </div>
+        <div className='mb-4 grid gap-1.5 text-[13.5px] leading-snug'>
+          <span className='font-medium'>{t('admission.duty.title')}</span>
+          <ul className='grid gap-1 ps-5 text-muted [list-style:disc]'>
+            <li>{t('admission.duty.1')}</li>
+            <li>{t('admission.duty.2')}</li>
+            <li>{t('admission.duty.3')}</li>
+          </ul>
         </div>
         <dl className='mb-4 grid gap-2 text-[13px] leading-relaxed'>
-          <div>
-            <dt className='font-medium'>{t('lot.terms')}</dt>
-            <dd className='text-muted'>{t('lot.terms.text')}</dd>
-          </div>
-          <div>
-            <dt className='font-medium'>{t('lot.refund')}</dt>
-            <dd className='text-muted'>{t('lot.refund.text')}</dd>
-          </div>
           <div>
             <dt className='font-medium'>{t('lot.pickup')}</dt>
             <dd className='text-muted'>{t('lot.pickup.text')}</dd>
@@ -118,7 +110,6 @@ function AdmissionSheet({ lot, onClose, onPaid }: { lot: Lot; onClose: () => voi
           />
           {t('admission.agree')}
         </label>
-        <PayMethodChoice methods={methods} value={method} onChange={setMethod} className='mb-5' />
         {error && (
           <p role='alert' className='mb-4 rounded-xl bg-hot/10 px-4 py-3 text-[14px] font-medium text-hot-text'>
             {error}
@@ -129,8 +120,8 @@ function AdmissionSheet({ lot, onClose, onPaid }: { lot: Lot; onClose: () => voi
             {t('admission.cancel')}
           </Button>
           {!native && (
-            <Button onClick={pay} disabled={!agree || pending}>
-              {t('admission.pay')} <Price value={lot.fee} />
+            <Button onClick={confirm} disabled={!agree || pending}>
+              {t('admission.get')}
             </Button>
           )}
         </div>
@@ -175,14 +166,21 @@ function LotPage() {
   // Ограничение участия видно сразу, с датой — а не после галочки и «Оплатить» (решение 18.11.2026)
   const restrictedUntil =
     !admitted && me?.restrictedUntil && Date.parse(me.restrictedUntil) > now ? me.restrictedUntil : null
-  const blocked = full || Boolean(restrictedUntil)
+  // лимит одновременных допусков (решение 18.11.2026) — тоже заранее, а не после галочки
+  const activeAdmissions = admissions.list.filter(
+    (a) => a.admitted !== false && (a.status === 'SCHEDULED' || a.status === 'LIVE')
+  ).length
+  const atLimit = registered && !admitted && activeAdmissions >= RULES.MAX_ACTIVE_ADMISSIONS
+  const blocked = full || Boolean(restrictedUntil) || atLimit
   const ctaText = admitted
     ? t('lot.toRoom')
     : restrictedUntil
       ? t('lot.restricted').replace('{until}', formatSessionDate(new Date(restrictedUntil), locale))
       : full
         ? t('lot.full')
-        : t('lot.participate')
+        : atLimit
+          ? t('lot.limit').replace('{n}', String(activeAdmissions))
+          : t('lot.participate')
   const primary = useCallback(() => {
     if (!lot) return
     if (admitted && live) navigate({ to: '/lot/$lotId/room', params: { lotId: lot.id } })
@@ -315,8 +313,8 @@ function LotPage() {
             {participantsOf(lot)}
             {lot.maxParticipants ? ` ${t('lot.of')} ${lot.maxParticipants}` : ''}
           </Row>
-          <Row label={t('lot.fee')}>
-            <Price value={lot.fee} />
+          <Row label={t('lot.participation')}>
+            <span className='font-medium text-ok'>{t('lot.free')}</span>
           </Row>
         </section>
 
@@ -339,9 +337,6 @@ function LotPage() {
           <h2 className='text-[15px] font-semibold'>{t('lot.terms')}</h2>
           <p className='text-[13.5px] leading-relaxed text-muted'>{t('lot.terms.text')}</p>
           <div className='divide-y divide-line'>
-            <Row stacked label={t('lot.refund')}>
-              {t('lot.refund.text')}
-            </Row>
             <Row stacked label={t('lot.pickup')}>
               {t('lot.pickup.text')}
             </Row>

@@ -1,3 +1,4 @@
+import { RULES } from '@auksion/shared'
 import { type ArgumentsHost, Catch, type ExceptionFilter } from '@nestjs/common'
 import type { FastifyReply } from 'fastify'
 import { AdmissionError } from './admission.errors'
@@ -13,6 +14,7 @@ const MAP: Record<string, { status: number; message: string }> = {
   LOT_STARTED: { status: 409, message: 'Торги уже начались — выйти с возвратом нельзя' },
   NOT_ADMITTED: { status: 404, message: 'Допуска к этому лоту нет' },
   LOT_FULL: { status: 409, message: 'Мест в этих торгах больше нет' },
+  ADMISSION_LIMIT: { status: 409, message: `Одновременно — не больше ${RULES.MAX_ACTIVE_ADMISSIONS} торгов` },
   PRODUCT_BLOCKED: { status: 403, message: 'Участие в торгах этого товара для вас недоступно' },
   DEVICE_SHARED: {
     status: 409,

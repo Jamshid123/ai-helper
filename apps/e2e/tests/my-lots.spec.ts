@@ -44,9 +44,9 @@ test('профиль: «Мои лоты» по группам; код выдач
   const toRoom = block.getByRole('link', { name: 'В комнату торгов' })
   await expect(toRoom).toBeVisible()
   await expect(toRoom).toHaveAttribute('href', `/lot/${myLots.liveLotId}/room`)
-  // Предстоящие: дата и «взнос оплачен»
+  // Предстоящие: дата и «допуск получен»
   await expect(block.getByText('ML Будущие торги')).toBeVisible()
-  await expect(block.getByText(/взнос оплачен/)).toBeVisible()
+  await expect(block.getByText(/допуск получен/)).toBeVisible()
 
   // История свёрнута, внутри — итог и взнос, без имени победителя
   await expect(block.getByText('ML Проигранный лот')).toHaveCount(0)

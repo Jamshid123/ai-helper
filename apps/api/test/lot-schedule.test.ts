@@ -96,41 +96,31 @@ describe('Параметры торгов: любой день, ожидание
     expect(await db.auditLog.count({ where: { action: 'lot.cancelled_min_participants' } })).toBe(1)
   })
 
-  it('максимум участников: мест нет — допуск не оформляется; оплата, пришедшая после заполнения, уходит на возврат', async () => {
+  it('максимум участников: одновременные заявки на последнее место — ровно столько допусков, сколько мест', async () => {
     const lot = await createLot(db, {
       status: 'SCHEDULED',
       opensAt: new Date(Date.now() + 86_400_000),
       closesAt: new Date(Date.now() + 90_000_000),
-      maxParticipants: 1,
+      maxParticipants: 2,
     })
-    const a = await loginAs(app, 960_001)
-    const b = await loginAs(app, 960_002)
+    const users = await Promise.all([960_001, 960_002, 960_003, 960_004, 960_005].map((tg) => loginAs(app, tg)))
     const start = (auth: Record<string, string>) =>
-      app.inject({
-        method: 'POST',
-        url: `/api/v1/lots/${lot.id}/admission`,
-        headers: auth,
-        payload: { acceptRules: true },
-      })
-    const ra = (await start(a.auth)).json()
-    const rb = (await start(b.auth)).json() // оба начали оформление, пока место было
-    const pay = (orderId: string, auth: Record<string, string>) =>
-      app.inject({ method: 'POST', url: `/api/v1/payments/fake/${orderId}/complete`, headers: auth })
-    expect((await pay(ra.orderId, a.auth)).json().outcome).toBe('ADMITTED')
-    expect((await pay(rb.orderId, b.auth)).json().outcome).toBe('REFUND_FULL')
-    expect((await db.order.findUniqueOrThrow({ where: { id: rb.orderId } })).status).toBe('REFUND_PENDING')
+      app.inject({ method: 'POST', url: `/api/v1/lots/${lot.id}/admission`, headers: auth, payload: { acceptRules: true } })
+    // допуск бесплатный (решение 18.11.2026): заявки сразу занимают места — без гонки «оплата пришла, мест нет»
+    const res = await Promise.all(users.map((u) => start(u.auth)))
+    expect(res.filter((r) => r.statusCode === 200 && r.json().status === 'ADMITTED')).toHaveLength(2)
+    expect(res.filter((r) => r.statusCode === 409).map((r) => r.json().code)).toEqual(['LOT_FULL', 'LOT_FULL', 'LOT_FULL'])
+    expect(await db.admission.count({ where: { lotId: lot.id } })).toBe(2)
+    expect(await db.order.count()).toBe(0)
 
-    const c = await loginAs(app, 960_003)
-    const full = await start(c.auth)
-    expect(full.statusCode).toBe(409)
-    expect(full.json().code).toBe('LOT_FULL')
     const dto = (await app.inject({ method: 'GET', url: `/api/v1/lots/${lot.id}` })).json()
     // число участников видно всем, в т.ч. без допуска (решение заказчика 14.11.2026)
-    expect(dto).toMatchObject({ maxParticipants: 1, full: true, admittedCount: 1 })
+    expect(dto).toMatchObject({ maxParticipants: 2, full: true, admittedCount: 2 })
     const list = (await app.inject({ method: 'GET', url: '/api/v1/lots' })).json()
-    expect(list[0]).toMatchObject({ admittedCount: 1 })
-    const mine = (await app.inject({ method: 'GET', url: '/api/v1/me/admissions', headers: a.auth })).json()
-    expect(mine).toEqual([expect.objectContaining({ lotId: lot.id, admittedCount: 1 })])
+    expect(list[0]).toMatchObject({ admittedCount: 2 })
+    const winner = users.find((_, k) => res[k].statusCode === 200)!
+    const mine = (await app.inject({ method: 'GET', url: '/api/v1/me/admissions', headers: winner.auth })).json()
+    expect(mine).toEqual([expect.objectContaining({ lotId: lot.id, admittedCount: 2, feeStatus: null, carried: false })])
   })
 
   it('каталог отдаёт фактическое окончание (endsAt) и ожидание предложения', async () => {

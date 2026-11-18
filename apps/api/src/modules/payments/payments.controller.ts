@@ -40,7 +40,7 @@ export class PaymentsController {
     private readonly clock: Clock
   ) {}
 
-  /** Оформить допуск к лоту: принять правила → заказ на взнос → оплата. */
+  /** Получить допуск к лоту: принять правила → допуск сразу, бесплатно (решение 18.11.2026). */
   @RateLimit(LIMITS.admission)
   @Post('lots/:lotId/admission')
   @HttpCode(200)
@@ -48,13 +48,11 @@ export class PaymentsController {
     const parsed = startSchema.safeParse(body)
     if (!parsed.success)
       throw new BadRequestException({ code: 'RULES_NOT_ACCEPTED', message: 'Примите правила торгов' })
-    return this.admissions.start(req.userId, lotId, true, req.deviceHash ?? null, {
-      provider: parsed.data.provider,
-      locale: parsed.data.locale,
-    })
+    // допуск бесплатный (решение 18.11.2026): provider/locale старых клиентов игнорируются
+    return this.admissions.start(req.userId, lotId, true, req.deviceHash ?? null)
   }
 
-  /** Выйти из лота до начала торгов — возврат 100% (решение 14.11.2026). */
+  /** Выйти из лота до начала торгов: место освобождается (старым оплаченным допускам — возврат 100%). */
   @RateLimit(LIMITS.admission)
   @Delete('lots/:lotId/admission')
   @HttpCode(200)

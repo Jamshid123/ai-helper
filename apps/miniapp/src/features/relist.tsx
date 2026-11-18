@@ -76,8 +76,6 @@ export function CarriedCard({ info, opensAt }: { info: AdmissionInfo; opensAt: n
           <span className='text-[12.5px] text-muted'>{t('relist.noAction')}</span>
         </>
       )}
-      {/* честно: по перенесённому допуску в этом лоте взнос не платили — при отмене возвращать нечего */}
-      <span className='text-[12px] text-muted'>{t('relist.noRefund')}</span>
       {error && (
         <p role='alert' className='text-[13px] font-medium text-hot-text'>
           {error}

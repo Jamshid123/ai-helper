@@ -58,10 +58,14 @@ describe('Выкуп: 10% за 15 минут, выдача по коду, пов
     const other = await createUser(db)
     const third = await createUser(db)
     for (const [i, uid] of [winner.userId, other.id, third.id].entries()) {
-      const order = await db.order.create({
-        data: { userId: uid, lotId: lot.id, purpose: 'ADMISSION', amount: 12_000n, provider: 'fake', status: 'PAID' },
-      })
-      await db.admission.create({ data: { lotId: lot.id, userId: uid, orderId: order.id } })
+      // допуск бесплатный (решение 18.11.2026); у второго — старый оплаченный: на повторные торги переносятся оба вида
+      const order =
+        uid === other.id
+          ? await db.order.create({
+              data: { userId: uid, lotId: lot.id, purpose: 'ADMISSION', amount: 12_000n, provider: 'fake', status: 'PAID' },
+            })
+          : null
+      await db.admission.create({ data: { lotId: lot.id, userId: uid, orderId: order?.id ?? null } })
       await db.bid.create({
         data: { lotId: lot.id, userId: uid, amount: BigInt(2_000_000 + i * 100_000), seq: i + 1, idempotencyKey: key() },
       })

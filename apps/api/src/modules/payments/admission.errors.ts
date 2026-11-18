@@ -6,6 +6,7 @@ export type AdmissionErrorCode =
   | 'LOT_STARTED'
   | 'NOT_ADMITTED'
   | 'LOT_FULL'
+  | 'ADMISSION_LIMIT'
   | 'DEVICE_SHARED'
   | 'PRODUCT_BLOCKED'
 

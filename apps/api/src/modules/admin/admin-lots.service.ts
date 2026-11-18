@@ -12,7 +12,8 @@ const MIN_DURATION_MIN = 5
 const MAX_DURATION_MIN = 14 * 24 * 60
 
 /** Взнос за допуск по умолчанию (решение заказчика: 12 000 сум, меняется для лота). */
-export const DEFAULT_FEE = 12_000n
+/** Допуск бесплатный (решение 18.11.2026): поле оставлено для старых лотов, у новых — 0. */
+export const DEFAULT_FEE = 0n
 
 export type LotInput = {
   title?: string
@@ -20,7 +21,6 @@ export type LotInput = {
   inspection?: Prisma.InputJsonValue
   startPrice?: bigint
   step?: bigint
-  fee?: bigint
   opensAt?: Date
   closesAt?: Date
   maxParticipants?: number | null
@@ -109,7 +109,7 @@ export class AdminLotsService {
   ) {
     const product = await this.prisma.product.findUnique({ where: { id: productId } })
     if (!product) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Товар не найден' })
-    const values = { fee: DEFAULT_FEE, ...input }
+    const values = { ...input }
     this.validate(values, product.costPrice)
     const lot = await this.prisma.$transaction(async (tx) => {
       // товар — только в один активный лот (условное обновление защищает от гонки)
@@ -128,7 +128,7 @@ export class AdminLotsService {
           inspection: values.inspection ?? (product.inspection as Prisma.InputJsonValue),
           startPrice: values.startPrice,
           step: values.step,
-          fee: values.fee,
+          fee: DEFAULT_FEE,
           opensAt: values.opensAt,
           closesAt: values.closesAt,
           maxParticipants: values.maxParticipants ?? null,
@@ -163,7 +163,6 @@ export class AdminLotsService {
         {
           startPrice: input.startPrice ?? l.startPrice,
           step: input.step ?? l.step,
-          fee: input.fee ?? l.fee,
           opensAt: input.opensAt ?? l.opensAt,
           closesAt: input.closesAt ?? l.closesAt,
           maxParticipants: input.maxParticipants !== undefined ? input.maxParticipants : l.maxParticipants,
@@ -272,7 +271,7 @@ export class AdminLotsService {
   }
 
   private validate(
-    v: Required<Pick<LotInput, 'startPrice' | 'step' | 'opensAt' | 'closesAt' | 'fee'>> &
+    v: Required<Pick<LotInput, 'startPrice' | 'step' | 'opensAt' | 'closesAt'>> &
       Pick<LotInput, 'maxParticipants' | 'minParticipants'>,
     costPrice: bigint | null
   ) {
@@ -280,7 +279,6 @@ export class AdminLotsService {
     if (costPrice !== null && v.startPrice < costPrice) {
       throw unprocessable('START_BELOW_COST', 'Стартовая цена ниже себестоимости товара')
     }
-    if (v.fee < 0n) throw unprocessable('BAD_FEE', 'Взнос не может быть отрицательным')
     if (v.opensAt <= this.clock.now()) throw unprocessable('LOT_IN_PAST', 'Время начала уже прошло')
     const minutes = (v.closesAt.getTime() - v.opensAt.getTime()) / 60_000
     if (minutes < MIN_DURATION_MIN || minutes > MAX_DURATION_MIN) {

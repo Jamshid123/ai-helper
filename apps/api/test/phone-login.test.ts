@@ -149,24 +149,16 @@ describe('Сайт: вход по телефону и SMS-коду (решени
     const admit = (lotId: string, h: Record<string, string>) =>
       post(`/lots/${lotId}/admission`, { acceptRules: true }, h)
 
-    // A начал оплату — B с того же устройства уже не может (отказ до оплаты)
-    const startA = await admit(lot.id, a.write)
-    expect(startA.json()).toMatchObject({ status: 'PAYMENT_REQUIRED' })
+    // A получил допуск — B с того же устройства в этот лот не может
+    expect((await admit(lot.id, a.write)).json()).toMatchObject({ status: 'ADMITTED' })
     const refused = await admit(lot.id, b.write)
     expect(refused.statusCode).toBe(409)
     expect(refused.json().code).toBe('DEVICE_SHARED')
-    expect(await db.order.count({ where: { lotId: lot.id } })).toBe(1) // у B заказ не создан
-
-    // A оплатил — B по-прежнему нельзя
-    await app.inject({
-      method: 'POST',
-      url: `/api/v1/payments/fake/${startA.json().orderId}/complete`,
-      headers: a.write,
-    })
     expect((await admit(lot.id, b.write)).json().code).toBe('DEVICE_SHARED')
+    expect(await db.admission.count({ where: { lotId: lot.id } })).toBe(1)
     // другой лот — можно; покупатель с другого устройства — можно
-    expect((await admit(other.id, b.write)).json()).toMatchObject({ status: 'PAYMENT_REQUIRED' })
-    expect((await admit(lot.id, c.write)).json()).toMatchObject({ status: 'PAYMENT_REQUIRED' })
+    expect((await admit(other.id, b.write)).json()).toMatchObject({ status: 'ADMITTED' })
+    expect((await admit(lot.id, c.write)).json()).toMatchObject({ status: 'ADMITTED' })
 
     const log = await db.auditLog.findMany({ where: { action: 'admission.device_shared', entityId: lot.id } })
     expect(log).toHaveLength(2)

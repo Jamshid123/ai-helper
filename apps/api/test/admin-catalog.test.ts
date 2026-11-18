@@ -139,7 +139,7 @@ describe('Админка: категории, товары, лоты', () => {
       status: 'DRAFT',
       title: p.title,
       startPrice: '4500000',
-      fee: '12000',
+      fee: '0', // допуск бесплатный (решение 18.11.2026)
       category: 'phones',
     })
     expect((await db.product.findUniqueOrThrow({ where: { id: p.id } })).status).toBe('IN_LOT')
@@ -233,19 +233,22 @@ describe('Админка: категории, товары, лоты', () => {
       headers: buyer.auth,
       payload: { acceptRules: true },
     })
-    await app.inject({
-      method: 'POST',
-      url: `/api/v1/payments/fake/${adm.json().orderId}/complete`,
-      headers: buyer.auth,
+    expect(adm.json()).toEqual({ status: 'ADMITTED' }) // допуск бесплатный (решение 18.11.2026)
+    // у второго — допуск, оплаченный взносом до 18.11.2026: при отмене взнос возвращается
+    const old = await loginAs(app, 930_021)
+    const oldOrder = await db.order.create({
+      data: { userId: old.userId, lotId: lot.id, purpose: 'ADMISSION', amount: 12_000n, provider: 'fake', status: 'PAID' },
     })
-    expect((await db.lot.findUniqueOrThrow({ where: { id: lot.id } })).admittedCount).toBe(1)
+    await db.admission.create({ data: { lotId: lot.id, userId: old.userId, orderId: oldOrder.id } })
+    await db.lot.update({ where: { id: lot.id }, data: { admittedCount: { increment: 1 } } })
+    expect((await db.lot.findUniqueOrThrow({ where: { id: lot.id } })).admittedCount).toBe(2)
 
     expect((await req('POST', `/admin/lots/${lot.id}/cancel`, s.write, {})).statusCode).toBe(400)
     const r = await req('POST', `/admin/lots/${lot.id}/cancel`, s.write, { reason: 'Брак при повторной проверке' })
     expect(r.statusCode).toBe(200)
     expect(r.json()).toMatchObject({ status: 'CANCELLED', refunded: 1 })
     expect(await db.admission.count({ where: { lotId: lot.id } })).toBe(0)
-    expect((await db.order.findUniqueOrThrow({ where: { id: adm.json().orderId } })).status).toBe('REFUNDED')
+    expect((await db.order.findUniqueOrThrow({ where: { id: oldOrder.id } })).status).toBe('REFUNDED')
     expect((await db.product.findUniqueOrThrow({ where: { id: p.id } })).status).toBe('AVAILABLE')
     const audit = await db.auditLog.findFirstOrThrow({ where: { action: 'lot.cancelled' } })
     expect(audit).toMatchObject({ actorId: s.id, reason: 'Брак при повторной проверке' })
