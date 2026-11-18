@@ -29,6 +29,13 @@ test('профиль: «Мои лоты» по группам; код выдач
   await expect(block.getByText(myLots.pickupCode)).toHaveCount(0)
   await block.getByRole('button', { name: 'Показать код' }).click()
   await expect(block.getByText(myLots.pickupCode)).toBeVisible()
+  // статус оплаты — с сервера: банк проводит → не платить повторно; попытка отменена → можно снова
+  const paying = block.locator('section').filter({ hasText: 'ML Оплата проверяется' })
+  await expect(paying.getByText(/Проверяем оплату.*Не оплачивайте повторно/)).toBeVisible()
+  await expect(paying.getByRole('button', { name: /^Оплатить/ })).toHaveCount(0)
+  const failed = block.locator('section').filter({ hasText: 'ML Оплата не прошла' })
+  await expect(failed.getByText('Оплата не завершена. Время ещё есть — оплатите снова.')).toBeVisible()
+  await expect(failed.getByRole('button', { name: /^Оплатить/ })).toBeEnabled()
   // повторные торги без подтверждения — тоже действие
   await expect(block.getByText('ML Повторные торги')).toBeVisible()
   await expect(block.getByText(/подтвердите участие/)).toBeVisible()
@@ -43,7 +50,8 @@ test('профиль: «Мои лоты» по группам; код выдач
 
   // История свёрнута, внутри — итог и взнос, без имени победителя
   await expect(block.getByText('ML Проигранный лот')).toHaveCount(0)
-  await block.getByRole('button', { name: /Показать историю \(3\)/ }).click()
+  await block.getByRole('button', { name: /Показать историю \(4\)/ }).click()
+  await expect(block.getByText(/Возврат 2\s700\s000\s*сум оформлен/)).toBeVisible()
   await expect(block.getByText('Торги завершены, вы не победили')).toBeVisible()
   await expect(block.getByText('Взнос возвращается')).toBeVisible()
   await expect(block.getByText(/10% не оплачены за 15 минут/)).toBeVisible()

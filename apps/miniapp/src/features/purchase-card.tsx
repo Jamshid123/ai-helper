@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { CheckCircle2, CircleHelp, Clock, Eye, PackageCheck, XCircle } from 'lucide-react'
+import { formatSum } from '@auksion/shared'
 import { useI18n } from '@/app/i18n'
 import { haptic } from '@/app/platform'
 import { usePayMethod } from '@/entities/payment/api'
@@ -45,6 +46,22 @@ export function PurchaseCard({ p, showTitle = true }: { p: Purchase; showTitle?:
     )
   }
   const choice = <PayMethodChoice methods={methods} value={method} onChange={setMethod} />
+  // Статус оплаты — с сервера (решение 18.11.2026): пока банк проводит, повторно не платить; не прошла — можно снова
+  const paying = p.payment === 'IN_PROGRESS' && (
+    <p role='status' className='rounded-xl bg-surface px-3 py-2.5 text-[13.5px] font-medium'>
+      {t('buy.paying')}
+    </p>
+  )
+  const failed = p.payment === 'FAILED' && (
+    <p role='alert' className='text-[13px] font-medium text-hot-text'>
+      {t('buy.payFailed')}
+    </p>
+  )
+  const refunds = (p.refunds ?? []).map((r, i) => (
+    <span key={i} className='text-[13px] font-medium text-ok'>
+      {t(r.status === 'REFUNDED' ? 'buy.refund.done' : 'buy.refund.pending').replace('{sum}', formatSum(r.amount, locale))}
+    </span>
+  ))
 
   const title = showTitle && (
     <Link to='/lot/$lotId' params={{ lotId: p.lotId }} className='text-[15px] leading-snug font-semibold'>
@@ -75,10 +92,20 @@ export function PurchaseCard({ p, showTitle = true }: { p: Purchase; showTitle?:
             </span>
           </div>
         </div>
-        {choice}
-        <Button onClick={() => run('prepayment')} disabled={pending !== null || left <= 0} className='w-full'>
-          {t('buy.pay10.cta')} <Price value={BigInt(p.prepaymentAmount)} />
-        </Button>
+        {paying ||
+          (left <= 0 ? (
+            <p role='status' className='rounded-xl bg-surface px-3 py-2.5 text-[13.5px] font-medium'>
+              {t('buy.timeUp')}
+            </p>
+          ) : (
+            <>
+              {failed}
+              {choice}
+              <Button onClick={() => run('prepayment')} disabled={pending !== null} className='w-full'>
+                {t('buy.pay10.cta')} <Price value={BigInt(p.prepaymentAmount)} />
+              </Button>
+            </>
+          ))}
         <p className='text-[12.5px] text-muted'>{t('buy.pay10.warn')}</p>
         {error && (
           <p role='alert' className='text-[13px] font-medium text-hot-text'>
@@ -122,16 +149,22 @@ export function PurchaseCard({ p, showTitle = true }: { p: Purchase; showTitle?:
         </div>
         {!p.remainderPaid && (
           <>
-            {choice}
-            <Button onClick={() => run('remainder')} disabled={pending !== null} variant='ghost' className='w-full'>
-              {t('buy.remainder.online')}
-            </Button>
+            {paying || (
+              <>
+                {failed}
+                {choice}
+                <Button onClick={() => run('remainder')} disabled={pending !== null} variant='ghost' className='w-full'>
+                  {t('buy.remainder.online')}
+                </Button>
+              </>
+            )}
             <p className='text-[12.5px] text-muted'>{t('buy.remainder.onsite')}</p>
           </>
         )}
         <p className='text-[12.5px] text-muted'>
           {t('lot.pickup')}: {t('lot.pickup.text')}
         </p>
+        {refunds}
         {error && (
           <p role='alert' className='text-[13px] font-medium text-hot-text'>
             {error}
@@ -153,6 +186,7 @@ export function PurchaseCard({ p, showTitle = true }: { p: Purchase; showTitle?:
               {t('buy.completedAt').replace('{date}', formatSessionDate(new Date(p.completedAt), locale))}
             </span>
           )}
+          {refunds}
         </div>
       </section>
     )
@@ -172,6 +206,7 @@ export function PurchaseCard({ p, showTitle = true }: { p: Purchase; showTitle?:
               {t('buy.restricted').replace('{until}', formatSessionDate(new Date(p.restrictedUntil), locale))}
             </span>
           )}
+          {refunds}
         </div>
       </section>
     )
@@ -183,6 +218,7 @@ export function PurchaseCard({ p, showTitle = true }: { p: Purchase; showTitle?:
       <div className='grid gap-0.5'>
         {title}
         <span className='text-[13px] text-muted'>{t('buy.other')}</span>
+        {refunds}
       </div>
     </section>
   )
