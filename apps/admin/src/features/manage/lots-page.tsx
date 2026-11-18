@@ -198,7 +198,7 @@ export function LotsPage() {
         title='Отменить лот?'
         description={
           cancelling
-            ? `«${cancelling.title}». Участникам (${cancelling.admittedCount}) вернётся 100% взноса, товар вернётся на склад.`
+            ? `«${cancelling.title}». Допуски участников (${cancelling.admittedCount}) снимутся, товар вернётся на склад. Если у кого-то старый оплаченный взнос — он вернётся.`
             : ''
         }
         confirm='Отменить лот'

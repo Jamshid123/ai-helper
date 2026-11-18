@@ -112,7 +112,7 @@ export function MyLots() {
   )
 }
 
-/** Итог по лоту без выкупа. Проигравшему про взнос пока не пишем (решение 18.11.2026 — ждём экспертизу). */
+/** Итог по лоту без выкупа. Допуск бесплатный (решение 18.11.2026); статусы возврата — только у старых оплаченных допусков. */
 function historyNote(a: AdmissionInfo): TKey {
   if (a.feeStatus === 'REFUND_PENDING') return 'mylots.refundPending'
   if (a.feeStatus === 'REFUNDED') return 'mylots.refunded'

@@ -10,10 +10,12 @@ test('допуск к живым торгам → комната → предл�
   await signIn(page)
   const sheet = page.getByRole('dialog')
   await expect(sheet).toBeVisible()
-  // до оплаты видно взнос, условия и возврат (ТЗ: прозрачность до оплаты)
-  await expect(sheet).toContainText('12 000')
-  await expect(sheet).toContainText('Возврат взноса')
-  const pay = sheet.getByRole('button', { name: /Оплатить/ })
+  // допуск бесплатный (решение 18.11.2026): видно «Участие бесплатно» и обязательства победителя, ни суммы, ни оплаты
+  await expect(sheet).toContainText('Участие бесплатно')
+  await expect(sheet).toContainText('оплатите 10% своей цены за 15 минут')
+  await expect(sheet).toContainText('ограничат на 7 дней')
+  await expect(sheet).not.toContainText(/Взнос|12 000|Click|Payme/)
+  const pay = sheet.getByRole('button', { name: 'Получить допуск' })
   await expect(pay).toBeDisabled()
   await sheet.locator('#agree').check()
   await pay.click()
@@ -36,17 +38,28 @@ test('допуск к живым торгам → комната → предл�
   }
 })
 
-test('выход из лота до начала торгов: взнос возвращается, можно снова получить допуск', async ({ page }) => {
+test('выход из лота до начала торгов: место освобождается, можно снова получить допуск', async ({ page }) => {
   const { scheduledLotId } = fixtures()
   await page.goto(`/lot/${scheduledLotId}?admit=true`)
   await signIn(page)
   const sheet = page.getByRole('dialog')
   await sheet.locator('#agree').check()
-  await sheet.getByRole('button', { name: /Оплатить/ }).click()
+  await sheet.getByRole('button', { name: 'Получить допуск' }).click()
   await expect(page.getByText('Вы допущены')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Выйти и вернуть взнос' }).click()
+  await page.getByRole('button', { name: 'Выйти из лота' }).click()
   await page.getByRole('button', { name: 'Да, выйти' }).click()
-  await expect(page.getByText('Вы вышли из лота — взнос возвращается')).toBeVisible()
+  await expect(page.getByText('Вы вышли из лота — место освобождено')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Участвовать' }).last()).toBeVisible()
+})
+
+test('лимит: с тремя допусками на ближайшие торги — четвёртый не оформить, видно заранее', async ({ page, isMobile }) => {
+  const { liveLotId, limitPhones } = fixtures()
+  await page.goto('/register')
+  await signIn(page, { phone: limitPhones[isMobile ? 'phone' : 'desktop'] })
+  await page.goto(`/lot/${liveLotId}`)
+  const cta = page.getByRole('button', { name: 'Уже 3 допуска на ближайшие торги — выйдите из одного' })
+  await expect(cta.last()).toBeVisible()
+  await expect(cta.last()).toBeDisabled()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
 })

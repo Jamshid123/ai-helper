@@ -30,7 +30,7 @@ test('гость: «Участвовать» ведёт на вход, посл�
   await signIn(page)
   await expect(page).toHaveURL(new RegExp(`/lot/${scheduledLotId}`))
   await expect(page.getByRole('dialog')).toBeVisible()
-  await expect(page.getByRole('dialog')).toContainText('Взнос за участие')
+  await expect(page.getByRole('dialog')).toContainText('Участие бесплатно')
 })
 
 test('экран входа: официальный адрес — auksiongo.uz', async ({ page }) => {

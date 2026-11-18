@@ -257,7 +257,8 @@ export class BuyoutService {
     // Переносим только оплаченные допуски и только один раз: перенесённый (orderId = null) второй раз не переносится,
     // сорвавший победитель не переносится (решение 16.11.2026, условия риск-аналитика).
     const admissions = await tx.admission.findMany({
-      where: { lotId, userId: { not: excludeUserId }, orderId: { not: null } },
+      // переносим один раз: участников этих торгов, но не перенесённых сюда с прошлых (решение 16.11.2026)
+      where: { lotId, userId: { not: excludeUserId }, carriedFromLotId: null },
       select: { userId: true },
     })
     const relist = await tx.lot.create({

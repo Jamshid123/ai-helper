@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { API_BASE, ApiError, api } from '@/shared/api/client'
-import { completeCheckout } from '@/entities/payment/api'
 import {
   admit as demoAdmit,
   leave as demoLeave,
@@ -133,42 +132,28 @@ export function useAdmissions(): Admissions {
   }
 }
 
-type AdmissionStart =
-  | { status: 'ADMITTED' }
-  | { status: 'PAYMENT_REQUIRED'; orderId: string; provider: string; checkoutUrl: string | null }
-
-/**
- * Оформить допуск: правила приняты → заказ → оплата выбранным способом (Click / Payme — переход на их страницу;
- * на тестовом запуске оплату имитирует сервер). 'redirected' — покупатель ушёл на страницу оплаты.
- */
-export function useAdmit(): (
-  lotId: string,
-  pay?: { provider?: string; locale?: 'ru' | 'uz' }
-) => Promise<'paid' | 'redirected'> {
+/** Получить допуск к лоту — бесплатно (решение 18.11.2026). */
+export function useAdmit(): (lotId: string) => Promise<void> {
   const qc = useQueryClient()
   return useCallback(
-    async (lotId: string, pay: { provider?: string; locale?: 'ru' | 'uz' } = {}) => {
+    async (lotId: string) => {
       if (DEMO) {
         await demoAdmit(lotId)
-        return 'paid' as const
+        return
       }
-      const r = await api<AdmissionStart>(`/lots/${lotId}/admission`, {
-        method: 'POST',
-        body: { acceptRules: true, ...pay },
-      })
-      if (r.status === 'PAYMENT_REQUIRED' && (await completeCheckout(r)) === 'redirected') return 'redirected' as const
+      // допуск бесплатный (решение 18.11.2026): правила приняты → допуск сразу
+      await api<{ status: 'ADMITTED' }>(`/lots/${lotId}/admission`, { method: 'POST', body: { acceptRules: true } })
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['admissions'] }),
         qc.invalidateQueries({ queryKey: ['lot', lotId] }),
         qc.invalidateQueries({ queryKey: ['lots'] }),
       ])
-      return 'paid' as const
     },
     [qc]
   )
 }
 
-/** Выйти из лота до начала торгов — сервер возвращает взнос полностью (решение 14.11.2026). */
+/** Выйти из лота до начала торгов — место освобождается (старым оплаченным допускам сервер возвращает взнос). */
 export function useLeave(): (lotId: string) => Promise<void> {
   const qc = useQueryClient()
   return useCallback(

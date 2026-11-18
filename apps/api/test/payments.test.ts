@@ -21,36 +21,48 @@ describe('Допуск и подтверждение оплаты', () => {
   const pendingOrder = (userId: string, lotId: string, amount = 12_000n) =>
     db.order.create({ data: { userId, lotId, purpose: 'ADMISSION', amount, provider: 'fake' } })
 
-  it('HTTP: правила обязательны; сумма — взнос лота (считает сервер); оплата → ровно один допуск', async () => {
-    const lot = await createLot(db, { fee: 12_000n })
+  it('HTTP: допуск бесплатный — правила обязательны, допуск сразу и ровно один, без заказа и оплаты', async () => {
+    const lot = await createLot(db, { fee: 12_000n }) // старое значение поля больше ни на что не влияет
     const a = await loginAs(app, 910_001)
     const url = `/api/v1/lots/${lot.id}/admission`
     expect((await app.inject({ method: 'POST', url, headers: a.auth, payload: {} })).statusCode).toBe(400)
 
-    const start = (await app.inject({ method: 'POST', url, headers: a.auth, payload: { acceptRules: true } })).json()
-    expect(start).toMatchObject({ status: 'PAYMENT_REQUIRED', amount: '12000' })
-    const again = (await app.inject({ method: 'POST', url, headers: a.auth, payload: { acceptRules: true } })).json()
-    expect(again.orderId).toBe(start.orderId) // неоплаченный заказ переиспользуется
-
-    const pay = await app.inject({
-      method: 'POST',
-      url: `/api/v1/payments/fake/${start.orderId}/complete`,
-      headers: a.auth,
-    })
-    expect(pay.json()).toEqual({ outcome: 'ADMITTED' })
-    const repeat = await app.inject({
-      method: 'POST',
-      url: `/api/v1/payments/fake/${start.orderId}/complete`,
-      headers: a.auth,
-    })
-    expect(repeat.json()).toEqual({ outcome: 'ALREADY_PROCESSED' })
+    const start = await app.inject({ method: 'POST', url, headers: a.auth, payload: { acceptRules: true } })
+    expect(start.statusCode).toBe(200)
+    expect(start.json()).toEqual({ status: 'ADMITTED' })
+    const again = await app.inject({ method: 'POST', url, headers: a.auth, payload: { acceptRules: true } })
+    expect(again.json()).toEqual({ status: 'ADMITTED' })
 
     expect(await db.admission.count({ where: { lotId: lot.id } })).toBe(1)
+    expect(await db.order.count()).toBe(0)
     expect((await db.lot.findUniqueOrThrow({ where: { id: lot.id } })).admittedCount).toBe(1)
+    expect((await db.user.findUniqueOrThrow({ where: { id: a.userId } })).rulesVersion).toBe('2026-11-18')
     const mine = (await app.inject({ method: 'GET', url: '/api/v1/me/admissions', headers: a.auth })).json()
-    expect(mine.map((m: { lotId: string }) => m.lotId)).toEqual([lot.id])
-    const done = (await app.inject({ method: 'POST', url, headers: a.auth, payload: { acceptRules: true } })).json()
-    expect(done.status).toBe('ADMITTED')
+    expect(mine).toEqual([expect.objectContaining({ lotId: lot.id, feeStatus: null, carried: false, admitted: true })])
+  })
+
+  it('лимит: не больше 3 предстоящих и идущих торгов одновременно; завершённые не считаются', async () => {
+    const a = await loginAs(app, 910_005)
+    const admit = (lotId: string) =>
+      app.inject({ method: 'POST', url: `/api/v1/lots/${lotId}/admission`, headers: a.auth, payload: { acceptRules: true } })
+    const soon = (h: number) =>
+      createLot(db, {
+        status: 'SCHEDULED',
+        opensAt: new Date(Date.now() + h * 3_600_000),
+        closesAt: new Date(Date.now() + (h + 1) * 3_600_000),
+      })
+    const lots = [await createLot(db), await soon(2), await soon(5)]
+    for (const l of lots) expect((await admit(l.id)).json()).toEqual({ status: 'ADMITTED' })
+    const fourth = await soon(8)
+    const refused = await admit(fourth.id)
+    expect(refused.statusCode).toBe(409)
+    expect(refused.json().code).toBe('ADMISSION_LIMIT')
+    // повтор в уже полученный — не ошибка
+    expect((await admit(lots[0].id)).json()).toEqual({ status: 'ADMITTED' })
+    // торги завершились — место в лимите освободилось
+    await db.lot.update({ where: { id: lots[0].id }, data: { status: 'CLOSED_UNSOLD' } })
+    expect((await admit(fourth.id)).json()).toEqual({ status: 'ADMITTED' })
+    expect(await db.admission.count({ where: { userId: a.userId } })).toBe(4)
   })
 
   it('чужой заказ подтвердить нельзя', async () => {

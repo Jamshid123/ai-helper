@@ -51,17 +51,17 @@ describe('Оплата через Click и Payme', () => {
 
   // ───────────── помощники ─────────────
 
-  /** Покупатель начинает оплату допуска выбранным способом. */
+  /**
+   * Неоплаченный заказ допуска, оформленный до 18.11.2026 (теперь допуск бесплатный). Такие заказы на dev ещё могут
+   * оплатиться — протоколы Click и Payme и возвраты проверяем на них (новые оплаты — 10% и остаток, тесты ниже и buyout).
+   */
   async function startAdmission(provider: 'click' | 'payme', lotData = {}, tg = 940_001) {
     const lot = await createLot(db, { fee: 12_000n, ...lotData })
     const u = await loginAs(app, tg)
-    const r = await app.inject({
-      method: 'POST',
-      url: `/api/v1/lots/${lot.id}/admission`,
-      headers: u.auth,
-      payload: { acceptRules: true, provider, locale: 'uz' },
+    const order = await db.order.create({
+      data: { userId: u.userId, lotId: lot.id, purpose: 'ADMISSION', amount: 12_000n, provider },
     })
-    return { lot, u, start: r.json() as { orderId: string; checkoutUrl: string; provider: string } }
+    return { lot, u, start: { orderId: order.id } }
   }
 
   let seq = 1000
@@ -134,7 +134,17 @@ describe('Оплата через Click и Payme', () => {
     const providers = (await app.inject({ method: 'GET', url: '/api/v1/payments/providers' })).json()
     expect(providers).toEqual({ providers: ['click', 'payme'] })
 
-    const { lot, start } = await startAdmission('click')
+    // оплата 10% победителем (10% = 12 000 сум, чтобы суммы в ссылках были наглядными)
+    const { lot, u, ob } = await prepaymentOrder()
+    await db.obligation.update({ where: { id: ob.id }, data: { amount: 120_000n, prepaymentAmount: 12_000n } })
+    const pay = (provider: string) =>
+      app.inject({
+        method: 'POST',
+        url: `/api/v1/obligations/${ob.id}/pay`,
+        headers: u.auth,
+        payload: { part: 'prepayment', provider, locale: 'uz' },
+      })
+    const start = (await pay('click')).json()
     const url = new URL(start.checkoutUrl)
     expect(url.origin + url.pathname).toBe('https://my.click.uz/services/pay/')
     expect(Object.fromEntries(url.searchParams)).toEqual({
@@ -146,15 +156,7 @@ describe('Оплата через Click и Payme', () => {
     })
 
     // тот же неоплаченный заказ, переключили на Payme
-    const u = await loginAs(app, 940_001)
-    const p = (
-      await app.inject({
-        method: 'POST',
-        url: `/api/v1/lots/${lot.id}/admission`,
-        headers: u.auth,
-        payload: { acceptRules: true, provider: 'payme', locale: 'uz' },
-      })
-    ).json()
+    const p = (await pay('payme')).json()
     expect(p.orderId).toBe(start.orderId)
     expect(p.checkoutUrl.startsWith('https://checkout.paycom.uz/')).toBe(true)
     const decoded = Buffer.from(p.checkoutUrl.split('/').pop(), 'base64').toString()
@@ -163,13 +165,7 @@ describe('Оплата через Click и Payme', () => {
     )
     expect((await db.order.findUniqueOrThrow({ where: { id: start.orderId } })).provider).toBe('payme')
 
-    const bad = await app.inject({
-      method: 'POST',
-      url: `/api/v1/lots/${lot.id}/admission`,
-      headers: u.auth,
-      payload: { acceptRules: true, provider: 'paypal' },
-    })
-    expect(bad.json()).toMatchObject({ code: 'UNKNOWN_PROVIDER' })
+    expect((await pay('paypal')).json()).toMatchObject({ code: 'UNKNOWN_PROVIDER' })
   })
 
   // ───────────── Click ─────────────

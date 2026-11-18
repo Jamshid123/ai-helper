@@ -1,13 +1,13 @@
-import { Inject, Injectable } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
+import { RULES } from '@auksion/shared'
 import { Clock } from '../../common/clock'
 import { PrismaService } from '../../prisma/prisma.service'
 import { DEVICE } from '../auth/buyer-session.service'
 import { AdmissionError } from './admission.errors'
-import { PAYMENT_GATEWAY, type PaymentGateway } from './payment-provider'
 import { RefundsService } from './refunds.service'
 
 /** Версия правил торгов, которую принимает покупатель (меняется вместе с публичной офертой). */
-export const RULES_VERSION = '2026-11-13'
+export const RULES_VERSION = '2026-11-18'
 
 export { AdmissionError } from './admission.errors'
 
@@ -19,7 +19,6 @@ export class AdmissionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly clock: Clock,
-    @Inject(PAYMENT_GATEWAY) private readonly gateway: PaymentGateway,
     private readonly refunds: RefundsService
   ) {}
 
@@ -77,7 +76,8 @@ export class AdmissionsService {
       // число участников лота видно только допущенным (решение 14.11.2026)
       admittedCount: a.lot.admittedCount,
       outcome: outcome(a.lotId, a.lot.status),
-      feeStatus: a.orderId === null ? 'CARRIED' : (orderStatus.get(a.orderId) ?? 'PAID'),
+      // допуск бесплатный с 18.11.2026; статус взноса — только у старых оплаченных допусков
+      feeStatus: a.carriedFromLotId !== null ? 'CARRIED' : a.orderId ? (orderStatus.get(a.orderId) ?? 'PAID') : null,
       // повторные торги: допуск перенесён без нового взноса; нужно подтвердить участие
       carried: a.carriedFromLotId !== null,
       confirmed: a.carriedFromLotId === null || a.confirmedAt !== null,
@@ -147,28 +147,22 @@ export class AdmissionsService {
   }
 
   /**
-   * Начать оформление допуска: условия приняты → заказ ADMISSION на сумму взноса (считает сервер) → оплата у провайдера.
-   * Уже есть допуск — возвращаем его; есть неоплаченный заказ — переиспользуем.
+   * Допуск к лоту — бесплатный (решение 18.11.2026: уходим от взноса). Условия приняты → допуск сразу, без оплаты.
+   * Место и лимит проверяются под блокировкой лота и покупателя: одновременные заявки не переполнят лот.
    */
-  async start(
-    userId: string,
-    lotId: string,
-    acceptRules: boolean,
-    deviceHash: string | null = null,
-    choice: { provider?: string; locale?: 'ru' | 'uz' } = {}
-  ) {
+  async start(userId: string, lotId: string, acceptRules: boolean, deviceHash: string | null = null) {
     if (!acceptRules) throw new AdmissionError('RULES_NOT_ACCEPTED')
     const now = this.clock.now()
     const lot = await this.prisma.lot.findUnique({ where: { id: lotId } })
     if (!lot || !['SCHEDULED', 'LIVE'].includes(lot.status)) throw new AdmissionError('LOT_NOT_FOUND')
     if (now >= lot.closesAt) throw new AdmissionError('LOT_CLOSED')
-    // ограниченный участник не может торговаться — деньги за допуск не берём (ТЗ «Неоплата и возвраты»)
+    // ограниченный участник не может торговаться (ТЗ «Неоплата и возвраты»)
     const restricted = await this.prisma.restriction.findFirst({
       where: { userId, liftedAt: null, startsAt: { lte: now }, endsAt: { gt: now } },
       select: { id: true },
     })
     if (restricted) throw new AdmissionError('RESTRICTED')
-    // Сорвавший выкуп не участвует в торгах того же товара — ни бесплатно, ни за деньги (решение 16.11.2026).
+    // Сорвавший выкуп не участвует в торгах того же товара (решение 16.11.2026).
     if (lot.productId) {
       const defaulted = await this.prisma.obligation.findFirst({
         where: { userId, status: 'EXPIRED', lot: { productId: lot.productId } },
@@ -176,41 +170,30 @@ export class AdmissionsService {
       })
       if (defaulted) throw new AdmissionError('PRODUCT_BLOCKED')
     }
-
-    const admission = await this.prisma.admission.findUnique({ where: { lotId_userId: { lotId, userId } } })
-    if (admission) return { status: 'ADMITTED' as const, orderId: admission.orderId, checkoutUrl: null }
-    // мест нет — заказ не создаём (решение заказчика 14.11.2026: максимум участников)
-    if (lot.maxParticipants !== null && lot.admittedCount >= lot.maxParticipants) throw new AdmissionError('LOT_FULL')
+    const already = await this.prisma.admission.findUnique({ where: { lotId_userId: { lotId, userId } } })
+    if (already) return { status: 'ADMITTED' as const }
     if (deviceHash) await this.assertDeviceFree(userId, lotId, deviceHash, now)
 
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { rulesVersion: RULES_VERSION, rulesAcceptedAt: now },
+    await this.prisma.$transaction(async (tx) => {
+      // покупатель — по одной заявке за раз (лимит), лот — точный счётчик мест
+      await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId}::uuid FOR UPDATE`
+      const [locked] = await tx.$queryRaw<{ admitted: number; max: number | null; status: string; closes_at: Date }[]>`
+        SELECT "admittedCount" AS admitted, "maxParticipants" AS max, status::text AS status, "closesAt" AS closes_at
+        FROM "Lot" WHERE id = ${lotId}::uuid FOR UPDATE`
+      if (!locked || !['SCHEDULED', 'LIVE'].includes(locked.status)) throw new AdmissionError('LOT_NOT_FOUND')
+      if (now >= locked.closes_at) throw new AdmissionError('LOT_CLOSED')
+      if (await tx.admission.findUnique({ where: { lotId_userId: { lotId, userId } }, select: { id: true } })) return
+      // мест нет (решение заказчика 14.11.2026: максимум участников)
+      if (locked.max !== null && locked.admitted >= locked.max) throw new AdmissionError('LOT_FULL')
+      const active = await tx.admission.count({
+        where: { userId, lot: { status: { in: ['SCHEDULED', 'LIVE'] }, closesAt: { gt: now } } },
+      })
+      if (active >= RULES.MAX_ACTIVE_ADMISSIONS) throw new AdmissionError('ADMISSION_LIMIT')
+      await tx.user.update({ where: { id: userId }, data: { rulesVersion: RULES_VERSION, rulesAcceptedAt: now } })
+      await tx.admission.create({ data: { lotId, userId } })
+      await tx.lot.update({ where: { id: lotId }, data: { admittedCount: { increment: 1 } } })
+      await tx.outboxEvent.create({ data: { type: 'admission.granted', aggregateId: lotId, payload: { lotId, userId } } })
     })
-    const provider = this.gateway.pick(choice.provider)
-    const existing = await this.prisma.order.findFirst({
-      where: { userId, lotId, purpose: 'ADMISSION', status: 'PENDING' },
-    })
-    const order = existing
-      ? existing.provider === provider.name
-        ? existing
-        : await this.prisma.order.update({ where: { id: existing.id }, data: { provider: provider.name } })
-      : await this.prisma.order.create({
-          data: { userId, lotId, purpose: 'ADMISSION', amount: lot.fee, provider: provider.name },
-        })
-    const checkout = await provider.createCheckout({
-      id: order.id,
-      amount: order.amount,
-      description: `Допуск к лоту: ${lot.title}`,
-      returnPath: `/lot/${lotId}`,
-      locale: choice.locale ?? 'ru',
-    })
-    return {
-      status: 'PAYMENT_REQUIRED' as const,
-      orderId: order.id,
-      amount: order.amount.toString(),
-      checkoutUrl: checkout.checkoutUrl,
-      provider: checkout.provider,
-    }
+    return { status: 'ADMITTED' as const }
   }
 }

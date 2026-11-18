@@ -218,7 +218,6 @@ export const useLots = () =>
 export type LotInput = {
   startPrice: string
   step: string
-  fee: string
   opensAt: string
   closesAt: string
   title?: string

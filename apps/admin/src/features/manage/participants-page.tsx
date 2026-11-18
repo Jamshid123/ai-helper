@@ -278,7 +278,7 @@ function ParticipantSheet({
               title='Отменить допуск?'
               description={
                 dialog?.kind === 'cancel'
-                  ? `«${dialog.title}». Участнику вернётся 100% взноса.`
+                  ? `«${dialog.title}». Допуск снимется, место освободится. Старый оплаченный взнос (если был) вернётся.`
                   : ''
               }
               confirm='Отменить допуск'

@@ -53,14 +53,14 @@ test('допуск → комната → предложить цену → «Lo
   await signIn(page)
 
   const sheet = page.getByRole('dialog')
-  await expect(sheet).toContainText('Ishtirok badali')
+  await expect(sheet).toContainText('Ishtirok bepul')
   await expectNoHorizontalScroll(page)
   await sheet.locator('#agree').check()
-  // кнопка оплаты внизу длинного окна: прокрутить и убедиться, что она целиком на экране и не перекрыта
-  const pay = sheet.getByRole('button', { name: /Toʻlash/ })
+  // кнопка допуска внизу длинного окна: прокрутить и убедиться, что она целиком на экране и не перекрыта
+  const pay = sheet.getByRole('button', { name: 'Ruxsat olish' })
   await pay.scrollIntoViewIfNeeded()
   await expectInViewport(page, pay)
-  await expectNotCovered(page, /Toʻlash/)
+  await expectNotCovered(page, 'Ruxsat olish')
   await pay.click()
 
   await expect(page).toHaveURL(new RegExp(`/lot/${liveLotId}/room`))

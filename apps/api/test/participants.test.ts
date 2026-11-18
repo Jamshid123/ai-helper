@@ -20,7 +20,7 @@ describe('Участники: выход до начала, ограничени
   const scheduled = () =>
     createLot(db, { status: 'SCHEDULED', opensAt: tomorrow(), closesAt: new Date(tomorrow().getTime() + 3_600_000) })
 
-  /** Допуск через настоящий путь: заказ → имитация оплаты. */
+  /** Допуск через настоящий путь — бесплатный (решение 18.11.2026). */
   async function admit(lotId: string, auth: Record<string, string>) {
     const r = await app.inject({
       method: 'POST',
@@ -28,32 +28,42 @@ describe('Участники: выход до начала, ограничени
       headers: auth,
       payload: { acceptRules: true },
     })
-    if (r.json().orderId && r.json().status === 'PAYMENT_REQUIRED') {
-      await app.inject({ method: 'POST', url: `/api/v1/payments/fake/${r.json().orderId}/complete`, headers: auth })
-    }
-    return r.json().orderId as string
+    expect(r.json()).toEqual({ status: 'ADMITTED' })
+  }
+  /** Допуск, оплаченный взносом до 18.11.2026 (на dev такие есть): при выходе или отмене взнос возвращается. */
+  async function legacyPaid(lotId: string, userId: string) {
+    const order = await db.order.create({
+      data: { userId, lotId, purpose: 'ADMISSION', amount: 12_000n, provider: 'fake', status: 'PAID', paidAt: new Date() },
+    })
+    await db.admission.create({ data: { lotId, userId, orderId: order.id } })
+    await db.lot.update({ where: { id: lotId }, data: { admittedCount: { increment: 1 } } })
+    return order.id
   }
   const leave = (lotId: string, auth: Record<string, string>) =>
     app.inject({ method: 'DELETE', url: `/api/v1/lots/${lotId}/admission`, headers: auth })
 
-  it('участник выходит из лота до начала: возврат 100%, счётчик уменьшается, можно вернуться', async () => {
+  it('участник выходит из лота до начала: место освобождается, можно вернуться; старый оплаченный допуск — с возвратом', async () => {
     const lot = await scheduled()
     const a = await loginAs(app, 940_001)
-    const orderId = await admit(lot.id, a.auth)
+    await admit(lot.id, a.auth)
     expect((await db.lot.findUniqueOrThrow({ where: { id: lot.id } })).admittedCount).toBe(1)
 
     const r = await leave(lot.id, a.auth)
     expect(r.statusCode).toBe(200)
-    expect(r.json()).toEqual({ refunded: true })
+    expect(r.json()).toEqual({ refunded: false }) // возвращать нечего — допуск бесплатный
     expect(await db.admission.count()).toBe(0)
-    expect((await db.order.findUniqueOrThrow({ where: { id: orderId } })).status).toBe('REFUNDED')
     expect((await db.lot.findUniqueOrThrow({ where: { id: lot.id } })).admittedCount).toBe(0)
     expect(await db.auditLog.count({ where: { action: 'admission.left' } })).toBe(1)
 
     expect((await leave(lot.id, a.auth)).statusCode).toBe(404)
-    const again = await admit(lot.id, a.auth)
-    expect(again).not.toBe(orderId)
+    await admit(lot.id, a.auth)
     expect(await db.admission.count()).toBe(1)
+
+    // допуск, оплаченный взносом до 18.11.2026 — взнос возвращается
+    const b = await loginAs(app, 940_009)
+    const orderId = await legacyPaid(lot.id, b.userId)
+    expect((await leave(lot.id, b.auth)).json()).toEqual({ refunded: true })
+    expect((await db.order.findUniqueOrThrow({ where: { id: orderId } })).status).toBe('REFUNDED')
   })
 
   it('после открытия торгов выйти с возвратом нельзя', async () => {
@@ -163,7 +173,7 @@ describe('Участники: выход до начала, ограничени
   it('сотрудник отменяет допуск до начала с возвратом (с причиной); после начала — 409; оператору раздел закрыт', async () => {
     const lot = await scheduled()
     const a = await loginAs(app, 940_030)
-    const orderId = await admit(lot.id, a.auth)
+    const orderId = await legacyPaid(lot.id, a.userId) // старый оплаченный допуск — проверяем и возврат
     const op = await loginStaff(app, { lots: 'edit' })
     expect((await app.inject({ method: 'GET', url: '/api/v1/admin/participants', headers: op.read })).statusCode).toBe(
       403

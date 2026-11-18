@@ -207,6 +207,23 @@ async function main() {
 
     return { phone: ml.phone, pickupCode: mlCode, liveLotId: mlLive.id, soonLotId: mlSoon.id }
   }
+  // Лимит (решение 18.11.2026): допуск бесплатный, одновременно — не больше 3 торгов. Покупатели с тремя допусками.
+  const limitLots = []
+  for (const n of [1, 2, 3]) {
+    limitLots.push(
+      await lot(`LIM Торги ${n}`, { status: 'SCHEDULED', opensAt: new Date(now + (10 + n) * H), closesAt: new Date(now + (12 + n) * H) })
+    )
+  }
+  const limitUser = async (phone) => {
+    const u = await db.user.create({ data: { phone, phoneVerifiedAt: new Date(now), firstName: 'Лимит', publicName: 'Лимит Т.' } })
+    for (const l of limitLots) {
+      await db.admission.create({ data: { lotId: l.id, userId: u.id } })
+      await db.lot.update({ where: { id: l.id }, data: { admittedCount: { increment: 1 } } })
+    }
+    return phone
+  }
+  const limitPhones = { phone: await limitUser('+998901110008'), desktop: await limitUser('+998901110009') }
+
   const myLotsPhone = await seedMyLots('+998901110004', '+998901110005')
   const myLotsDesktop = await seedMyLots('+998901110006', '+998901110007')
 
@@ -217,6 +234,7 @@ async function main() {
     winnerPhone,
     admin: { phone: process.env.E2E_STAFF_PHONE, password: process.env.E2E_STAFF_PASSWORD, pickupCode: code },
     myLots: { phone: myLotsPhone, desktop: myLotsDesktop },
+    limitPhones,
   }
   writeFileSync(path.join(__dirname, '../.fixtures.json'), JSON.stringify(fixtures, null, 2))
   console.log('e2e fixtures:', { liveLotId: live.id, soldLotId: sold.id, pickupLotId: pickupLot.id })
