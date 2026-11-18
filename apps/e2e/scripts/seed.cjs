@@ -179,7 +179,33 @@ async function main() {
         startsAt: new Date(now - 5 * H + 15 * MIN), endsAt: new Date(now - 5 * H + 15 * MIN + 7 * 24 * H),
       },
     })
-      return { phone: ml.phone, pickupCode: mlCode, liveLotId: mlLive.id, soonLotId: mlSoon.id }
+      // статусы оплаты с сервера (шаг 2): банк проводит / попытка отменена / дубль остатка на возврате
+    const wonLot = async (title, prepay) => {
+      const l = await lot(title, { status: 'CLOSED_SOLD', opensAt: new Date(now - 3 * H), closesAt: new Date(now - 10 * MIN) })
+      const b = await db.bid.create({ data: { lotId: l.id, userId: ml.id, amount: 3_000_000n, seq: 1, idempotencyKey: crypto.randomUUID() } })
+      const o = await db.obligation.create({
+        data: {
+          lotId: l.id, userId: ml.id, bidId: b.id, rank: 1, amount: 3_000_000n, prepaymentAmount: 300_000n,
+          confirmDeadline: new Date(now - 10 * MIN), ...prepay,
+        },
+      })
+      return { l, o }
+    }
+    const payAttempt = async (lotId, purpose, state, amount = 300_000n, status = 'PENDING') => {
+      const order = await db.order.create({ data: { userId: ml.id, lotId, purpose, amount, provider: 'payme', status } })
+      if (state !== null)
+        await db.paymentTransaction.create({ data: { provider: 'payme', externalId: crypto.randomUUID(), orderId: order.id, amount, state } })
+    }
+    const deadline = { status: 'AWAITING_PREPAYMENT', prepaymentDeadline: new Date(now + 50 * MIN) }
+    const paying = await wonLot('ML Оплата проверяется', deadline)
+    await payAttempt(paying.l.id, 'PREPAYMENT', 1)
+    const failed = await wonLot('ML Оплата не прошла', deadline)
+    await payAttempt(failed.l.id, 'PREPAYMENT', -1)
+    const dup = await wonLot('ML Дубль остатка', { status: 'COMPLETED', completedAt: new Date(now - 30 * MIN) })
+    await payAttempt(dup.l.id, 'REMAINDER', null, 2_700_000n, 'PAID')
+    await payAttempt(dup.l.id, 'REMAINDER', null, 2_700_000n, 'REFUND_PENDING')
+
+    return { phone: ml.phone, pickupCode: mlCode, liveLotId: mlLive.id, soonLotId: mlSoon.id }
   }
   const myLotsPhone = await seedMyLots('+998901110004', '+998901110005')
   const myLotsDesktop = await seedMyLots('+998901110006', '+998901110007')

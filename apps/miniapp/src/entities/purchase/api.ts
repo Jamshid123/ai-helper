@@ -21,6 +21,10 @@ export type Purchase = {
   completedAt: string | null
   /** Не оплатил 10% → ограничение участия до этой даты (решение 18.11.2026). */
   restrictedUntil?: string | null
+  /** Текущая оплата (10% или остаток): идёт проверка / последняя попытка не прошла — считает сервер. */
+  payment?: 'IN_PROGRESS' | 'FAILED' | null
+  /** Возвраты по выкупу: оплата после срока, дубль, остаток за невыданный товар. */
+  refunds?: { purpose: 'PREPAYMENT' | 'REMAINDER' | string; status: 'REFUND_PENDING' | 'REFUNDED' | string; amount: string }[]
 }
 
 export function usePurchases(): Purchase[] {
@@ -33,8 +37,8 @@ export function usePurchases(): Purchase[] {
       }),
     enabled: !DEMO,
     retry: false,
-    // сроки короткие (15 минут) — держим статус свежим
-    refetchInterval: 30_000,
+    // сроки короткие (15 минут) — держим статус свежим; пока банк проводит оплату — чаще
+    refetchInterval: (query) => (query.state.data?.some((p) => p.payment === 'IN_PROGRESS') ? 5_000 : 30_000),
   })
   return DEMO ? [] : (q.data ?? [])
 }

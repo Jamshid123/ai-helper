@@ -132,4 +132,56 @@ describe('Мои лоты: допуски, итог, взнос, огранич�
     })
     expect((await get('/auth/me', me.auth)).json().restrictedUntil).toBeNull()
   })
+
+  it('выкуп: статус оплаты с сервера — «проверяем» / «не прошла»; возвраты видны (кроме 10% при «не забрал»)', async () => {
+    const me = await loginAs(app, 970_003)
+    const MIN = 60_000
+    const won = async (title: string, data: Record<string, unknown>) => {
+      const lot = await closed(title)
+      const ob = await obligation(lot.id, me.userId)
+      return db.obligation.update({ where: { id: ob.id }, data, include: { lot: true } })
+    }
+    const order = (lotId: string, purpose: 'PREPAYMENT' | 'REMAINDER', status = 'PENDING', amount = 300_000n) =>
+      db.order.create({
+        data: { userId: me.userId, lotId, purpose, amount, provider: 'payme', status: status as never },
+      })
+    const tx = (orderId: string, state: number, ageMs = 0) =>
+      db.paymentTransaction.create({
+        data: { provider: 'payme', externalId: key(), orderId, amount: 300_000n, state, createdAt: new Date(Date.now() - ageMs) },
+      })
+
+    const paying = await won('Проверяется', {})
+    await tx((await order(paying.lotId, 'PREPAYMENT')).id, 1)
+    const failed = await won('Не прошла', {})
+    await tx((await order(failed.lotId, 'PREPAYMENT')).id, -1)
+    const stale = await won('Зависла', {})
+    await tx((await order(stale.lotId, 'PREPAYMENT')).id, 1, 11 * MIN)
+    const fresh = await won('Только начал', {})
+    await order(fresh.lotId, 'PREPAYMENT') // перешёл на страницу оплаты, транзакции ещё нет
+    const remainder = await won('Остаток проверяется', {
+      status: 'AWAITING_PICKUP',
+      remainderDeadline: new Date(Date.now() + 20 * 3_600_000),
+    })
+    await order(remainder.lotId, 'PREPAYMENT', 'PAID')
+    await tx((await order(remainder.lotId, 'REMAINDER', 'PENDING', 2_700_000n)).id, 1)
+    // дубль остатка после выдачи — на возврате
+    const dup = await won('Дубль остатка', { status: 'COMPLETED', completedAt: new Date() })
+    await order(dup.lotId, 'REMAINDER', 'PAID', 2_700_000n)
+    await order(dup.lotId, 'REMAINDER', 'REFUND_PENDING', 2_700_000n)
+    // не забрал: остаток вернули, решение по 10% — у поддержки (покупателю не показываем)
+    const missed = await won('Не забрал', { status: 'EXPIRED', expiredReason: 'PICKUP_MISSED', prepaymentDecision: 'REFUNDED' })
+    await order(missed.lotId, 'PREPAYMENT', 'REFUND_PENDING')
+    await order(missed.lotId, 'REMAINDER', 'REFUNDED', 2_700_000n)
+
+    const list = (await get('/me/obligations', me.auth)).json() as Array<Record<string, unknown>>
+    const by = Object.fromEntries(list.map((o) => [o.lotTitle as string, o]))
+    expect(by['Проверяется'].payment).toBe('IN_PROGRESS')
+    expect(by['Не прошла'].payment).toBe('FAILED')
+    expect(by['Зависла'].payment).toBe('FAILED')
+    expect(by['Только начал'].payment).toBeNull()
+    expect(by['Остаток проверяется'].payment).toBe('IN_PROGRESS')
+    expect(by['Дубль остатка']).toMatchObject({ payment: null, refunds: [{ purpose: 'REMAINDER', status: 'REFUND_PENDING', amount: '2700000' }] })
+    expect(by['Не забрал'].refunds).toEqual([{ purpose: 'REMAINDER', status: 'REFUNDED', amount: '2700000' }])
+    expect(by['Проверяется'].refunds).toEqual([])
+  })
 })

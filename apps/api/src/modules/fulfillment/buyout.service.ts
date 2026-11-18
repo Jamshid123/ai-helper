@@ -53,10 +53,33 @@ export class BuyoutService {
       select: { obligationId: true, endsAt: true },
     })
     const until = new Map(restrictions.map((r) => [r.obligationId, r.endsAt.toISOString()]))
-    return list.map((o) => ({
-      ...this.buyerDto(o, o.lot.title, paidRemainder.has(o.lotId)),
-      restrictedUntil: until.get(o.id) ?? null,
-    }))
+    const orders = await this.prisma.order.findMany({
+      where: { userId, lotId: { in: list.map((o) => o.lotId) }, purpose: { in: ['PREPAYMENT', 'REMAINDER'] } },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        lotId: true,
+        purpose: true,
+        status: true,
+        amount: true,
+        transactions: { select: { state: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
+      },
+    })
+    const now = this.clock.now()
+    return list.map((o) => {
+      const remainderPaid = paidRemainder.has(o.lotId)
+      const mine = orders.filter((x) => x.lotId === o.lotId)
+      return {
+        ...this.buyerDto(o, o.lot.title, remainderPaid),
+        restrictedUntil: until.get(o.id) ?? null,
+        payment: paymentState(o, remainderPaid, mine, now),
+        // Возвраты по выкупу (оплата после срока, дубль, остаток за невыданный товар). 10% при «не забрал» —
+        // решение поддержки, покупателю не показываем (решение 18.11.2026).
+        refunds: mine
+          .filter((x) => x.status === 'REFUND_PENDING' || x.status === 'REFUNDED')
+          .filter((x) => !(o.expiredReason === 'PICKUP_MISSED' && x.purpose === 'PREPAYMENT'))
+          .map((x) => ({ purpose: x.purpose, status: x.status, amount: x.amount.toString() })),
+      }
+    })
   }
 
   /** Начать оплату 10% или остатка: заказ на сумму, которую считает сервер, → оплата у провайдера. */
@@ -479,4 +502,26 @@ export class BuyoutService {
       completedAt: o.completedAt?.toISOString() ?? null,
     }
   }
+}
+
+type BuyoutOrder = { purpose: string; status: string; transactions: { state: number; createdAt: Date }[] }
+
+/**
+ * Статус текущей оплаты выкупа (решение 18.11.2026) — то, что сейчас нужно оплатить: 10% или остаток.
+ * IN_PROGRESS — платёжная система создала транзакцию и ещё не провела (≤ PAYMENT_LOCK_MS): победа не
+ * аннулируется, повторно не платить. FAILED — последняя попытка отменена или зависла: можно оплатить снова.
+ * Перешёл на страницу оплаты, но транзакции ещё нет — статуса нет.
+ */
+function paymentState(o: Obligation, remainderPaid: boolean, orders: BuyoutOrder[], now: Date): 'IN_PROGRESS' | 'FAILED' | null {
+  const purpose =
+    o.status === 'AWAITING_PREPAYMENT' ? 'PREPAYMENT' : o.status === 'AWAITING_PICKUP' && !remainderPaid ? 'REMAINDER' : null
+  if (!purpose) return null
+  const attempts = orders.filter((x) => x.purpose === purpose && x.status !== 'PAID')
+  const txs = attempts.flatMap((x) => x.transactions.map((t) => ({ ...t, pending: x.status === 'PENDING' })))
+  if (txs.some((t) => t.pending && t.state === 1 && now.getTime() - t.createdAt.getTime() < PAYMENT_LOCK_MS)) return 'IN_PROGRESS'
+  const last = attempts.at(-1)
+  if (!last) return null
+  if (last.status === 'FAILED' || last.status === 'CANCELLED') return 'FAILED'
+  const lastTx = last.transactions.at(-1)
+  return lastTx && (lastTx.state < 0 || lastTx.state === 1) ? 'FAILED' : null
 }
