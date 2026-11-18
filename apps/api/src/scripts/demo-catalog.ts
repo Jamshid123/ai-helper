@@ -18,7 +18,8 @@ export async function seedDemoCatalog(db: PrismaClient, opts: { mediaSrc: string
   for (const c of CATEGORIES) {
     const row = await db.category.upsert({
       where: { slug: c.slug },
-      create: { slug: c.slug, nameRu: c.ru, nameUz: c.uz, enabled: true, sortOrder: c.sort },
+      // демо-категории — электроника с актом эксперта (IMEI/серийный, батарея, бейдж)
+      create: { slug: c.slug, nameRu: c.ru, nameUz: c.uz, enabled: true, sortOrder: c.sort, deviceAct: true },
       // порядок в каталоге — как задумано для демо; названия не трогаем (их могли поправить в админке)
       update: { enabled: true, sortOrder: c.sort },
     })

@@ -254,4 +254,123 @@ describe('Админка: категории, товары, лоты', () => {
     expect(audit).toMatchObject({ actorId: s.id, reason: 'Брак при повторной проверке' })
     expect((await app.inject({ method: 'GET', url: '/api/v1/lots' })).json()).toEqual([])
   })
+
+  describe('шаблоны товаров (решение 18.11.2026): поля у категории, блок устройства, снимок в лоте', () => {
+    const laptopFields = [
+      { key: 'cpu', labelRu: 'Процессор', labelUz: 'Protsessor', type: 'text', required: true, public: true },
+      { key: 'ram_gb', labelRu: 'Память, ГБ', labelUz: 'Xotira, GB', type: 'number', required: false, public: true },
+      { key: 'supplier', labelRu: 'Поставщик', labelUz: 'Yetkazuvchi', type: 'text', required: false, public: false },
+    ]
+    async function laptops(h: Record<string, string>) {
+      const r = await req('POST', '/admin/categories', h, {
+        slug: 'laptops',
+        nameRu: 'Ноутбуки',
+        nameUz: 'Noutbuklar',
+        enabled: true,
+        fields: laptopFields,
+      })
+      expect(r.statusCode).toBe(201)
+      return r.json()
+    }
+
+    it('категория: поля проверяются (ошибки по-русски), правка — в журнал «до/после»; блок устройства — флажок', async () => {
+      const s = await loginStaff(app)
+      const bad = await req('POST', '/admin/categories', s.write, {
+        slug: 'laptops',
+        nameRu: 'Ноутбуки',
+        nameUz: 'Noutbuklar',
+        fields: [{ key: 'CPU!', labelRu: '', labelUz: 'x', type: 'html', required: true, public: true }],
+      })
+      expect(bad.statusCode).toBe(422)
+      expect(bad.json()).toMatchObject({ code: 'BAD_FIELDS' })
+      expect(bad.json().message).toContain('Поле 1: тип')
+
+      const c = await laptops(s.write)
+      expect(c).toMatchObject({ slug: 'laptops', deviceAct: false, fields: laptopFields })
+      const upd = await req('PATCH', `/admin/categories/${c.id}`, s.write, { deviceAct: true, fields: laptopFields.slice(0, 2) })
+      expect(upd.json()).toMatchObject({ deviceAct: true, fields: laptopFields.slice(0, 2) })
+      const log = await db.auditLog.findFirstOrThrow({ where: { action: 'category.updated', entityId: c.id } })
+      expect(log.meta).toMatchObject({ before: { fields: laptopFields, deviceAct: false }, after: { deviceAct: true } })
+      // телефоны — с блоком устройства (миграция)
+      const phones = (await req('GET', '/admin/categories', s.read)).json().find((x: { slug: string }) => x.slug === 'phones')
+      expect(phones).toMatchObject({ deviceAct: true, fields: [] })
+    })
+
+    it('товар: значения по шаблону категории; IMEI — только с блоком устройства; новое обязательное поле не ломает старые товары', async () => {
+      const s = await loginStaff(app)
+      const c = await laptops(s.write)
+      const base = { categoryId: c.id, title: 'MacBook Air M2', condition: 'USED' }
+      const missing = await req('POST', '/admin/products', s.write, { ...base, attributes: { ram_gb: 8 } })
+      expect(missing.statusCode).toBe(400)
+      expect(missing.json()).toMatchObject({ code: 'BAD_ATTRIBUTES', message: '«Процессор» — обязательное поле' })
+      const extra = await req('POST', '/admin/products', s.write, { ...base, attributes: { cpu: 'M2', imei: '123' } })
+      expect(extra.json().message).toBe('Нет поля «imei» в категории')
+      const imei = await req('POST', '/admin/products', s.write, { ...base, attributes: { cpu: 'M2' }, imei: '356938035643809' })
+      expect(imei.statusCode).toBe(400)
+      expect(imei.json().code).toBe('IMEI_NOT_ALLOWED')
+
+      const ok = await req('POST', '/admin/products', s.write, {
+        ...base,
+        description: 'Без царапин',
+        attributes: { cpu: ' M2 ', ram_gb: 8 },
+      })
+      expect(ok.statusCode).toBe(201)
+      expect(ok.json().attributes).toEqual({ cpu: 'M2', ram_gb: 8 })
+      // телефон с IMEI — как раньше, наружу только последние 4 цифры
+      const phone = await product(s.write, { imei: '356938035643809' })
+      expect(phone).toMatchObject({ imeiLast4: '3809' })
+      expect(JSON.stringify(phone)).not.toContain('356938035643809')
+
+      // шаблону добавили обязательное поле — старый товар правится без него; при правке значений — требуется
+      await req('PATCH', `/admin/categories/${c.id}`, s.write, {
+        fields: [...laptopFields, { key: 'year', labelRu: 'Год', labelUz: 'Yil', type: 'number', required: true, public: true }],
+      })
+      const title = await req('PATCH', `/admin/products/${ok.json().id}`, s.write, { title: 'MacBook Air M2, 8/256' })
+      expect(title.statusCode).toBe(200)
+      expect(title.json()).toMatchObject({ attributes: { cpu: 'M2', ram_gb: 8 }, description: 'Без царапин' }) // описание не стёрто
+      const values = await req('PATCH', `/admin/products/${ok.json().id}`, s.write, { attributes: { cpu: 'M2' } })
+      expect(values.json().message).toBe('«Год» — обязательное поле')
+
+      // смена категории: остаются только значения полей новой категории
+      const moved = await req('PATCH', `/admin/products/${ok.json().id}`, s.write, { categoryId: await phonesId() })
+      expect(moved.json()).toMatchObject({ category: { slug: 'phones' }, attributes: {} })
+      const log = await db.auditLog.findFirstOrThrow({ where: { action: 'product.created', entityId: ok.json().id } })
+      expect(log.meta).toEqual({ title: 'MacBook Air M2' }) // значения полей в журнал не пишем
+    })
+
+    it('лот: снимок полей; покупателю — только «показывать покупателю»; правка шаблона не меняет выставленный лот', async () => {
+      const s = await loginStaff(app, { categories: 'edit', products: 'edit', lots: 'edit' })
+      const c = await laptops(s.write)
+      const p = await req('POST', '/admin/products', s.write, {
+        categoryId: c.id,
+        title: 'MacBook Air M2',
+        condition: 'USED',
+        costPrice: '9000000',
+        attributes: { cpu: 'M2', ram_gb: 8, supplier: 'ООО Склад' },
+      })
+      const lot = (
+        await req('POST', '/admin/lots', s.write, { productId: p.json().id, startPrice: '9000000', step: '100000', ...fridaySlot() })
+      ).json()
+      await req('POST', `/admin/lots/${lot.id}/publish`, s.write)
+      const dto = (await app.inject({ method: 'GET', url: `/api/v1/lots/${lot.id}` })).json()
+      expect(dto.deviceAct).toBe(false)
+      expect(dto.attributes).toEqual([
+        { key: 'cpu', labelRu: 'Процессор', labelUz: 'Protsessor', type: 'text', value: 'M2' },
+        { key: 'ram_gb', labelRu: 'Память, ГБ', labelUz: 'Xotira, GB', type: 'number', value: 8 },
+      ])
+      expect(JSON.stringify(dto)).not.toContain('ООО Склад')
+
+      await req('PATCH', `/admin/categories/${c.id}`, s.write, {
+        fields: [{ ...laptopFields[0], labelRu: 'ЦП', labelUz: 'MP' }],
+      })
+      const after = (await app.inject({ method: 'GET', url: `/api/v1/lots/${lot.id}` })).json()
+      expect(after.attributes).toEqual(dto.attributes)
+      // у телефонов — блок устройства
+      const phoneLot = await createLot(db)
+      expect((await app.inject({ method: 'GET', url: `/api/v1/lots/${phoneLot.id}` })).json()).toMatchObject({
+        deviceAct: true,
+        attributes: [],
+      })
+    })
+  })
 })

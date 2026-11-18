@@ -6,15 +6,20 @@ import { StaffAuthService } from '../staff/staff-auth.service'
 import { parse } from './admin.schemas'
 
 const name = z.string().trim().min(1).max(60)
-const createSchema = z.object({
+const staffFields = {
   firstName: name,
-  lastName: z.string().trim().max(60).default(''),
+  lastName: z.string().trim().max(60),
   phone: z.string().trim().min(1).max(30),
-  password: z.string().min(1).max(200),
   roleId: z.string().uuid(),
+}
+const createSchema = z.object({
+  ...staffFields,
+  lastName: staffFields.lastName.default(''),
+  password: z.string().min(1).max(200),
 })
-const patchSchema = createSchema
-  .omit({ password: true })
+// без default: в zod 4 `.partial()` подставляет его, и PATCH стирал бы фамилию (баг 18.11.2026)
+const patchSchema = z
+  .object(staffFields)
   .partial()
   .extend({ disabled: z.boolean().optional() })
   .strict()

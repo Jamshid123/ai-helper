@@ -25,13 +25,14 @@ import { MediaService, detectImage, photoUrl } from '../media/media.service'
 import { AuditService } from '../staff/audit.service'
 import { StaffOnly } from '../staff/staff.decorator'
 import type { StaffRequest } from '../staff/staff-auth.guard'
+import { type Attributes, type CategoryField, checkAttributes } from '@auksion/shared'
 import { conflict, inspectionSchema, isUniqueViolation, money, parse } from './admin.schemas'
 
-const createSchema = z.object({
+const productFields = {
   categoryId: z.string().uuid(),
   title: z.string().trim().min(2).max(120),
   condition: z.enum(['NEW', 'USED']),
-  description: z.string().trim().max(3000).default(''),
+  description: z.string().trim().max(3000),
   inspection: inspectionSchema.optional(),
   /** Полный IMEI / серийный номер — хранится зашифрованным. */
   imei: z
@@ -41,8 +42,12 @@ const createSchema = z.object({
     .optional(),
   inventoryNo: z.string().trim().min(1).max(40).optional(),
   costPrice: money.optional(),
-})
-const patchSchema = createSchema.partial().strict()
+  /** Значения полей категории (решение 18.11.2026): проверяются по шаблону категории. */
+  attributes: z.record(z.string(), z.unknown()).optional(),
+}
+const createSchema = z.object({ ...productFields, description: productFields.description.default('') })
+// без default: в zod 4 `.partial()` подставляет его, и PATCH стирал бы описание (баг 18.11.2026)
+const patchSchema = z.object(productFields).partial().strict()
 const STATUSES = ['AVAILABLE', 'IN_LOT', 'SOLD', 'ARCHIVED'] as const
 /** Не больше 10 фото на товар. */
 export const MAX_PHOTOS = 10
@@ -56,6 +61,7 @@ const dto = (p: Product & { category: Pick<Category, 'slug' | 'nameRu'>; photos:
   condition: p.condition,
   description: p.description,
   inspection: p.inspection,
+  attributes: (p.attributes ?? {}) as Attributes,
   imeiLast4: p.imeiLast4,
   inventoryNo: p.inventoryNo,
   costPrice: p.costPrice?.toString() ?? null,
@@ -98,10 +104,14 @@ export class AdminProductsController {
   @Post()
   async create(@Body() body: unknown, @Req() req: StaffRequest) {
     const d = parse(createSchema, body)
+    const category = await this.category(d.categoryId)
+    this.assertImeiAllowed(category, d.imei)
+    const attributes = this.attributes(category, d.attributes ?? {}, true)
     const p = await this.save(() =>
       this.prisma.product.create({
         data: {
           categoryId: d.categoryId,
+          attributes,
           title: d.title,
           condition: d.condition,
           description: d.description,
@@ -120,9 +130,18 @@ export class AdminProductsController {
   @Patch(':id')
   async update(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: unknown, @Req() req: StaffRequest) {
     const d = parse(patchSchema, body)
-    if (!(await this.prisma.product.findUnique({ where: { id } }))) {
-      throw new NotFoundException({ code: 'NOT_FOUND', message: 'Товар не найден' })
-    }
+    const current = await this.prisma.product.findUnique({ where: { id } })
+    if (!current) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Товар не найден' })
+    const category = await this.category(d.categoryId ?? current.categoryId)
+    this.assertImeiAllowed(category, d.imei)
+    // Значения прислали — проверяем целиком по шаблону. Сменили категорию без значений — оставляем те, что есть в
+    // новой категории. Иначе не трогаем: старые товары не ломаются от нового обязательного поля (решение 18.11.2026).
+    const attributes =
+      d.attributes !== undefined
+        ? this.attributes(category, d.attributes, true)
+        : d.categoryId && d.categoryId !== current.categoryId
+          ? this.attributes(category, keepKnown(category, current.attributes), false)
+          : undefined
     const p = await this.save(() =>
       this.prisma.product.update({
         where: { id },
@@ -135,6 +154,7 @@ export class AdminProductsController {
           ...(d.inventoryNo !== undefined && { inventoryNo: d.inventoryNo }),
           ...(d.costPrice && { costPrice: BigInt(d.costPrice) }),
           ...(d.imei && this.imei(d.imei)),
+          ...(attributes && { attributes }),
         },
         include,
       })
@@ -218,6 +238,25 @@ export class AdminProductsController {
     return dto(await this.prisma.product.findUniqueOrThrow({ where: { id }, include }))
   }
 
+  private async category(id: string) {
+    const c = await this.prisma.category.findUnique({ where: { id }, select: { fields: true, deviceAct: true } })
+    if (!c) throw conflict('CATEGORY_NOT_FOUND', 'Категория не найдена')
+    return { fields: (c.fields ?? []) as CategoryField[], deviceAct: c.deviceAct }
+  }
+
+  /** IMEI/серийный — только у категорий с блоком устройства (решение 18.11.2026). */
+  private assertImeiAllowed(category: { deviceAct: boolean }, imei: string | undefined) {
+    if (imei && !category.deviceAct) {
+      throw new BadRequestException({ code: 'IMEI_NOT_ALLOWED', message: 'В этой категории IMEI не заполняется' })
+    }
+  }
+
+  private attributes(category: { fields: CategoryField[] }, input: unknown, requireAll: boolean) {
+    const { values, problems } = checkAttributes(category.fields, input, { requireAll })
+    if (problems.length) throw new BadRequestException({ code: 'BAD_ATTRIBUTES', message: problems.join('; ') })
+    return values
+  }
+
   private imei(imei: string | undefined) {
     return imei ? { imeiEnc: seal(imei, this.env.DATA_ENCRYPTION_KEY), imeiLast4: imei.slice(-4) } : {}
   }
@@ -243,4 +282,11 @@ export class AdminProductsController {
       ip: req.ip,
     })
   }
+}
+
+/** При смене категории — только значения полей, которые есть в новой категории. */
+function keepKnown(category: { fields: CategoryField[] }, raw: unknown): Attributes {
+  const known = new Set(category.fields.map((f) => f.key))
+  const values = (raw ?? {}) as Attributes
+  return Object.fromEntries(Object.entries(values).filter(([k]) => known.has(k)))
 }

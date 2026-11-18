@@ -1,3 +1,4 @@
+import type { LotAttribute } from '@auksion/shared'
 import type { Category, Lot } from '@prisma/client'
 import { photoUrl } from '../media/media.service'
 import { effectiveEnd } from '@auksion/shared'
@@ -31,6 +32,10 @@ export type LotDto = {
   minParticipants: number | null
   status: 'scheduled' | 'live' | 'closed'
   inspection: { summary: string; battery: number | null; imeiChecked: boolean; kit: string[]; defects: string[] }
+  /** Есть акт эксперта по устройству (IMEI, батарея, бейдж «Проверено экспертом») — флаг категории. */
+  deviceAct: boolean
+  /** «Характеристики»: только поля «показывать покупателю», снимок на момент создания лота (решение 18.11.2026). */
+  attributes: { key: string; labelRu: string; labelUz: string; type: string; value: string | number | boolean }[]
   /** Фото товара (адреса), видны всем, в т.ч. до допуска (решение 14.11.2026). */
   photos: string[]
   hue: number
@@ -76,15 +81,22 @@ function inspectionOf(raw: unknown): LotDto['inspection'] {
   }
 }
 
+function publicAttributes(raw: unknown): LotDto['attributes'] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .filter((a): a is LotAttribute => a && typeof a === 'object' && (a as LotAttribute).public === true)
+    .map(({ key, labelRu, labelUz, type, value }) => ({ key, labelRu, labelUz, type, value }))
+}
+
 export type LotWithCategory = Lot & {
-  category: Pick<Category, 'slug'>
+  category: Pick<Category, 'slug' | 'deviceAct'>
   product?: { photos: { file: string }[] } | null
   relist?: { id: string; status: Lot['status'] } | null
 }
 
 /** Что подтянуть для карточки лота: код категории и фото товара по порядку. */
 export const LOT_DTO_INCLUDE = {
-  category: { select: { slug: true } },
+  category: { select: { slug: true, deviceAct: true } },
   product: { select: { photos: { orderBy: { position: 'asc' }, select: { file: true } } } },
   relist: { select: { id: true, status: true } },
 } as const
@@ -110,6 +122,8 @@ export function toLotDto(lot: LotWithCategory): LotDto {
     minParticipants: lot.minParticipants,
     status: STATUS[lot.status] ?? 'closed',
     inspection: inspectionOf(lot.inspection),
+    deviceAct: lot.category.deviceAct,
+    attributes: publicAttributes(lot.attributes),
     photos: (lot.product?.photos ?? []).map((ph) => photoUrl(ph.file)),
     hue: hueOf(lot.id),
     relistLotId: lot.relist && STATUS[lot.relist.status] ? lot.relist.id : null,

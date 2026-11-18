@@ -270,6 +270,7 @@ export class BuyoutService {
         sellerType: lot.sellerType,
         description: lot.description,
         inspection: lot.inspection as Prisma.InputJsonValue,
+        attributes: lot.attributes as Prisma.InputJsonValue,
         startPrice: lot.startPrice,
         step: lot.step,
         fee: lot.fee,
