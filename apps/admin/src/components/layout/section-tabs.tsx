@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Link } from '@tanstack/react-router'
 import { type NavTab } from '@/config/nav'
 import { cn } from '@/lib/utils'
@@ -7,8 +8,15 @@ import { cn } from '@/lib/utils'
  * прямые ссылки, обновление и «назад/вперёд» работают. На узком экране — горизонтальная прокрутка.
  */
 export function SectionTabs({ tabs, path }: { tabs: NavTab[]; path: string }) {
+  const ref = useRef<HTMLElement>(null)
+  // на узком экране активная вкладка может оказаться за краем — прокручиваем к ней
+  useEffect(() => {
+    const el = ref.current?.querySelector<HTMLElement>('[aria-current="page"]')
+    el?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+  }, [path])
   return (
     <nav
+      ref={ref}
       aria-label='Вкладки раздела'
       className='-mx-1 mb-4 overflow-x-auto border-b'
     >
