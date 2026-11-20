@@ -5,6 +5,7 @@ import { AdminAuditController } from './admin-audit.controller'
 import { AdminCategoriesController } from './admin-categories.controller'
 import { AdminLotsController } from './admin-lots.controller'
 import { AdminLotsService } from './admin-lots.service'
+import { AdminOverviewController } from './admin-overview.controller'
 import { AdminParticipantsController } from './admin-participants.controller'
 import { AdminProductsController } from './admin-products.controller'
 import { AdminRolesController } from './admin-roles.controller'
@@ -21,6 +22,7 @@ import { AdminStaffController } from './admin-staff.controller'
     AdminAuditController,
     AdminStaffController,
     AdminRolesController,
+    AdminOverviewController,
   ],
   providers: [AdminLotsService],
 })
