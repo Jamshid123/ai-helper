@@ -1,5 +1,5 @@
-import type { Attributes, CategoryField } from '@auksion/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { Attributes, CategoryField } from '@auksion/shared'
 import { toast } from 'sonner'
 import { api, apiUpload } from '@/lib/api'
 
@@ -251,7 +251,13 @@ export const useUpdateLot = () =>
   )
 export const usePublishLot = () =>
   useAction(
-    ({ id, inspectionConfirmed }: { id: string; inspectionConfirmed?: boolean }) =>
+    ({
+      id,
+      inspectionConfirmed,
+    }: {
+      id: string
+      inspectionConfirmed?: boolean
+    }) =>
       api<Lot>(`/admin/lots/${id}/publish`, {
         method: 'POST',
         body: { inspectionConfirmed: Boolean(inspectionConfirmed) },
@@ -456,10 +462,19 @@ export type Buyout = {
   relist: { id: string; status: LotStatus } | null
 }
 export type BuyoutFilter = 'active' | 'decisions' | 'all'
-export const useBuyouts = (filter: BuyoutFilter) =>
+export const useBuyouts = (filter: BuyoutFilter, enabled = true) =>
   useQuery({
+    enabled,
     queryKey: ['buyouts', filter],
     queryFn: () => api<Buyout[]>(`/admin/fulfillment?filter=${filter}`),
+    refetchInterval: 30_000,
+  })
+/** Финансы / Решения по 10% — тот же список, но по праву `finance` (`GET /admin/finance/buyouts`). */
+export const useFinanceBuyouts = (enabled = true) =>
+  useQuery({
+    enabled,
+    queryKey: ['buyouts', 'finance'],
+    queryFn: () => api<Buyout[]>('/admin/finance/buyouts'),
     refetchInterval: 30_000,
   })
 export const useRemainderOnSite = () =>

@@ -7,7 +7,7 @@ import { openSection, staffSignIn } from './admin-helpers'
  */
 test('категория: поля карточки → форма товара под категорию, обязательное поле, без IMEI', async ({ page }) => {
   await staffSignIn(page)
-  await openSection(page, 'Категории')
+  await openSection(page, 'Каталог', 'Категории')
   await page.getByRole('button', { name: 'Добавить категорию' }).click()
   const cat = page.getByRole('dialog')
   await cat.getByLabel('Название на русском', { exact: true }).fill('E2E Часы')
@@ -22,7 +22,7 @@ test('категория: поля карточки → форма товара 
   await expect(cat).toBeHidden()
   await expect(page.getByRole('row').filter({ hasText: 'E2E Часы' })).toContainText('1')
 
-  await openSection(page, 'Товары')
+  await openSection(page, 'Каталог', 'Товары')
   await page.getByRole('button', { name: 'Добавить товар' }).click()
   const form = page.getByRole('dialog')
   await expect(form.getByLabel('IMEI / серийный')).toBeVisible() // по умолчанию — телефоны

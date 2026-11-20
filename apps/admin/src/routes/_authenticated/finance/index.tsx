@@ -1,8 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { requireSection } from '@/lib/require-section'
-import { SectionPage } from '@/features/sections/section-page'
+import { FulfillmentPage } from '@/features/manage/fulfillment-page'
 
+/** Финансы / Решения по 10% (решение владельца 20.11.2026; раньше — фильтр в «Выдаче»). */
 export const Route = createFileRoute('/_authenticated/finance/')({
   beforeLoad: requireSection('finance'),
-  component: () => <SectionPage id='finance' />,
+  component: () => <FulfillmentPage mode='finance' />,
 })

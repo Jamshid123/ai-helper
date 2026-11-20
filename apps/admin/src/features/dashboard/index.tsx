@@ -70,7 +70,7 @@ export function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className='text-sm text-muted-foreground'>
-            {session.isLive ? 'Приём ставок до ' : 'Открытие: '}
+            {session.isLive ? 'Приём ценовых предложений до ' : 'Открытие: '}
             {dateFmt.format(
               session.isLive ? session.closesAt : session.opensAt
             )}

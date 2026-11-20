@@ -16,10 +16,12 @@ test('неверный пароль — понятная ошибка, в адм
 test('владелец входит и видит все разделы; лоты из базы в списке', async ({ page }) => {
   await staffSignIn(page)
   await expect(page.getByRole('heading', { name: 'Обзор', level: 1 })).toBeVisible()
-  for (const s of ['Лоты', 'Товары', 'Участники', 'Выдача', 'Платежи', 'Журнал аудита']) {
+  for (const s of ['Аукционы', 'Каталог', 'Пользователи', 'Финансы', 'Контроль', 'Настройки']) {
     await expect(page.getByRole('link', { name: s, exact: true }).first()).toBeVisible()
   }
-  await openSection(page, 'Лоты')
+  // раздел открывает первую вкладку — «Все лоты»
+  await openSection(page, 'Аукционы')
+  await expect(page).toHaveURL(/\/lots$/)
   await expect(page.getByText('E2E iPhone 13, 128 ГБ')).toBeVisible()
   await expect(page.getByText('E2E Galaxy S23, 256 ГБ')).toBeVisible()
 })

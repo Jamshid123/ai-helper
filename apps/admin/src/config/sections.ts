@@ -21,7 +21,6 @@ export type SectionMeta = {
   title: string
   url: string
   icon: React.ElementType
-  group: 'Торги' | 'Контроль' | 'Деньги и выдача' | 'Система'
   /** Что будет в разделе — по ТЗ (docs/spec/tz.md). */
   description: string
   planned: string[]
@@ -33,7 +32,6 @@ export const SECTION_LIST: SectionMeta[] = [
     title: 'Обзор',
     url: '/',
     icon: LayoutDashboard,
-    group: 'Торги',
     description: 'Ближайшая торговая сессия и ключевые показатели пилота.',
     planned: [],
   },
@@ -42,9 +40,8 @@ export const SECTION_LIST: SectionMeta[] = [
     title: 'Расписание',
     url: '/schedule',
     icon: CalendarClock,
-    group: 'Торги',
     description:
-      'Торги по дням: начало в любой день и время, продолжительность, минимум и максимум участников, ожидание следующей ставки.',
+      'Торги по дням: начало в любой день и время, продолжительность, минимум и максимум участников, ожидание следующего предложения.',
     planned: [],
   },
   {
@@ -52,7 +49,6 @@ export const SECTION_LIST: SectionMeta[] = [
     title: 'Категории',
     url: '/categories',
     icon: Tags,
-    group: 'Торги',
     description:
       'Категории каталога: названия на русском и узбекском, включение и порядок. Выключенная категория и её лоты не видны покупателям.',
     planned: [],
@@ -62,7 +58,6 @@ export const SECTION_LIST: SectionMeta[] = [
     title: 'Товары',
     url: '/products',
     icon: Package,
-    group: 'Торги',
     description:
       'Товары площадки: карточка, акт проверки, себестоимость. Из товара создаётся лот.',
     planned: [],
@@ -72,14 +67,13 @@ export const SECTION_LIST: SectionMeta[] = [
     title: 'Лоты',
     url: '/lots',
     icon: Gavel,
-    group: 'Торги',
     description:
       'Лоты из товаров: черновик → публикация. До открытия торгов можно править и отменить (участникам — возврат), после открытия лот не меняется.',
     planned: [
       'Создание и редактирование карточки до публикации',
       'Согласование стартовой цены и шага (нижняя граница 100 000 сум)',
       'После открытия торгов цена, шаг и описание заблокированы',
-      'История ставок и итог — только просмотр, без правки',
+      'История ценовых предложений и итог — только просмотр, без правки',
     ],
   },
   {
@@ -87,7 +81,6 @@ export const SECTION_LIST: SectionMeta[] = [
     title: 'Заявки продавцов',
     url: '/sellers',
     icon: BadgeCheck,
-    group: 'Торги',
     description:
       'Заявки «Стать продавцом». В пилоте принимаются без публикации лотов.',
     planned: [
@@ -100,7 +93,6 @@ export const SECTION_LIST: SectionMeta[] = [
     title: 'Экспертиза',
     url: '/inspection',
     icon: ClipboardCheck,
-    group: 'Контроль',
     description:
       'Приёмка товара, инвентарный номер, акт проверки и чек-лист телефона.',
     planned: [
@@ -115,7 +107,6 @@ export const SECTION_LIST: SectionMeta[] = [
     title: 'Риски и споры',
     url: '/risk',
     icon: ShieldAlert,
-    group: 'Контроль',
     description: 'Сигналы антифрода, ручные разборы и споры по товару.',
     planned: [
       'Сигналы: связи аккаунтов, пары «продавец — участник», серии разгонов',
@@ -128,19 +119,17 @@ export const SECTION_LIST: SectionMeta[] = [
     title: 'Участники',
     url: '/participants',
     icon: UserMinus,
-    group: 'Контроль',
     description:
       'Поиск участника, его допуски и ограничения. Ограничить, снять ограничение или отменить допуск до начала — только с причиной.',
     planned: [],
   },
   {
     id: 'finance',
-    title: 'Платежи',
+    title: 'Решения по 10%',
     url: '/finance',
     icon: Wallet,
-    group: 'Деньги и выдача',
     description:
-      'Взносы за допуск, предоплаты, остатки, возвраты и сверка с партнёром.',
+      'Победитель оплатил 10%, но не забрал товар за 24 часа: вернуть или удержать предоплату — только с причиной, решение пишется в журнал.',
     planned: [
       'Заказы по назначению: допуск, предоплата 10%, остаток',
       'Зависшие платежи и поздние оплаты на возврат',
@@ -152,17 +141,17 @@ export const SECTION_LIST: SectionMeta[] = [
     title: 'Выдача',
     url: '/fulfillment',
     icon: PackageCheck,
-    group: 'Деньги и выдача',
     description:
       'Победитель оплатил 10% — у него код и 24 часа. Примите остаток (если не оплачен на сайте) и выдайте товар по коду.',
-    planned: ['Сверка товара с актом; расхождение блокирует выдачу и открывает спор'],
+    planned: [
+      'Сверка товара с актом; расхождение блокирует выдачу и открывает спор',
+    ],
   },
   {
     id: 'staff',
     title: 'Сотрудники',
     url: '/staff',
     icon: UserCog,
-    group: 'Система',
     description:
       'Сотрудники админки: вход по телефону и паролю, доступ — по роли. Пароль виден только при вводе: передайте его сотруднику сразу.',
     planned: [],
@@ -172,7 +161,6 @@ export const SECTION_LIST: SectionMeta[] = [
     title: 'Роли',
     url: '/roles',
     icon: ShieldCheck,
-    group: 'Система',
     description:
       'Роли сотрудников и их права по каждому разделу: нет доступа, только просмотр или изменение. Настраивает владелец.',
     planned: [],
@@ -182,7 +170,6 @@ export const SECTION_LIST: SectionMeta[] = [
     title: 'Журнал аудита',
     url: '/audit',
     icon: FileClock,
-    group: 'Система',
     description:
       'Кто, что и когда изменил: лоты, категории, товары, ограничения, возвраты, входы сотрудников.',
     planned: [

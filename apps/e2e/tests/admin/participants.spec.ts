@@ -3,7 +3,7 @@ import { openSection, staffSignIn } from './admin-helpers'
 
 test('участники: поиск по телефону и ограничение участия с обязательной причиной', async ({ page }) => {
   await staffSignIn(page)
-  await openSection(page, 'Участники')
+  await openSection(page, 'Пользователи')
   await page.getByLabel('Поиск участника').fill('901110003')
   const row = page.getByRole('row').filter({ hasText: 'Нарушитель Тестов' })
   await expect(row).toBeVisible()

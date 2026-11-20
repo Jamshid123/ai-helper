@@ -35,42 +35,33 @@ export function CommandMenu() {
       <CommandList>
         <ScrollArea type='hover' className='h-72 pe-1'>
           <CommandEmpty>Ничего не найдено.</CommandEmpty>
-          {navGroups.map((group) => (
-            <CommandGroup key={group.title} heading={group.title}>
-              {group.items.map((navItem, i) => {
-                if (navItem.url)
-                  return (
-                    <CommandItem
-                      key={`${navItem.url}-${i}`}
-                      value={navItem.title}
-                      onSelect={() => {
-                        runCommand(() => navigate({ to: navItem.url }))
-                      }}
-                    >
-                      <div className='flex size-4 items-center justify-center'>
-                        <ArrowRight className='size-2 text-muted-foreground/80' />
-                      </div>
-                      {navItem.title}
-                    </CommandItem>
-                  )
-
-                return navItem.items?.map((subItem, i) => (
+          {navGroups.map((group) =>
+            group.items.map((area) => (
+              <CommandGroup key={area.title} heading={area.title}>
+                {(area.tabs ?? []).map((tab) => (
                   <CommandItem
-                    key={`${navItem.title}-${subItem.url}-${i}`}
-                    value={`${navItem.title}-${subItem.url}`}
+                    key={tab.url}
+                    value={`${area.title} ${tab.title}`}
+                    keywords={tab.keywords}
                     onSelect={() => {
-                      runCommand(() => navigate({ to: subItem.url }))
+                      runCommand(() => navigate({ to: tab.url }))
                     }}
                   >
                     <div className='flex size-4 items-center justify-center'>
                       <ArrowRight className='size-2 text-muted-foreground/80' />
                     </div>
-                    {navItem.title} <ChevronRight /> {subItem.title}
+                    {tab.title !== area.title ? (
+                      <>
+                        {area.title} <ChevronRight /> {tab.title}
+                      </>
+                    ) : (
+                      tab.title
+                    )}
                   </CommandItem>
-                ))
-              })}
-            </CommandGroup>
-          ))}
+                ))}
+              </CommandGroup>
+            ))
+          )}
           <CommandSeparator />
           <CommandGroup heading='Тема'>
             <CommandItem onSelect={() => runCommand(() => setTheme('light'))}>
