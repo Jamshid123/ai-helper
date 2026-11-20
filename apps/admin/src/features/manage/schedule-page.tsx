@@ -32,7 +32,7 @@ const duration = (l: Lot) => {
 }
 const ACTIVE: Lot['status'][] = ['DRAFT', 'SCHEDULED', 'LIVE']
 
-/** Расписание торгов (решение 14.11.2026): любой день и время, длительность, участники, ожидание ставки. */
+/** Расписание торгов (решение 14.11.2026): любой день и время, длительность, участники, ожидание следующего предложения. */
 export function SchedulePage() {
   const meta = SECTIONS_BY_ID.schedule
   const { data = [], isLoading } = useLots()
@@ -108,7 +108,7 @@ export function SchedulePage() {
                   </span>
                   <span
                     className='inline-flex items-center gap-1 text-sm text-muted-foreground'
-                    title='Ожидание следующей ставки'
+                    title='Ожидание следующего предложения'
                   >
                     <Timer className='size-4' />
                     {l.bidTimeoutSec

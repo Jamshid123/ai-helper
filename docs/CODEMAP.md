@@ -61,7 +61,9 @@
 | `apps/api/src/common/pickup-code.ts` | Код выдачи: 6 цифр из секрета и id обязательства, в БД — только хэш |
 | `apps/miniapp/src/entities/purchase/api.ts`, `features/purchase-card.tsx`, `features/win-banner.tsx` | Сайт: мои покупки, карточка победителя (10%, таймер, код по нажатию, остаток, аннулирование с датой ограничения), баннер «оплатите 10%» |
 | `apps/miniapp/src/features/my-lots/` | Сайт: «Мои лоты» в профиле — `group.ts` (чистая раскладка: нужно действие / идут / предстоящие / история) и `my-lots.tsx`; данные — `GET /me/admissions` (`AdmissionsService.mine`: итог, судьба взноса, возвращённые взносы) и `/me/obligations` |
-| `apps/admin/src/features/manage/fulfillment-page.tsx` | Админка: раздел «Выдача» (остаток на месте, выдача по коду, решение по 10%) |
+| `apps/admin/src/features/manage/fulfillment-page.tsx` | Админка: «Аукционы / Выдача» (остаток на месте, выдача по коду) и «Финансы / Решения по 10%» (`mode='finance'`) |
+| `apps/admin/src/config/nav.ts`, `components/layout/section-tabs.tsx`, `page-shell.tsx` | Админка: 7 разделов меню и их вкладки (страница = вкладка, адрес прежний), видимость по правам, строка вкладок раздела |
+| `apps/admin/src/features/manage/lots-page.tsx`, `lot-filters.ts` | Админка: «Все лоты» (фильтр статуса в `?status=`) и «Результаты» (`/results`, завершённые торги) |
 | `apps/api/src/common/crypto-box.ts`, `cookies.ts` | AES-256-GCM для секретов в БД; разбор/сборка cookie |
 | `apps/api/src/common/rate-limit.ts` | Ограничение частоты запросов: `@RateLimit(LIMITS.x)` на эндпоинте, глобальный перехватчик, окно в Redis |
 | `.github/workflows/admin-create.yml` | Вручную: создать администратора по телефону (пароль из секрета `ADMIN_INITIAL_PASSWORD`) |

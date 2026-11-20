@@ -1,19 +1,28 @@
 import { useMemo } from 'react'
-import { SECTION_LIST } from '@/config/sections'
+import { visibleAreas } from '@/config/nav'
 import { useAuthStore } from '@/stores/auth-store'
-import { canAccess } from '@/lib/rbac'
 import { type NavGroup } from './types'
 
-/** Меню, отфильтрованное по ролям текущего сотрудника. */
+/** Меню: 7 разделов (config/nav.ts), отфильтрованных по правам текущего сотрудника. */
 export function useNavGroups(): NavGroup[] {
   const user = useAuthStore((s) => s.user)
   return useMemo(() => {
     const groups = new Map<string, NavGroup>()
-    for (const s of SECTION_LIST) {
-      if (!canAccess(user, s.id)) continue
-      const group = groups.get(s.group) ?? { title: s.group, items: [] }
-      group.items.push({ title: s.title, url: s.url, icon: s.icon })
-      groups.set(s.group, group)
+    for (const a of visibleAreas(user)) {
+      const title = a.group ?? ''
+      const group = groups.get(title) ?? { title, items: [] }
+      group.items.push({
+        title: a.title,
+        url: a.url,
+        icon: a.icon,
+        activeUrls: a.tabs.map((t) => t.url),
+        tabs: a.tabs.map((t) => ({
+          title: t.title,
+          url: t.url,
+          keywords: t.keywords,
+        })),
+      })
+      groups.set(title, group)
     }
     return [...groups.values()]
   }, [user])

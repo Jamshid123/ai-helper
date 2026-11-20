@@ -263,14 +263,14 @@ export function LotDialog({ open, onOpenChange, product: given, lot }: Props) {
               />
             </Field>
             <div className='grid gap-1.5 self-start'>
-              <span className='text-sm font-medium'>Ожидание ставки</span>
+              <span className='text-sm font-medium'>Ожидание предложения</span>
               <Select
                 value={v.timeout}
                 onValueChange={(timeout) => setV({ ...v, timeout })}
               >
                 <SelectTrigger
                   className='w-full'
-                  aria-label='Ожидание следующей ставки'
+                  aria-label='Ожидание следующего предложения'
                 >
                   <SelectValue />
                 </SelectTrigger>
@@ -283,7 +283,7 @@ export function LotDialog({ open, onOpenChange, product: given, lot }: Props) {
                 </SelectContent>
               </Select>
               <p className='text-xs text-muted-foreground'>
-                Нет новой ставки — торги завершаются раньше
+                Нет нового предложения — торги завершаются раньше
               </p>
             </div>
           </div>

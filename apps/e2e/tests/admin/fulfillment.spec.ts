@@ -8,7 +8,7 @@ import { openSection, staffSignIn } from './admin-helpers'
  */
 test('выдача: остаток на месте → неверный код отклонён → верный код, товар выдан', async ({ page }) => {
   await staffSignIn(page)
-  await openSection(page, 'Выдача')
+  await openSection(page, 'Аукционы', 'Выдача')
   const row = page.getByRole('row').filter({ hasText: 'E2E MacBook Air M2' })
   await expect(row.getByText('Ждёт выдачи')).toBeVisible()
   // пока остаток не принят, выдать нельзя

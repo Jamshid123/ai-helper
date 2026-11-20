@@ -61,10 +61,10 @@ describe('SearchProvider and CommandMenu', () => {
     vi.clearAllMocks()
     useAuthStore.getState().setUser({
       id: 'u1',
-      name: 'Эксперт',
+      name: 'Выдача',
       email: 'e@x.uz',
       phone: null,
-      permissions: { inspection: 'edit' },
+      permissions: { fulfillment: 'edit' },
     })
   })
 
@@ -79,9 +79,13 @@ describe('SearchProvider and CommandMenu', () => {
       .toBeInTheDocument()
     await expect.element(getByText('Тема')).toBeInTheDocument()
     await expect.element(getByText('Светлая')).toBeInTheDocument()
-    await expect.element(getByText('Экспертиза')).toBeInTheDocument()
-    // разделы чужих ролей в палитре не показываются
-    await expect.element(getByText('Платежи')).not.toBeInTheDocument()
+    // вкладка раздела (меню из 7 разделов, решение 20.11.2026)
+    await expect
+      .element(screen.getByRole('option', { name: /Выдача/ }))
+      .toBeInTheDocument()
+    // разделы и вкладки чужих ролей в палитре не показываются
+    await expect.element(getByText('Все лоты')).not.toBeInTheDocument()
+    await expect.element(getByText('Финансы')).not.toBeInTheDocument()
     await expect.element(getByText('Сотрудники')).not.toBeInTheDocument()
   })
 
@@ -118,9 +122,9 @@ describe('SearchProvider and CommandMenu', () => {
 
     await openCommandPalette(screen)
 
-    await userEvent.click(screen.getByText('Экспертиза'))
+    await userEvent.click(screen.getByRole('option', { name: /Выдача/ }))
 
-    expect(mocks.navigate).toHaveBeenCalledWith({ to: '/inspection' })
+    expect(mocks.navigate).toHaveBeenCalledWith({ to: '/fulfillment' })
     await expect
       .element(screen.getByPlaceholder(COMMAND_MENU_PLACEHOLDER))
       .not.toBeInTheDocument()

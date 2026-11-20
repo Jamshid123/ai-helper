@@ -9,8 +9,15 @@ export async function staffSignIn(page: Page, password = fixtures().admin.passwo
   await page.getByRole('button', { name: 'Войти' }).click()
 }
 
-/** Переход в раздел через боковое меню — так, как это делает оператор. */
-export async function openSection(page: Page, title: string) {
-  await page.getByRole('link', { name: title, exact: true }).first().click()
-  await expect(page.getByRole('heading', { name: title, level: 1 })).toBeVisible()
+/** Вкладки раздела (ТЗ 20.11.2026: 7 разделов меню, внутри — вкладки). */
+export const sectionTabs = (page: Page) => page.getByRole('navigation', { name: 'Вкладки раздела' })
+
+/** Переход в раздел через боковое меню и, если нужно, во вкладку — так, как это делает оператор. */
+export async function openSection(page: Page, area: string, tab?: string) {
+  await page.getByRole('link', { name: area, exact: true }).first().click()
+  await expect(page.getByRole('heading', { name: area, level: 1 })).toBeVisible()
+  if (tab) {
+    await sectionTabs(page).getByRole('link', { name: tab, exact: true }).click()
+    await expect(sectionTabs(page).getByRole('link', { name: tab, exact: true })).toHaveAttribute('aria-current', 'page')
+  }
 }

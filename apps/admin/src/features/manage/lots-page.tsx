@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { SECTIONS_BY_ID } from '@/config/sections'
 import { MoreHorizontal } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -31,6 +31,7 @@ import { PageShell } from '@/components/layout/page-shell'
 import { type Lot, useCancelLot, useLots, usePublishLot } from './api'
 import { sum, windowText } from './format'
 import { LotDialog } from './lot-dialog'
+import { LOT_FILTERS, RESULT_STATUSES, parseLotFilter } from './lot-filters'
 import { EmptyRow, LotStatusBadge, ReasonDialog } from './ui'
 import { useCanEdit } from './use-can-edit'
 
@@ -39,9 +40,21 @@ const beforeOpen = (l: Lot) =>
   l.status === 'DRAFT' ||
   (l.status === 'SCHEDULED' && Date.parse(l.opensAt) > Date.now())
 
-export function LotsPage() {
+/**
+ * Аукционы / Все лоты и Аукционы / Результаты (ТЗ 20.11.2026): один список лотов, «Результаты» — завершённые
+ * торги, только просмотр. Победитель и предложения цены не правятся (ТЗ).
+ */
+export function LotsPage({ view }: { view: 'all' | 'results' }) {
+  const results = view === 'results'
   const meta = SECTIONS_BY_ID.lots
-  const { data = [], isLoading } = useLots()
+  const navigate = useNavigate()
+  const search: { status?: unknown } = useSearch({ strict: false })
+  const filter = results ? undefined : parseLotFilter(search.status)
+  const statuses = results
+    ? RESULT_STATUSES
+    : LOT_FILTERS.find((f) => f.id === filter)?.statuses
+  const { data: all = [], isLoading } = useLots()
+  const data = statuses ? all.filter((l) => statuses.includes(l.status)) : all
   const publish = usePublishLot()
   const cancel = useCancelLot()
   const canEditLots = useCanEdit('lots')
@@ -60,13 +73,40 @@ export function LotsPage() {
   return (
     <PageShell
       title={meta.title}
-      description={meta.description}
+      description={
+        results
+          ? 'Завершённые торги: итоговая цена и число участников. Оплата и выдача — во вкладке «Выдача».'
+          : meta.description
+      }
       actions={
-        <Button variant='outline' asChild>
-          <Link to='/products'>Создать из товара</Link>
-        </Button>
+        results ? undefined : (
+          <Button variant='outline' asChild>
+            <Link to='/products'>Создать из товара</Link>
+          </Button>
+        )
       }
     >
+      {!results && (
+        <div
+          role='group'
+          aria-label='Статус лота'
+          className='mb-4 flex flex-wrap gap-2'
+        >
+          {LOT_FILTERS.map((f) => (
+            <Button
+              key={f.text}
+              size='sm'
+              aria-pressed={filter === f.id}
+              variant={filter === f.id ? 'default' : 'outline'}
+              onClick={() =>
+                navigate({ to: '/lots', search: f.id ? { status: f.id } : {} })
+              }
+            >
+              {f.text}
+            </Button>
+          ))}
+        </div>
+      )}
       <div className='rounded-md border'>
         <Table>
           <TableHeader>
@@ -75,7 +115,9 @@ export function LotsPage() {
               <TableHead>Статус</TableHead>
               <TableHead>Торги</TableHead>
               <TableHead className='text-right'>Старт / шаг</TableHead>
-              <TableHead className='text-right'>Текущая цена</TableHead>
+              <TableHead className='text-right'>
+                {results ? 'Итоговая цена' : 'Текущая цена'}
+              </TableHead>
               <TableHead className='text-right'>Участники</TableHead>
               <TableHead />
             </TableRow>
@@ -84,7 +126,13 @@ export function LotsPage() {
             {!isLoading && data.length === 0 && (
               <EmptyRow
                 cols={7}
-                text='Лотов пока нет. Создайте лот из товара.'
+                text={
+                  results
+                    ? 'Завершённых торгов пока нет.'
+                    : all.length === 0
+                      ? 'Лотов пока нет. Создайте лот из товара.'
+                      : 'С этим статусом лотов нет.'
+                }
               />
             )}
             {data.map((l) => {
@@ -109,7 +157,8 @@ export function LotsPage() {
                       (l.carriedCount ?? 0) < l.minParticipants && (
                         <span className='mt-1 block text-xs text-amber-600 dark:text-amber-400'>
                           Перенесённых меньше минимума ({l.carriedCount ?? 0} из{' '}
-                          {l.minParticipants}) — без новых участников торги отменятся
+                          {l.minParticipants}) — без новых участников торги
+                          отменятся
                         </span>
                       )}
                   </TableCell>
@@ -212,7 +261,10 @@ export function LotsPage() {
           )
         }
       />
-      <Dialog open={publishing !== null} onOpenChange={(v) => !v && setPublishing(null)}>
+      <Dialog
+        open={publishing !== null}
+        onOpenChange={(v) => !v && setPublishing(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Опубликовать повторные торги</DialogTitle>
@@ -223,8 +275,14 @@ export function LotsPage() {
             </DialogDescription>
           </DialogHeader>
           <ul className='list-disc space-y-1 pl-5 text-sm text-muted-foreground'>
-            <li>Начало — не раньше чем через 24 часа после публикации, чтобы участники успели узнать.</li>
-            <li>Победителю, который не выкупил лот, участие в торгах этого товара закрыто.</li>
+            <li>
+              Начало — не раньше чем через 24 часа после публикации, чтобы
+              участники успели узнать.
+            </li>
+            <li>
+              Победителю, который не выкупил лот, участие в торгах этого товара
+              закрыто.
+            </li>
           </ul>
           {publishing?.needsRelistCheck && (
             <label className='flex items-start gap-2 text-sm'>
@@ -234,8 +292,8 @@ export function LotsPage() {
                 className='mt-0.5'
               />
               <span>
-                Товар не забрали после оплаты 10% — я перепроверил его по акту, описание и фото
-                соответствуют.
+                Товар не забрали после оплаты 10% — я перепроверил его по акту,
+                описание и фото соответствуют.
               </span>
             </label>
           )}
@@ -244,7 +302,10 @@ export function LotsPage() {
               Отмена
             </Button>
             <Button
-              disabled={publish.isPending || (Boolean(publishing?.needsRelistCheck) && !checked)}
+              disabled={
+                publish.isPending ||
+                (Boolean(publishing?.needsRelistCheck) && !checked)
+              }
               onClick={() =>
                 publishing &&
                 publish.mutate(
