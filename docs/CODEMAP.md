@@ -62,6 +62,7 @@
 | `apps/miniapp/src/entities/purchase/api.ts`, `features/purchase-card.tsx`, `features/win-banner.tsx` | Сайт: мои покупки, карточка победителя (10%, таймер, код по нажатию, остаток, аннулирование с датой ограничения), баннер «оплатите 10%» |
 | `apps/miniapp/src/features/my-lots/` | Сайт: «Мои лоты» в профиле — `group.ts` (чистая раскладка: нужно действие / идут / предстоящие / история) и `my-lots.tsx`; данные — `GET /me/admissions` (`AdmissionsService.mine`: итог, судьба взноса, возвращённые взносы) и `/me/obligations` |
 | `apps/admin/src/features/manage/fulfillment-page.tsx` | Админка: «Аукционы / Выдача» (остаток на месте, выдача по коду) и «Финансы / Решения по 10%» (`mode='finance'`) |
+| `apps/api/src/modules/admin/admin-overview.controller.ts`, `apps/admin/src/features/dashboard/` | «Обзор»: `/admin/overview/auctions` (идущие и ближайшие торги, право `lots`), `/attention` (необработанные задачи), `/metrics?period=` (показатели за период по Ташкенту); каждый показатель — по праву своего модуля |
 | `apps/admin/src/config/nav.ts`, `components/layout/section-tabs.tsx`, `page-shell.tsx` | Админка: 7 разделов меню и их вкладки (страница = вкладка, адрес прежний), видимость по правам, строка вкладок раздела |
 | `apps/admin/src/features/manage/lots-page.tsx`, `lot-filters.ts` | Админка: «Все лоты» (фильтр статуса в `?status=`) и «Результаты» (`/results`, завершённые торги) |
 | `apps/api/src/common/crypto-box.ts`, `cookies.ts` | AES-256-GCM для секретов в БД; разбор/сборка cookie |
